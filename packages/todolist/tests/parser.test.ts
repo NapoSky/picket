@@ -22,12 +22,21 @@ describe('todolist grammar: item markers', () => {
     expect(items(list).map((item) => item.text)).toEqual(['Crates', 'Trucks', 'Ammo', 'Fuel', 'Water', 'Rations']);
   });
 
+  it('accepts a capital letter with - or : followed by a space', () => {
+    const list = parse('A - Crates\nB- Trucks\nC: Ammo\nD : Fuel\nE-  Water');
+    expect(items(list).map((item) => item.text)).toEqual(['Crates', 'Trucks', 'Ammo', 'Fuel', 'Water']);
+  });
+
+  it.each(['R-12 Hauler', 'A-10 Warthog', 'N:note'])('keeps %j as free text: - and : need a space after a plain letter', (line) => {
+    expect(kinds(parse(`${line}\nB・Real item`))).toEqual(['text', 'item']);
+  });
+
   it('TDL-EC-01: ignores the typed letters, items keep their order of appearance', () => {
     const list = parse('C・x\nA・y\nZ・z');
     expect(items(list).map((item) => item.text)).toEqual(['x', 'y', 'z']);
   });
 
-  it.each(['I - sinon on prend le camion', 'N: note pour plus tard', 'A - titre', 'X.', 'A・', '🇦', '🇦-', 'A) texte', '1・texte'])(
+  it.each(['X.', 'A・', 'A - ', '🇦', '🇦-', 'A) texte', '1・texte'])(
     'TDL-EC-02: %j stays free text instead of becoming a phantom item',
     (line) => {
       const list = parse(`${line}\nB・Real item`);

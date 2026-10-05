@@ -16,15 +16,15 @@ Le bot a besoin des permissions **Voir le salon**, **Envoyer des messages** (ou 
 
 | Vous saisissez | Cela devient |
 | --- | --- |
-| `A・Caisses` ou `A·Caisses` (une lettre majuscule, puis `・` ou `·`) | Un item |
+| `A・Caisses`, `A·Caisses`, `A - Caisses`, `A: Caisses` (une lettre majuscule, puis `・`, `·`, `-` ou `:`) | Un item |
 | `🇦 Caisses`, `🇦- Caisses`, `🇦: Caisses`, `:regional_indicator_a: - Caisses` | Un item |
 | `__Préparation__`, `__**Préparation**__`, `**__Préparation__**` | Un titre de catégorie |
 | `**Préparation**` suivi d'un item | Un titre de catégorie |
-| Tout le reste (`Rappel : briefing à 21h`, `N: note`, `A - titre`, `**Info**` seul) | Du texte libre, conservé exactement là où vous l'avez écrit |
+| Tout le reste (`Rappel : briefing à 21h`, `R-12 Hauler`, `**Info**` seul) | Du texte libre, conservé exactement là où vous l'avez écrit |
 
 - La lettre saisie est ignorée : les items sont lettrés 🇦, 🇧, 🇨… dans l'ordre d'apparition.
-- Une lettre simple n'est un marqueur d'item qu'avec `・` ou `·`. `A - quelque chose` ou `N: note` restent du texte libre :
-  une phrase ne devient jamais un item par accident.
+- Après une lettre simple, `-` et `:` demandent une espace (`A - Caisses`, `A: Caisses`) ; `R-12 Hauler` ou `A-10` restent
+  du texte libre.
 - `Caisses (x3)` demande trois clics. `(x1)` est redondant et disparaît. `(x0)` et les quantités au-delà de 999 restent
   du texte.
 - Deux items de même texte dans la même catégorie sont fusionnés et leurs quantités s'additionnent : `Caisses (x2)` et

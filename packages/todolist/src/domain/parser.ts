@@ -25,11 +25,11 @@ export type ParseError =
   | { readonly code: 'too_many_items'; readonly max: number }
   | { readonly code: 'item_too_long'; readonly line: number; readonly max: number };
 
-// Un marqueur n'est reconnu que s'il est sans ambiguïté : emoji lettre (tous séparateurs) ou lettre majuscule
-// avec `・` / `·` seulement. `A - titre` ou `N: note` restent du texte libre.
+// Marqueur : emoji lettre (tous séparateurs) ou lettre majuscule. Pour la lettre, `・` / `·` se collent au texte ;
+// `-` et `:` exigent une espace après, pour que `R-12 Hauler` ou `A-10` restent du texte libre.
 const MARKER = String.raw`(?:\p{Regional_Indicator}|:regional_indicator_[a-z]:)`;
 const EMOJI_ITEM = new RegExp(String.raw`^${MARKER}\s*[・·:-]\s*(.+)$`, 'u');
-const LETTER_ITEM = /^[A-Z]\s*[・·]\s*(.+)$/u;
+const LETTER_ITEM = /^[A-Z]\s*(?:[・·]\s*|[:-]\s+)(.+)$/u;
 
 const UNDERLINE_BOLD = /^__\*\*(.+?)\*\*__$/u;
 const BOLD_UNDERLINE = /^\*\*__(.+?)__\*\*$/u;
@@ -85,8 +85,8 @@ const categoryKey = (raw: string): string => raw.replace(/[_*]/gu, '').trim().to
 
 /**
  * Grammaire stricte, pure et déterministe : le même texte donne toujours la même liste.
- * - item : marqueur (🇦, `:regional_indicator_a:`, ou `A` suivi de `・`/`·`) puis séparateur puis texte ; le marqueur saisi est
- *   ignoré (les lettres sont attribuées au rendu) ;
+ * - item : marqueur (🇦, `:regional_indicator_a:`, ou une lettre majuscule) puis séparateur (`・`, `·`, `-`, `:`) puis texte ;
+ *   le marqueur saisi est ignoré (les lettres sont attribuées au rendu) ;
  * - catégorie : `__Nom__`, `__**Nom**__`, `**__Nom__**`, ou `**Nom**` quand un item suit ;
  * - tout le reste est du texte libre, conservé à sa place.
  */

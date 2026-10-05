@@ -16,15 +16,14 @@ channel; if one is missing, PICKET tells you which before opening the form.
 
 | You type | It becomes |
 | --- | --- |
-| `A・Crates` or `A·Crates` (a capital letter, then `・` or `·`) | An item |
+| `A・Crates`, `A·Crates`, `A - Crates`, `A: Crates` (a capital letter, then `・`, `·`, `-` or `:`) | An item |
 | `🇦 Crates`, `🇦- Crates`, `🇦: Crates`, `:regional_indicator_a: - Crates` | An item |
 | `__Preparation__`, `__**Preparation**__`, `**__Preparation__**` | A category title |
 | `**Preparation**` followed by an item | A category title |
-| Anything else (`Reminder: briefing at 9pm`, `N: note`, `A - title`, `**Info**` alone) | Free text, kept exactly where you wrote it |
+| Anything else (`Reminder: briefing at 9pm`, `R-12 Hauler`, `**Info**` alone) | Free text, kept exactly where you wrote it |
 
 - The letter you type is ignored: items are lettered 🇦, 🇧, 🇨… in the order they appear.
-- A plain letter is only an item marker with `・` or `·`. `A - something` or `N: note` stay free text, so a sentence
-  never turns into an item by accident.
+- After a plain letter, `-` and `:` need a space (`A - Crates`, `A: Crates`); `R-12 Hauler` or `A-10` stay free text.
 - `Crates (x3)` needs three clicks. `(x1)` is redundant and disappears. `(x0)` and quantities over 999 are kept as plain
   text.
 - Two items with the same text in the same category are merged and their quantities added: `Crates (x2)` and `Crates`
