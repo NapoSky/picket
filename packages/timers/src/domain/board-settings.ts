@@ -25,7 +25,16 @@ export interface BoardSettings {
   /** Heures après lesquelles un asset barré ou expiré est supprimé ; `null` : jamais. */
   readonly purgeAfterHours: number | null;
   readonly resetOnNewWar: boolean;
+  /** Icône devant la région dans l'en-tête de chaque lieu : emoji Unicode ou emoji personnalisé ; `null` : celle par défaut. */
+  readonly regionEmoji: string | null;
+  readonly locationEmoji: string | null;
 }
+
+const CUSTOM_EMOJI = /^<a?:[A-Za-z0-9_]{2,32}:\d{15,25}>$/u;
+const UNICODE_EMOJI = /^(?:\p{Regional_Indicator}{2}|\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?)*)$/u;
+
+/** Un seul emoji, Unicode ou personnalisé (`<:nom:123…>`) : rien d'autre ne doit pouvoir entrer dans un titre de champ. */
+export const isValidEmoji = (value: string): boolean => value.length <= 64 && (CUSTOM_EMOJI.test(value) || UNICODE_EMOJI.test(value));
 
 export const DEFAULT_BOARD_SETTINGS: BoardSettings = {
   alertsEnabled: true,
@@ -37,6 +46,8 @@ export const DEFAULT_BOARD_SETTINGS: BoardSettings = {
   maxActive: DEFAULT_MAX_ACTIVE,
   purgeAfterHours: null,
   resetOnNewWar: false,
+  regionEmoji: null,
+  locationEmoji: null,
 };
 
 const SNOWFLAKE = /^\d{15,25}$/u;
@@ -73,6 +84,8 @@ export function parseBoardSettings(raw: unknown): BoardSettings {
     purgeAfterHours:
       typeof purge === 'number' && Number.isInteger(purge) && purge >= 1 && purge <= MAX_PURGE_HOURS ? purge : null,
     resetOnNewWar: typeof source['resetOnNewWar'] === 'boolean' ? source['resetOnNewWar'] : defaults.resetOnNewWar,
+    regionEmoji: typeof source['regionEmoji'] === 'string' && isValidEmoji(source['regionEmoji']) ? source['regionEmoji'] : null,
+    locationEmoji: typeof source['locationEmoji'] === 'string' && isValidEmoji(source['locationEmoji']) ? source['locationEmoji'] : null,
   };
 }
 
@@ -89,6 +102,9 @@ export interface SettingsPatch {
   /** 0 : jamais. */
   readonly purgeAfterHours?: number;
   readonly resetOnNewWar?: boolean;
+  /** `null` : revenir à l'icône par défaut. */
+  readonly regionEmoji?: string | null;
+  readonly locationEmoji?: string | null;
 }
 
 export type SettingsError =
@@ -97,6 +113,7 @@ export type SettingsError =
   | 'invalid_role'
   | 'invalid_max_active'
   | 'invalid_purge'
+  | 'invalid_emoji'
   | 'max_active_below_current';
 
 /** `activeNow` : le plafond ne peut pas passer sous le nombre d'assets actifs déjà présents. */
@@ -135,6 +152,13 @@ export function applySettingsPatch(current: BoardSettings, patch: SettingsPatch,
       return err('invalid_purge');
     }
     next = { ...next, purgeAfterHours: patch.purgeAfterHours === 0 ? null : patch.purgeAfterHours };
+  }
+
+  for (const key of ['regionEmoji', 'locationEmoji'] as const) {
+    const value = patch[key];
+    if (value === undefined) continue;
+    if (value !== null && !isValidEmoji(value)) return err('invalid_emoji');
+    next = { ...next, [key]: value };
   }
 
   return ok({

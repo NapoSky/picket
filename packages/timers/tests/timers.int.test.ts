@@ -30,7 +30,7 @@ describe('board creation', () => {
 
     const messages = h.boardMessages();
     expect(messages).toHaveLength(1);
-    expect(messages[0]?.view.embeds[0]).toMatchObject({ title: '⏱️ Timers', description: 'No timer yet. Add one with /timers add.' });
+    expect(messages[0]?.view.embeds[0]).toMatchObject({ title: '⏱️ Timers and refreshes', description: 'No timer yet. Add one with /timers add.' });
     expect(messages[0]?.view.buttons).toEqual([]);
 
     const board = await h.store.boardByChannel(h.ids.guild, h.ids.channel);
@@ -74,7 +74,7 @@ describe('adding timers', () => {
     await h.boardWithMessage();
     const asset = await h.add({ name: 'North depot' });
 
-    expect(h.lines()).toEqual([`🇦・📦 **North depot** \`123456\`・<t:${unix(new Date(NOW.getTime() + 50 * HOUR_MS))}:R>・<@${h.ids.user}>`]);
+    expect(h.lines()).toEqual([`📦\u2009🇦・North depot | 123456 | <t:${unix(new Date(NOW.getTime() + 50 * HOUR_MS))}:R>・<@${h.ids.user}>`]);
     expect(h.boardMessages()[0]?.buttons).toEqual([{ customId: refreshCustomId(asset.id), emoji: '🇦' }]);
     expect(await queryAsAdmin(database, 'SELECT name, code, status, region_key, location_key FROM timer_assets')).toEqual([
       { name: 'North depot', code: '123456', status: 'active', region_key: 'allodsbight', location_key: 'mercyswail' },
@@ -168,7 +168,7 @@ describe('striking, refreshing and cleaning up', () => {
     for (let index = 0; index < 12; index += 1) assets.push(await h.add({ name: `T${index}`, code: String(100_000 + index) }));
     h.clock.advance(HOUR_MS);
     h.messaging.latencyMs = 15;
-    const before = edits(h);
+    const before = h.messaging.calls.filter((call) => call.startsWith("edit:")).length;
 
     const clicks = [...assets, ...assets, ...assets].map((asset) =>
       h.refresh.execute({ guildId: h.ids.guild, channelId: h.ids.channel, userId: h.ids.user, level: 'member', assetId: asset.id }),
@@ -176,7 +176,7 @@ describe('striking, refreshing and cleaning up', () => {
     const results = await Promise.all(clicks);
 
     expect(results.every((result) => result.kind === 'done')).toBe(true);
-    expect(edits(h) - before).toBeLessThan(12);
+    expect(h.messaging.calls.filter((call) => call.startsWith("edit:")).length - before).toBeLessThan(12);
     const expected = `<t:${unix(new Date(NOW.getTime() + 51 * HOUR_MS))}:R>`;
     expect(h.lines()).toHaveLength(12);
     expect(h.lines().every((line) => line.includes(expected))).toBe(true);
@@ -208,7 +208,7 @@ describe('striking, refreshing and cleaning up', () => {
       { status: 'struck', duration_s: 180_000, frozen_at: new Date(NOW.getTime() + 50 * HOUR_MS), struck_at: new Date(NOW.getTime() + HOUR_MS) },
     ]);
     expect(h.boardMessages()[0]?.buttons).toEqual([]);
-    expect(h.lines()[0]?.startsWith('~~❌・📦')).toBe(true);
+    expect(h.lines()[0]?.startsWith('~~📦\u2009❌・')).toBe(true);
     expect(await h.strike.execute({ guildId: h.ids.guild, channelId: h.ids.channel, userId: h.ids.user, level: 'member', assetId: asset.id })).toEqual({ kind: 'already_struck' });
     expect(await h.refresh.execute({ guildId: h.ids.guild, channelId: h.ids.channel, userId: h.ids.user, level: 'member', assetId: asset.id })).toEqual({ kind: 'already_struck' });
   });
@@ -268,7 +268,9 @@ describe('pagination on Discord', () => {
     for (let index = 0; index < 27; index += 1) assets.push(await h.add({ name: `T${String(index).padStart(2, '0')}`, code: String(100_000 + index) }));
     expect(h.boardMessages()).toHaveLength(2);
     expect(h.boardMessages().map((message) => message.buttons.length)).toEqual([25, 2]);
-    expect(h.boardMessages()[0]?.view.embeds.at(-1)?.footer).toBe('⏱️ 1/2');
+    expect(h.boardMessages()[0]?.view.embeds[0]).toMatchObject({ title: '⏱️ Timers and refreshes', footer: '🕓 Last update' });
+    expect(h.boardMessages()[1]?.view.embeds[0]).toMatchObject({ title: '⏱️ Timers and refreshes' });
+    expect(h.boardMessages()[1]?.view.embeds[0]).not.toHaveProperty('footer');
     const [first, second] = h.boardMessages();
     expect(await h.store.pages(h.ids.guild, (await h.store.boardByChannel(h.ids.guild, h.ids.channel))?.id ?? '')).toHaveLength(2);
 
@@ -304,9 +306,9 @@ describe('resilience (TIM-RQ-15)', () => {
     await h.boardWithMessage();
     await h.add();
     const [message] = h.boardMessages();
-    const before = edits(h);
+    const before = h.messaging.calls.filter((call) => call.startsWith("edit:")).length;
     expect(await h.repair.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user })).toEqual({ kind: 'repaired', sync: { synced: true } });
-    expect(edits(h)).toBe(before + 1);
+    expect(h.messaging.calls.filter((call) => call.startsWith("edit:")).length).toBe(before + 1);
     expect(h.messaging.calls).toContain(`edit:${message?.id}`);
     expect(await h.repair.execute({ guildId: h.ids.guild, channelId: h.ids.otherChannel, actor: h.ids.user })).toEqual({ kind: 'no_board' });
   });
@@ -481,17 +483,19 @@ describe('alerts (TIM-RQ-09)', () => {
     expect(h.alertMessages()).toHaveLength(0);
   });
 
-  it('TIM-EC-10: at the deadline the alert goes away and the board shows the timer expired, without removing it', async () => {
+  it('TIM-EC-10: at the deadline the alert goes away, and the timer stays on the board, shown as past by Discord itself', async () => {
     const { h } = await alertSetup();
     toRemaining(h, 100);
     await h.sweep.tick();
     expect(h.alertMessages()).toHaveLength(1);
-    expect(h.lines()[0]).not.toContain('⌛');
+    const edited = h.messaging.calls.filter((call) => call.startsWith("edit:")).length;
 
     h.clock.set(new Date(NOW.getTime() + 10 * HOUR_MS));
     expect(await h.sweep.tick()).toBe(1);
     expect(h.alertMessages()).toHaveLength(0);
-    expect(h.lines()[0]).toContain('⌛');
+    // Le tableau n'a pas à être modifié : `<t:…:R>` devient « il y a… » côté client.
+    expect(h.messaging.calls.filter((call) => call.startsWith("edit:")).length).toBe(edited);
+    expect(h.lines()).toHaveLength(1);
     expect(await count("SELECT count(*) AS n FROM timer_assets WHERE status = 'active'")).toBe('1');
     expect(await count('SELECT count(*) AS n FROM timer_schedule')).toBe('0');
   });

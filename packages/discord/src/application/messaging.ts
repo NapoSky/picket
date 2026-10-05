@@ -11,6 +11,8 @@ export interface EmbedView {
   readonly description?: string;
   readonly fields?: readonly EmbedFieldView[];
   readonly footer?: string;
+  /** Date ISO affichée à côté du pied de page. */
+  readonly timestamp?: string;
   readonly color?: number;
 }
 

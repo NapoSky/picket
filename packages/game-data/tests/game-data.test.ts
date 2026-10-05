@@ -4,9 +4,13 @@ import {
   findLocation,
   findRegion,
   normalizeText,
+  placeLabel,
+  placeValue,
   resolveLocation,
+  resolvePlace,
   resolveRegion,
   searchLocations,
+  searchPlaces,
   searchRegions,
 } from '@picket/game-data';
 
@@ -43,7 +47,7 @@ describe('game data catalogue', () => {
   it('orders alphabetically without the article', () => {
     const names = allRegions().map((region) => region.name);
     expect(names.indexOf('The Deadlands')).toBeLessThan(names.indexOf('Westgate'));
-    expect(names.indexOf('Callum\'s Cape')).toBeLessThan(names.indexOf('The Deadlands'));
+    expect(names.indexOf("Callum's Cape")).toBeLessThan(names.indexOf('The Deadlands'));
     expect(allRegions().map((region) => region.order)).toEqual(allRegions().map((_region, index) => index));
   });
 
@@ -88,5 +92,46 @@ describe('game data search', () => {
     expect(searchLocations('allodsbight', 'zzzz')).toEqual([]);
     expect(searchLocations('unknown', 'mercy')).toEqual([]);
     expect(searchLocations('allodsbight', '').length).toBeLessThanOrEqual(25);
+  });
+});
+
+describe('places (a location, whatever its region)', () => {
+  it('finds a location by its name first, labelled with its region', () => {
+    const [first] = searchPlaces("mercy's");
+    expect(first && placeLabel(first)).toBe("Mercy's Wail (Allod's Bight)");
+    expect(first && placeValue(first)).toBe('allodsbight.mercyswail');
+  });
+
+  it('lists the same name once per region that has it, so the label tells them apart', () => {
+    const labels = searchPlaces('brine glen').map(placeLabel);
+    expect(labels.filter((label) => label.startsWith('Brine Glen')).length).toBeGreaterThanOrEqual(2);
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  it('also finds the places of a region typed by its name, and a name followed by its region', () => {
+    expect(searchPlaces('allods bight').every((place) => place.region.key === 'allodsbight')).toBe(true);
+    const [first] = searchPlaces('mercy allods');
+    expect(first && placeValue(first)).toBe('allodsbight.mercyswail');
+  });
+
+  it('answers at most 25 places, even for an empty or very common query', () => {
+    expect(searchPlaces('')).toHaveLength(25);
+    expect(searchPlaces('the')).toHaveLength(25);
+    expect(searchPlaces('zzzzzz')).toEqual([]);
+  });
+
+  it('resolves the identifier of a suggestion, and an exact name that exists in one region only', () => {
+    expect(resolvePlace('allodsbight.mercyswail')?.location.name).toBe("Mercy's Wail");
+    expect(resolvePlace("Mercy's Wail")?.region.key).toBe('allodsbight');
+    expect(resolvePlace('mercys wail')?.region.key).toBe('allodsbight');
+  });
+
+  it('never guesses: an unknown, approximate or ambiguous place resolves to nothing', () => {
+    expect(resolvePlace('')).toBeUndefined();
+    expect(resolvePlace('nowhere')).toBeUndefined();
+    expect(resolvePlace('allodsbight.nowhere')).toBeUndefined();
+    expect(resolvePlace('atlantis.mercyswail')).toBeUndefined();
+    expect(resolvePlace('mercy')).toBeUndefined();
+    expect(resolvePlace('Brine Glen')).toBeUndefined();
   });
 });

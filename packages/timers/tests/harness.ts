@@ -145,11 +145,22 @@ export function timerHarness(database: TestDatabase, options: { features?: () =>
     return result.asset;
   }
 
-  const lines = (channel = ids.channel) =>
-    messaging
+  /** Une ligne par asset affiché, colonnes Asset, Code et Timer réunies : `nom | code | échéance`. */
+  const lines = (channel = ids.channel) => {
+    const fields = messaging
       .list(channel)
       .filter((message) => message.view.content === undefined)
-      .flatMap((message) => message.view.embeds.flatMap((embed) => (embed.fields ?? []).flatMap((field) => field.value.split('\n'))));
+      .flatMap((message) => message.view.embeds.flatMap((embed) => embed.fields ?? []));
+    const rows: string[] = [];
+    fields.forEach((field, position) => {
+      if (field.name !== 'Asset') return;
+      const names = field.value.split('\n');
+      const codes = (fields[position + 1]?.value ?? '').split('\n');
+      const timers = (fields[position + 2]?.value ?? '').split('\n');
+      names.forEach((name, row) => rows.push(`${name} | ${codes[row] ?? ''} | ${timers[row] ?? ''}`));
+    });
+    return rows;
+  };
   const boardMessages = (channel = ids.channel) => messaging.list(channel).filter((message) => message.view.content === undefined);
   const alertMessages = (channel = ids.channel) => messaging.list(channel).filter((message) => message.view.content !== undefined);
 

@@ -13,7 +13,10 @@ export function boardTexts(t: T): BoardTexts {
   return {
     title: t('timers.board.title'),
     empty: t('timers.board.empty'),
-    footer: (page, total) => t('timers.board.footer', { page, total }),
+    updated: t('timers.board.updated'),
+    assetColumn: t('timers.board.asset'),
+    codeColumn: t('timers.board.code'),
+    timerColumn: t('timers.board.timer'),
   };
 }
 

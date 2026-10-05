@@ -25,13 +25,8 @@
     },
     "timers": {
       "description": "Countdown board for Foxhole timers",
-      "groups": {
-        "board": "Manage the timer board of a channel"
-      },
-      "board": {
-        "create": {
-          "description": "Create the timer board in this channel"
-        }
+      "create": {
+        "description": "Create the timer board in this channel"
       },
       "add": {
         "description": "Add a timer to the board of this channel",
@@ -39,11 +34,8 @@
           "type": {
             "description": "What the timer tracks"
           },
-          "region": {
-            "description": "Region (hex) of the timer"
-          },
-          "location": {
-            "description": "Town or location in that region"
+          "place": {
+            "description": "Town or location (type a name; the region is shown)"
           },
           "owner": {
             "description": "Who looks after it (you by default)"
@@ -105,6 +97,12 @@
           },
           "resetOnNewWar": {
             "description": "Empty the board when a new war starts"
+          },
+          "regionEmoji": {
+            "description": "Icon before the region in the board (an emoji, or default)"
+          },
+          "locationEmoji": {
+            "description": "Icon before the town in the board (an emoji, or default)"
           }
         }
       }
@@ -239,9 +237,12 @@
   },
   "timers": {
     "board": {
-      "title": "⏱️ Timers",
+      "title": "⏱️ Timers and refreshes",
       "empty": "No timer yet. Add one with /timers add.",
-      "footer": "⏱️ {{page}}/{{total}}"
+      "updated": "🕓 Last update",
+      "asset": "Asset",
+      "code": "Code",
+      "timer": "Timer"
     },
     "types": {
       "stockpile": "Stockpile",
@@ -276,7 +277,7 @@
     "nothingToClean": "Nothing to clean up: no timer is struck.",
     "repaired": "The board messages were reposted.",
     "errors": {
-      "noBoard": "This channel has no timer board. An officer can create one with /timers board create.",
+      "noBoard": "This channel has no timer board. An officer can create one with /timers create.",
       "boardExists": "This channel already has a timer board.",
       "boardQuota": "This server already has {{max}} timer boards.",
       "missingPermissions": "I cannot post here. Missing permissions in this channel: {{missing}}.",
@@ -286,9 +287,10 @@
       "notFound": "This timer no longer exists.",
       "alreadyStruck": "This timer is already struck.",
       "forbidden": "On this board only the owner of a timer and officers can change it.",
-      "boardDisabled": "The channel of this board no longer exists, so the board is disabled. Create a new one with /timers board create.",
+      "boardDisabled": "The channel of this board no longer exists, so the board is disabled. Create a new one with /timers create.",
       "syncPending": "Saved, but the board message could not be updated yet ({{reason}}). I will retry on my own.",
       "unknownType": "Unknown timer type.",
+      "unknownPlace": "Unknown place. Start typing the name of the town and pick one of the suggestions.",
       "unknownRegion": "Unknown region. Pick one of the suggestions.",
       "unknownLocation": "Unknown location. Pick one of the suggestions for that region.",
       "nameEmpty": "The name is empty.",
@@ -300,7 +302,7 @@
       "durationTooLong": "The duration is too long (maximum {{max}})."
     },
     "settings": {
-      "show": "Alerts: {{alerts}}\nAlert thresholds: {{thresholds}}\nNotified roles: {{roles}}\nAlert mode: {{mode}}\nIdentical timers: {{duplicates}}\nStrike and refresh: {{changes}}\nActive timers: {{active}}/{{max}}\nAuto-purge: {{purge}}\nEmpty on a new war: {{reset}}\nBoard messages: {{sync}}",
+      "show": "Alerts: {{alerts}}\nAlert thresholds: {{thresholds}}\nNotified roles: {{roles}}\nAlert mode: {{mode}}\nIdentical timers: {{duplicates}}\nStrike and refresh: {{changes}}\nActive timers: {{active}}/{{max}}\nAuto-purge: {{purge}}\nEmpty on a new war: {{reset}}\nHeader icons: {{icons}}\nBoard messages: {{sync}}",
       "on": "on",
       "off": "off",
       "none": "none",
@@ -322,7 +324,8 @@
       "roleNeeded": "Give a role to add or remove.",
       "invalidMaxActive": "The limit must be between 1 and {{max}}.",
       "maxBelowCurrent": "The board already holds more active timers than that limit.",
-      "invalidPurge": "Auto-purge must be between 0 (never) and {{max}} hours."
+      "invalidPurge": "Auto-purge must be between 0 (never) and {{max}} hours.",
+      "invalidEmoji": "Give a single emoji, or the word default to restore the default icon. A custom emoji looks like <:name:123456789012345678>."
     }
   },
   "status": {

@@ -7,93 +7,165 @@ import {
   renderBoard,
   strikeAsset,
   type BoardTexts,
+  type RenderedPage,
   type TimerAsset,
 } from '@picket/timers';
 import { HOUR_MS, NOW, OTHER, OWNER, makeAsset, unix } from './fixtures';
 
 const texts: BoardTexts = {
-  title: '⏱️ Timers',
+  title: '⏱️ Gestion des timers et refreshs',
   empty: 'No timer yet.',
-  footer: (page, total) => `⏱️ ${page}/${total}`,
+  updated: '🕓 Dernière mise à jour',
+  assetColumn: 'Asset',
+  codeColumn: 'Code',
+  timerColumn: 'Timer',
 };
-const render = (assets: readonly TimerAsset[], now = NOW) => renderBoard({ assets, texts, now });
+const render = (assets: readonly TimerAsset[], now = NOW, icons?: { region: string; location: string }) =>
+  renderBoard({ assets, texts, now, ...(icons ? { icons } : {}) });
 const later = (hours: number) => new Date(NOW.getTime() + hours * HOUR_MS);
+const moment = (hours: number) => `<t:${unix(later(hours))}:R>`;
 
-describe('renderBoard', () => {
+const fieldsOf = (page: RenderedPage | undefined) => page?.view.embeds.flatMap((embed) => embed.fields ?? []) ?? [];
+const column = (page: RenderedPage | undefined, name: string) => fieldsOf(page).filter((field) => field.name === name).flatMap((field) => field.value.split('\n'));
+const THIN = '\u2009';
+const ZERO = '\u200b';
+
+describe('renderBoard: the layout of the original bot (Asset, Code and Timer columns under a place header)', () => {
   it('TIM-EC-21: an empty board is one message with no button, never zero pages', () => {
     const pages = render([]);
     expect(pages).toHaveLength(1);
-    expect(pages[0]?.view).toEqual({ embeds: [{ description: 'No timer yet.', color: 0x2b5fb3, title: '⏱️ Timers' }], buttons: [] });
+    expect(pages[0]?.view.embeds).toEqual([
+      { description: 'No timer yet.', color: 0x2b5fb3, title: texts.title, footer: texts.updated, timestamp: NOW.toISOString() },
+    ]);
+    expect(pages[0]?.view.buttons).toEqual([]);
     expect(pages[0]?.activeAssetIds).toEqual([]);
   });
 
-  it('writes one field per location and one line per asset, with the letter of its button', () => {
+  it('writes a header per place, then the three columns side by side', () => {
     const first = makeAsset({ name: 'Depot', code: '123456', ownerId: OWNER });
     const second = makeAsset({ name: 'Garage', type: 'facility', code: null, ownerId: OTHER });
-    const pages = render([second, first]);
-    expect(pages).toHaveLength(1);
-    const [embed] = pages[0]?.view.embeds ?? [];
-    expect(embed).toMatchObject({ title: '⏱️ Timers', color: 0x2b5fb3 });
-    expect(embed?.fields).toEqual([
-      {
-        name: "🏞️ Allod's Bight・🏙️ Mercy's Wail",
-        value: [
-          `🇦・📦 **Depot** \`123456\`・<t:${unix(later(50))}:R>・<@${OWNER}>`,
-          `🇧・🏭 **Garage**・<t:${unix(later(50))}:R>・<@${OTHER}>`,
-        ].join('\n'),
-      },
+    const [page] = render([second, first]);
+    expect(page?.view.embeds).toHaveLength(1);
+    expect(page?.view.embeds[0]).toMatchObject({ title: texts.title, color: 0x2b5fb3, footer: texts.updated, timestamp: NOW.toISOString() });
+    expect(fieldsOf(page)).toEqual([
+      { name: "<:region:1556691725001687090> Allod's Bight", value: "<:Storage:1556691752050499734> **Mercy's Wail**" },
+      { name: 'Asset', value: [`📦${THIN}🇦・Depot`, `🏭${THIN}🇧・Garage`].join('\n'), inline: true },
+      { name: 'Code', value: ['123456', ZERO].join('\n'), inline: true },
+      { name: 'Timer', value: [`${moment(50)}・<@${OWNER}>`, `${moment(50)}・<@${OTHER}>`].join('\n'), inline: true },
     ]);
-    expect(pages[0]?.view.buttons).toEqual([
+    expect(page?.view.buttons).toEqual([
       { customId: refreshCustomId(first.id), emoji: '🇦' },
       { customId: refreshCustomId(second.id), emoji: '🇧' },
     ]);
-    expect(pages[0]?.activeAssetIds).toEqual([first.id, second.id]);
+    expect(page?.activeAssetIds).toEqual([first.id, second.id]);
   });
 
-  it('starts a new field for each place, and shows an age as a past moment', () => {
-    const field = makeAsset({ type: 'field', direction: 'up', code: null, name: 'Iron', locationKey: 'rumhold' });
-    const depot = makeAsset({ name: 'Depot' });
-    const fields = render([field, depot])[0]?.view.embeds[0]?.fields ?? [];
-    expect(fields.map((entry) => entry.name)).toEqual(["🏞️ Allod's Bight・🏙️ Mercy's Wail", "🏞️ Allod's Bight・🏙️ Rumhold"]);
-    // Les lettres se suivent sur toute la page, d'un lieu au suivant.
-    expect(fields[0]?.value.startsWith('🇦・📦')).toBe(true);
-    expect(fields[1]?.value).toBe(`🇧・⛏️ **Iron**・<t:${unix(NOW)}:R>・<@${OWNER}>`);
+  it('writes the region only when it changes, and separates the places with an empty line, except after the last', () => {
+    const rumhold = makeAsset({ name: 'A', locationKey: 'rumhold' });
+    const mercy = makeAsset({ name: 'B', locationKey: 'mercyswail' });
+    const deadlands = makeAsset({ name: 'C', regionKey: 'thedeadlands', locationKey: 'abandonedward' });
+    const fields = fieldsOf(render([deadlands, rumhold, mercy])[0]);
+    expect(fields.filter((field) => field.inline !== true).map((field) => [field.name, field.value])).toEqual([
+      ["<:region:1556691725001687090> Allod's Bight", "<:Storage:1556691752050499734> **Mercy's Wail**"],
+      [ZERO, '<:Storage:1556691752050499734> **Rumhold**'],
+      ['<:region:1556691725001687090> The Deadlands', '<:Storage:1556691752050499734> **Abandoned Ward**'],
+    ]);
+    const timers = fields.filter((field) => field.name === 'Timer').map((field) => field.value);
+    expect(timers[0]?.endsWith(`\n${ZERO}`)).toBe(true);
+    expect(timers[1]?.endsWith(`\n${ZERO}`)).toBe(true);
+    expect(timers[2]?.endsWith(ZERO)).toBe(false);
   });
 
-  it('shows a struck asset crossed out, without a button, and does not count it for the letters', () => {
+  it('puts the letters one after the other over the whole message, from one place to the next', () => {
+    const a = makeAsset({ name: 'A' });
+    const b = makeAsset({ name: 'B', locationKey: 'rumhold' });
+    const [page] = render([b, a]);
+    expect(column(page, 'Asset')).toEqual([`📦${THIN}🇦・A`, `📦${THIN}🇧・B`]);
+  });
+
+  it('shows an age without owner (a field has nobody to chase), and the moment it started', () => {
+    const field = makeAsset({ type: 'field', direction: 'up', code: null, name: 'Iron' });
+    const [page] = render([field]);
+    expect(column(page, 'Timer')).toEqual([moment(0)]);
+    expect(column(page, 'Asset')).toEqual([`⛏️${THIN}🇦・Iron`]);
+  });
+
+  it('shows a struck asset crossed out with a cross instead of its letter, and does not count it for the letters', () => {
     const struck = strikeAsset(makeAsset({ name: 'Old', type: 'facility', code: null }), later(1));
     const live = makeAsset({ name: 'Live', type: 'tank', code: null });
     const [page] = render([struck, live]);
-    const value = page?.view.embeds[0]?.fields?.[0]?.value ?? '';
-    expect(value.split('\n')).toEqual([
-      `~~❌・🏭 Old・<t:${unix(later(50))}:R>~~・<@${OWNER}>`,
-      `🇦・⚙️ **Live**・<t:${unix(later(50))}:R>・<@${OWNER}>`,
-    ]);
+    expect(column(page, 'Asset')).toEqual([`~~🏭${THIN}❌・Old~~`, `⚙️${THIN}🇦・Live`]);
+    expect(column(page, 'Code').slice(0, 2)).toEqual([`~~${ZERO}~~`, ZERO]);
+    expect(column(page, 'Timer')).toEqual([`~~${moment(50)}~~`, `${moment(50)}・<@${OWNER}>`]);
     expect(page?.view.buttons).toHaveLength(1);
     expect(page?.activeAssetIds).toEqual([live.id]);
   });
 
-  it('marks an expired countdown, which changes the page content and so its hash', () => {
-    const asset = makeAsset();
-    const before = render([asset], later(49))[0];
-    const after = render([asset], later(51))[0];
-    expect(before?.view.embeds[0]?.fields?.[0]?.value).not.toContain('⌛');
-    expect(after?.view.embeds[0]?.fields?.[0]?.value).toContain(`⌛ <t:${unix(later(50))}:R>`);
-    expect(after?.hash).not.toBe(before?.hash);
+  it('shows the code of a struck asset crossed out too', () => {
+    const [page] = render([strikeAsset(makeAsset({ code: '654321' }), later(1))]);
+    expect(column(page, 'Code')).toEqual(['~~654321~~']);
   });
 
-  it('is deterministic: same state, same messages, same hashes, whatever the input order', () => {
-    const assets = Array.from({ length: 12 }, (_value, index) => makeAsset({ name: `T${index}`, locationKey: index % 2 === 0 ? 'mercyswail' : 'rumhold' }));
+  it('uses the icons the board chose, for example the custom emojis of a regiment', () => {
+    const icons = { region: '<:forge_region:1426712511796871211>', location: '<:Storage:1173161948569944064>' };
+    const fields = fieldsOf(render([makeAsset()], NOW, icons)[0]);
+    expect(fields[0]).toEqual({ name: "<:forge_region:1426712511796871211> Allod's Bight", value: "<:Storage:1173161948569944064> **Mercy's Wail**" });
+  });
+
+  it('does not change at the deadline: the countdown shows itself as past, with no re-render needed', () => {
+    const asset = makeAsset();
+    expect(render([asset], later(49))[0]?.hash).toBe(render([asset], later(51))[0]?.hash);
+  });
+});
+
+describe('renderBoard: messages, footer and hash', () => {
+  const crowd = (count: number) => Array.from({ length: count }, (_value, index) => makeAsset({ name: `T${String(index).padStart(2, '0')}`, code: String(100_000 + index) }));
+
+  it('puts 25 active assets on a message at most, and the title on each message', () => {
+    const pages = render(crowd(26));
+    expect(pages.map((page) => page.view.buttons.length)).toEqual([25, 1]);
+    expect(pages.map((page) => page.view.embeds[0]?.title)).toEqual([texts.title, texts.title]);
+    expect(pages[1]?.view.buttons[0]?.emoji).toBe(indicatorEmoji(0));
+  });
+
+  it('shows the last update only under the first message, and no page counter', () => {
+    const pages = render(crowd(26));
+    expect(pages[0]?.view.embeds[0]).toMatchObject({ footer: texts.updated, timestamp: NOW.toISOString() });
+    expect(pages[1]?.view.embeds.every((embed) => embed.footer === undefined && embed.timestamp === undefined)).toBe(true);
+    expect(JSON.stringify(pages)).not.toMatch(/1\/2/);
+  });
+
+  it('puts the title on the first embed of a message only, 24 fields at most per embed', () => {
+    const assets = allRegions().slice(0, 4).flatMap((region) => region.locations.slice(0, 2).map((location) => makeAsset({ regionKey: region.key, locationKey: location.key })));
+    const [page] = render(assets);
+    const embeds = page?.view.embeds ?? [];
+    expect(embeds.length).toBeGreaterThan(1);
+    expect(embeds[0]?.title).toBe(texts.title);
+    expect(embeds.slice(1).every((embed) => embed.title === undefined)).toBe(true);
+    expect(embeds.every((embed) => (embed.fields?.length ?? 0) <= 24)).toBe(true);
+    // Un lieu n'est jamais coupé entre deux embeds : chacun commence par un en-tête.
+    expect(embeds.map((embed) => embed.fields?.[0]?.inline)).toEqual(embeds.map(() => undefined));
+  });
+
+  it('is deterministic, and its hash ignores the date of the last update (no edit for a mere clock tick)', () => {
+    const assets = crowd(12).map((asset, index) => ({ ...asset, locationKey: index % 2 === 0 ? 'mercyswail' : 'rumhold' }));
     const a = render(assets);
     const b = render([...assets].reverse());
-    expect(b).toEqual(a);
-    expect(a.map((page) => page.hash)).toEqual(b.map((page) => page.hash));
+    expect(b.map((page) => page.hash)).toEqual(a.map((page) => page.hash));
+    const later1 = render(assets, later(1));
+    expect(later1.map((page) => page.hash)).toEqual(a.map((page) => page.hash));
+    expect(later1[0]?.view.embeds[0]?.timestamp).toBe(later(1).toISOString());
     expect(render(assets.slice(1))[0]?.hash).not.toBe(a[0]?.hash);
+  });
+
+  it('changes the hash when an icon changes', () => {
+    const asset = makeAsset();
+    expect(render([asset], NOW, { region: '🌍', location: '📍' })[0]?.hash).not.toBe(render([asset])[0]?.hash);
   });
 
   it('TIM-EC-20: neutralises Markdown, links and mentions in a name', () => {
     const asset = makeAsset({ name: '**b** _i_ [x](y) <@1> @everyone' });
-    const line = render([asset])[0]?.view.embeds[0]?.fields?.[0]?.value ?? '';
+    const line = column(render([asset])[0], 'Asset')[0] ?? '';
     expect(line).not.toContain('<@1>');
     expect(line).not.toContain('@everyone');
     expect(line).toContain('\\*\\*b\\*\\*');
@@ -101,20 +173,19 @@ describe('renderBoard', () => {
     expect(escapeMarkdown('a|b ~c~ `d` #e >f')).toBe('a\\|b \\~c\\~ \\`d\\` \\#e \\>f');
   });
 
-  it('puts 25 active assets on a page at most, with a footer once there is more than one page', () => {
-    const assets = Array.from({ length: 26 }, (_value, index) => makeAsset({ name: `T${String(index).padStart(2, '0')}` }));
-    const pages = render(assets);
-    expect(pages.map((page) => page.view.buttons.length)).toEqual([25, 1]);
-    expect(pages[0]?.view.embeds.at(-1)?.footer).toBe('⏱️ 1/2');
-    expect(pages[1]?.view.embeds.at(-1)?.footer).toBe('⏱️ 2/2');
-    expect(render(assets.slice(0, 25))[0]?.view.embeds[0]).not.toHaveProperty('footer');
-    expect(pages[1]?.view.buttons[0]?.emoji).toBe(indicatorEmoji(0));
+  it('keeps a struck asset beside its neighbours: it costs no button and does not force a page', () => {
+    const live = crowd(25);
+    expect(render([...live, strikeAsset(makeAsset({ name: 'A struck' }), later(1))])).toHaveLength(1);
   });
 
-  it('keeps a struck asset next to its neighbours: it costs no button and does not force a page', () => {
-    const live = Array.from({ length: 25 }, (_value, index) => makeAsset({ name: `L${String(index).padStart(2, '0')}` }));
-    const struck = strikeAsset(makeAsset({ name: 'A struck' }), later(1));
-    expect(render([...live, struck])).toHaveLength(1);
+  it('splits a place whose columns would pass 1 024 characters, with no new header', () => {
+    const struck = Array.from({ length: 90 }, (_value, index) => strikeAsset(makeAsset({ name: `S${index}`, code: null, type: 'facility' }), later(1)));
+    const pages = render(struck);
+    for (const page of pages) for (const field of fieldsOf(page)) expect(field.value.length).toBeLessThanOrEqual(MAX_FIELD_VALUE);
+    expect(pages.flatMap((page) => column(page, 'Asset'))).toHaveLength(90);
+    const headers = pages.flatMap((page) => fieldsOf(page).filter((field) => field.inline !== true));
+    expect(headers.every((field) => field.value === "<:Storage:1556691752050499734> **Mercy's Wail**")).toBe(true);
+    expect(headers.length).toBe(pages.length);
   });
 });
 
@@ -158,7 +229,7 @@ describe('renderBoard properties (TIM-RQ-19)', () => {
     [5, 60],
     [6, 150],
     [7, 400],
-  ])('seed %i, %i assets: every page fits what Discord accepts, and every asset is shown exactly once', (seed, count) => {
+  ])('seed %i, %i assets: every message fits what Discord accepts, and every asset is shown exactly once', (seed, count) => {
     const assets = crowd(seed, count);
     const pages = render(assets);
     expect(pages.length).toBeGreaterThanOrEqual(1);
@@ -184,12 +255,10 @@ describe('renderBoard properties (TIM-RQ-19)', () => {
       for (const id of page.activeAssetIds) activeIds.add(id);
     }
     expect([...activeIds].sort()).toEqual(assets.filter((asset) => asset.status === 'active').map((asset) => asset.id).sort());
-
-    const lines = pages.flatMap((page) => page.view.embeds.flatMap((embed) => (embed.fields ?? []).flatMap((field) => field.value.split('\n'))));
-    expect(lines).toHaveLength(assets.length);
+    expect(pages.flatMap((page) => column(page, 'Asset'))).toHaveLength(assets.length);
   });
 
-  it('a page with long names in many places still fits the 6 000 characters', () => {
+  it('a message with long names in many places still fits the 6 000 characters', () => {
     const assets = allRegions()
       .slice(0, 12)
       .flatMap((region) => region.locations.slice(0, 3).map((location) => makeAsset({ regionKey: region.key, locationKey: location.key, name: '*'.repeat(15) })));

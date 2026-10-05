@@ -27,6 +27,12 @@ export function parseSettingsOptions(options: Readonly<Record<string, OptionValu
   const duplicates = options['duplicates'];
   if (duplicates === 'warn' || duplicates === 'refuse') patch.duplicates = duplicates;
 
+  // `default` rend l'icône par défaut ; toute autre valeur doit être un emoji, ce que le domaine contrôle.
+  for (const [option, key] of [['region-emoji', 'regionEmoji'], ['location-emoji', 'locationEmoji']] as const) {
+    const raw = options[option];
+    if (typeof raw === 'string') patch[key] = raw.trim().toLowerCase() === 'default' ? null : raw.trim();
+  }
+
   const thresholds = options['thresholds'];
   if (typeof thresholds === 'string') {
     const parsed = parseThresholds(thresholds);

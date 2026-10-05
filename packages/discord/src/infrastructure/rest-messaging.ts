@@ -100,6 +100,7 @@ export function toRestMessage(view: MessageView): RESTPostAPIChannelMessageJSONB
         ? { fields: embed.fields.map((field) => ({ name: field.name, value: field.value, inline: field.inline ?? false })) }
         : {}),
       ...(embed.footer !== undefined ? { footer: { text: embed.footer } } : {}),
+      ...(embed.timestamp !== undefined ? { timestamp: embed.timestamp } : {}),
       ...(embed.color !== undefined ? { color: embed.color } : {}),
     })),
     components,

@@ -43,3 +43,55 @@ export function searchLocations(regionKey: string, query: string, limit: number 
   const region = findRegion(regionKey);
   return region === undefined ? [] : rank(region.locations, query, limit);
 }
+
+export interface GamePlace {
+  readonly region: GameRegion;
+  readonly location: GameLocation;
+}
+
+/** Un nom de lieu existe parfois dans plusieurs régions : le libellé les distingue. */
+export const placeLabel = (place: GamePlace): string => `${place.location.name} (${place.region.name})`;
+
+/** Identifiant d'un lieu dans une option de commande : `<région>.<lieu>`. */
+export const placeValue = (place: GamePlace): string => `${place.region.key}.${place.location.key}`;
+
+/**
+ * Recherche d'un lieu sans connaître sa région : le nom du lieu compte d'abord, puis celui de la région (qui propose
+ * alors tous ses lieux), puis les deux ensemble (« mercy allods »).
+ */
+export function searchPlaces(query: string, limit: number = DEFAULT_SEARCH_LIMIT): GamePlace[] {
+  const normalized = normalizeText(query);
+  const scored: { place: GamePlace; points: number }[] = [];
+  for (const region of allRegions()) {
+    for (const location of region.locations) {
+      const points = Math.max(
+        score(normalized, location.name),
+        score(normalized, `${location.name} ${region.name}`) * 0.9,
+        score(normalized, region.name) * 0.5,
+      );
+      if (points > 0) scored.push({ place: { region, location }, points });
+    }
+  }
+  return scored
+    .sort((a, b) => b.points - a.points || a.place.region.order - b.place.region.order || a.place.location.order - b.place.location.order)
+    .slice(0, limit)
+    .map((entry) => entry.place);
+}
+
+/**
+ * Accepte l'identifiant `<région>.<lieu>` d'une suggestion, ou un nom de lieu exact s'il n'existe que dans une région.
+ * Jamais de correction approximative, jamais de choix au hasard entre deux régions.
+ */
+export function resolvePlace(input: string): GamePlace | undefined {
+  const trimmed = input.trim();
+  const dot = trimmed.indexOf('.');
+  if (dot > 0) {
+    const region = findRegion(trimmed.slice(0, dot));
+    const location = region?.locations.find((candidate) => candidate.key === trimmed.slice(dot + 1));
+    return region !== undefined && location !== undefined ? { region, location } : undefined;
+  }
+  const key = normalizeText(trimmed);
+  if (key === '') return undefined;
+  const matches = allRegions().flatMap((region) => region.locations.filter((location) => location.key === key).map((location) => ({ region, location })));
+  return matches.length === 1 ? matches[0] : undefined;
+}

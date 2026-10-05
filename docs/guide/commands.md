@@ -8,8 +8,8 @@ Commands start with `/picket`, `/todolist` or `/timers`, work only inside a serv
 | `/picket permissions show` | member | Shows who holds the officer and member levels, your own level, and warnings about the configuration. |
 | `/picket permissions set` | administrator | Adds or removes a role from a level. |
 | `/todolist create` | member | Opens a form and posts a todo list in the channel. See [Todo lists](./todolists). |
-| `/timers board create` | officer | Creates the timer board of the channel. See [Timers](./timers). |
-| `/timers add` | member | Adds a timer to the board: type, region and location (suggestions as you type), then a form. |
+| `/timers create` | officer | Creates the timer board of the channel. See [Timers](./timers). |
+| `/timers add` | member | Adds a timer to the board: type and place (suggestions as you type), then a form. |
 | `/timers strike` | member | Strikes a timer off the board. |
 | `/timers cleanup` | officer | Removes the struck timers from the board. |
 | `/timers repair` | officer | Reposts the board messages from the saved timers. |

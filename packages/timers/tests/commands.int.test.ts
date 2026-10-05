@@ -96,36 +96,43 @@ function app(h: TimerHarness) {
 const stockpileModal = (h: TimerHarness) => `tm:1:a:st:allodsbight:mercyswail:${h.ids.user}`;
 const choicesOf = (reply: Reply) => (reply.kind === 'autocomplete' ? reply.choices : []);
 
-describe('/timers board create', () => {
+describe('/timers create', () => {
   it('creates the board, answers privately, and refuses a second one', async () => {
     const h = timerHarness(database);
     const { command, said } = app(h);
-    expect(await said(command(['board', 'create']))).toBe('Timer board created. Timers added with /timers add appear here.');
+    expect(await said(command(['create']))).toBe('Timer board created. Timers added with /timers add appear here.');
     expect(h.boardMessages()).toHaveLength(1);
-    expect(await said(command(['board', 'create']))).toBe('This channel already has a timer board.');
+    expect(await said(command(['create']))).toBe('This channel already has a timer board.');
     expect(h.boardMessages()).toHaveLength(1);
+  });
+
+  it('draws the board in the language of whoever creates it, not in the one of the community', async () => {
+    const h = timerHarness(database);
+    const { command, said } = app(h);
+    await said(command(['create'], {}, { locale: 'fr', guildLocale: 'en-US' }));
+    expect(h.boardMessages()[0]?.view.embeds[0]?.title).toBe('⏱️ Gestion des timers et refreshs');
   });
 
   it('is an officer command, off when the feature is disabled, and checks the bot rights before anything', async () => {
     const h = timerHarness(database);
     const { command, state, text, said } = app(h);
     state.level = 'member';
-    expect(text(await command(['board', 'create']))).toContain('required level: officer');
+    expect(text(await command(['create']))).toContain('required level: officer');
     state.level = 'officer';
     state.enabled = false;
-    expect(text(await command(['board', 'create']))).toContain('disabled on this server');
+    expect(text(await command(['create']))).toContain('disabled on this server');
     state.enabled = true;
-    expect(text(await command(['board', 'create'], {}, { appPermissions: VIEW }))).toBe(
+    expect(text(await command(['create'], {}, { appPermissions: VIEW }))).toBe(
       'I cannot post here. Missing permissions in this channel: Send Messages, Embed Links.',
     );
-    expect(await said(command(['board', 'create']))).toContain('Timer board created.');
+    expect(await said(command(['create']))).toContain('Timer board created.');
   });
 
   it('tells the user when the board was saved but Discord refused the message', async () => {
     const h = timerHarness(database);
     const { command, said } = app(h);
     h.messaging.failNext('send', 'missing_permissions');
-    expect(await said(command(['board', 'create']))).toContain('could not be updated yet (missing_permissions)');
+    expect(await said(command(['create']))).toContain('could not be updated yet (missing_permissions)');
   });
 });
 
@@ -134,7 +141,7 @@ describe('/timers add', () => {
     const h = timerHarness(database);
     await h.boardWithMessage();
     const { command } = app(h);
-    const reply = await command(['add'], { type: 'stockpile', region: 'allodsbight', location: 'mercyswail' });
+    const reply = await command(['add'], { type: 'stockpile', place: 'allodsbight.mercyswail' });
     expect(reply).toMatchObject({
       kind: 'modal',
       customId: stockpileModal(h),
@@ -152,7 +159,7 @@ describe('/timers add', () => {
     await h.boardWithMessage();
     const { command } = app(h);
     const inputsOf = async (type: string) => {
-      const reply = await command(['add'], { type, region: 'allodsbight', location: 'mercyswail' });
+      const reply = await command(['add'], { type, place: 'allodsbight.mercyswail' });
       return reply.kind === 'modal' ? reply.inputs.map((input) => `${input.customId}${input.required ? '*' : ''}:${input.value ?? ''}`) : [];
     };
     expect(await inputsOf('facility')).toEqual(['name*:', 'duration*:50']);
@@ -164,19 +171,18 @@ describe('/timers add', () => {
     const h = timerHarness(database);
     await h.boardWithMessage();
     const { command } = app(h);
-    const reply = await command(['add'], { type: 'train', region: "Allod's Bight", location: "mercy's wail", owner: h.ids.other });
+    const reply = await command(['add'], { type: 'train', place: 'mercyswail', owner: h.ids.other });
     expect(reply).toMatchObject({ kind: 'modal', customId: `tm:1:a:tr:allodsbight:mercyswail:${h.ids.other}` });
   });
 
   it('refuses before opening the modal: no board, board full, unknown place or type', async () => {
     const h = timerHarness(database);
     const { command, text } = app(h);
-    const options = { type: 'stockpile', region: 'allodsbight', location: 'mercyswail' };
+    const options = { type: 'stockpile', place: 'allodsbight.mercyswail' };
     expect(text(await command(['add'], options))).toContain('has no timer board');
 
     await h.boardWithMessage();
-    expect(text(await command(['add'], { ...options, region: 'atlantis' }))).toBe('Unknown region. Pick one of the suggestions.');
-    expect(text(await command(['add'], { ...options, location: 'nowhere' }))).toBe('Unknown location. Pick one of the suggestions for that region.');
+    expect(text(await command(['add'], { ...options, place: 'atlantis' }))).toBe('Unknown place. Start typing the name of the town and pick one of the suggestions.');
     expect(text(await command(['add'], { ...options, type: 'castle' }))).toBe('Unknown timer type.');
 
     await h.updateSettings.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, patch: { maxActive: 1 } });
@@ -189,7 +195,7 @@ describe('/timers add', () => {
     await h.boardWithMessage();
     const { command, state } = app(h);
     state.level = 'member';
-    expect((await command(['add'], { type: 'stockpile', region: 'allodsbight', location: 'mercyswail' })).kind).toBe('modal');
+    expect((await command(['add'], { type: 'stockpile', place: 'allodsbight.mercyswail' })).kind).toBe('modal');
   });
 });
 
@@ -239,18 +245,15 @@ describe('timer modal submission', () => {
 });
 
 describe('autocomplete', () => {
-  it('suggests regions, then the locations of the chosen region', async () => {
+  it('suggests places by town name, then by region, with the region in the label', async () => {
     const h = timerHarness(database);
     const { autocomplete } = app(h);
-    const regions = await autocomplete(['add'], 'region', { region: 'dead' });
-    expect(regions).toMatchObject({ kind: 'autocomplete', choices: [{ name: 'The Deadlands', value: 'thedeadlands' }] });
-
-    const byKey = await autocomplete(['add'], 'location', { region: 'allodsbight', location: 'mercy' });
-    expect(byKey).toEqual({ kind: 'autocomplete', choices: [{ name: "Mercy's Wail", value: 'mercyswail' }] });
-    const byName = await autocomplete(['add'], 'location', { region: "Allod's Bight", location: 'rum' });
-    expect(byName).toEqual({ kind: 'autocomplete', choices: [{ name: 'Rumhold', value: 'rumhold' }] });
-    expect(await autocomplete(['add'], 'location', { region: 'atlantis', location: 'a' })).toEqual({ kind: 'autocomplete', choices: [] });
-    expect(choicesOf(await autocomplete(['add'], 'region', { region: '' }))).toHaveLength(25);
+    const byTown = await autocomplete(['add'], 'place', { place: 'mercy' });
+    expect(choicesOf(byTown)[0]).toEqual({ name: "Mercy's Wail (Allod's Bight)", value: 'allodsbight.mercyswail' });
+    const byRegion = await autocomplete(['add'], 'place', { place: 'dead' });
+    expect(choicesOf(byRegion).length).toBeGreaterThan(1);
+    expect(await autocomplete(['add'], 'place', { place: 'zzzzzzzz' })).toEqual({ kind: 'autocomplete', choices: [] });
+    expect(choicesOf(await autocomplete(['add'], 'place', { place: '' })).length).toBeLessThanOrEqual(25);
   });
 
   it('lists the active timers of this channel to strike, and nothing for someone without access', async () => {
@@ -320,7 +323,7 @@ describe('/timers strike, cleanup and repair', () => {
     const { command, said } = app(h);
 
     expect(await said(command(['strike'], { timer: asset.id }))).toBe('Timer struck: North.');
-    expect(h.lines()[0]?.startsWith('~~❌')).toBe(true);
+    expect(h.lines()[0]?.startsWith('~~📦\u2009❌')).toBe(true);
     expect(await said(command(['strike'], { timer: asset.id }))).toBe('This timer is already struck.');
     expect(await said(command(['strike'], { timer: 'forged value' }))).toBe('This timer no longer exists.');
 

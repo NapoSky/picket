@@ -22,7 +22,7 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 | Area | State |
 | --- | --- |
 | **Todo lists** | `/todolist create` posts an interactive list; one button per item; quantities `(x3)`, categories, pagination beyond 25 items; the list lives in the Discord message, nothing is stored in the database |
-| **Timers** | A countdown board per channel for stockpiles, facilities, fields, ships, tanks and trains; region and location suggestions as you type; one button per timer to refresh it, however many people click at once; silent expiry alerts with configurable thresholds and roles; strike, clean up, repair; the state lives in the database, so a deleted message is simply reposted |
+| **Timers** | A countdown board per channel for stockpiles, facilities, fields, ships, tanks and trains; place suggestions as you type; one button per timer to refresh it, however many people click at once; silent expiry alerts with configurable thresholds and roles; strike, clean up, repair; the state lives in the database, so a deleted message is simply reposted |
 | **Permissions** | Three levels (`member`, `officer`, `admin`), roles configurable per server, audit log of every change |
 | **Server settings** | Language, time zone, audit channel, per-feature switches |
 | **Multi-server** | Every server is isolated at the database level (row-level security) |
@@ -36,8 +36,8 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 | Command | Level | What it does |
 | --- | --- | --- |
 | `/todolist create` | member | Opens a form and posts a todo list in the channel |
-| `/timers board create` | officer | Creates the timer board of the channel |
-| `/timers add` / `strike` | member | Adds a timer (type, region, location, then a form) or strikes one |
+| `/timers create` | officer | Creates the timer board of the channel |
+| `/timers add` / `strike` | member | Adds a timer (type, place, then a form) or strikes one |
 | `/timers cleanup` / `repair` / `settings` | officer | Removes struck timers, reposts the board, shows or changes its settings |
 | `/picket status` | member | Shows the server configuration |
 | `/picket permissions show` / `set` | member / admin | Shows or changes who can use PICKET |

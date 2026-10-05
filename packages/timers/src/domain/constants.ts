@@ -16,3 +16,7 @@ export const MAX_ALERT_ROLES = 5;
 export const MAX_PURGE_HOURS = 30 * 24;
 
 export const BOARD_COLOR = 0x2b5fb3;
+
+/** Icônes d'en-tête de lieu quand le board n'en choisit pas (emojis de la communauté PICKET). */
+export const DEFAULT_REGION_EMOJI = '<:region:1556691725001687090>';
+export const DEFAULT_LOCATION_EMOJI = '<:Storage:1556691752050499734>';

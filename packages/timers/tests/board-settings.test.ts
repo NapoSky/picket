@@ -1,5 +1,5 @@
 import { RoleId } from '@picket/kernel';
-import { DEFAULT_BOARD_SETTINGS, applySettingsPatch, parseBoardSettings, settingsEqual, type SettingsPatch } from '@picket/timers';
+import { DEFAULT_BOARD_SETTINGS, applySettingsPatch, isValidEmoji, parseBoardSettings, settingsEqual, type SettingsPatch } from '@picket/timers';
 
 const role = (n: number) => RoleId.assert(`4000000000000000${String(10 + n)}`);
 const apply = (patch: SettingsPatch, current = DEFAULT_BOARD_SETTINGS, active = 0) => applySettingsPatch(current, patch, active);
@@ -30,6 +30,8 @@ describe('parseBoardSettings', () => {
       maxActive: 75,
       purgeAfterHours: 48,
       resetOnNewWar: true,
+      regionEmoji: '<:forge_region:1426712511796871211>',
+      locationEmoji: '📍',
     });
     expect(parsed).toEqual({
       alertsEnabled: false,
@@ -41,7 +43,10 @@ describe('parseBoardSettings', () => {
       maxActive: 75,
       purgeAfterHours: 48,
       resetOnNewWar: true,
+      regionEmoji: '<:forge_region:1426712511796871211>',
+      locationEmoji: '📍',
     });
+    expect(parseBoardSettings({ regionEmoji: 'not an emoji', locationEmoji: 42 })).toMatchObject({ regionEmoji: null, locationEmoji: null });
   });
 });
 
@@ -85,5 +90,21 @@ describe('applySettingsPatch', () => {
     expect(settings({ purgeAfterHours: 0 }, { ...DEFAULT_BOARD_SETTINGS, purgeAfterHours: 48 }).purgeAfterHours).toBeNull();
     expect(apply({ purgeAfterHours: 721 })).toEqual({ ok: false, error: 'invalid_purge' });
     expect(apply({ purgeAfterHours: -1 })).toEqual({ ok: false, error: 'invalid_purge' });
+  });
+
+  it('sets, changes and restores the header icons: an emoji, a custom emoji, or null for the default', () => {
+    expect(settings({ regionEmoji: '🌍', locationEmoji: '<:Storage:1173161948569944064>' })).toMatchObject({
+      regionEmoji: '🌍',
+      locationEmoji: '<:Storage:1173161948569944064>',
+    });
+    const custom = { ...DEFAULT_BOARD_SETTINGS, regionEmoji: '🌍' };
+    expect(settings({ regionEmoji: null }, custom).regionEmoji).toBeNull();
+    expect(settings({ locationEmoji: '👨‍👩‍👧' }).locationEmoji).toBe('👨‍👩‍👧');
+    expect(settings({ regionEmoji: '🇫🇷' }).regionEmoji).toBe('🇫🇷');
+  });
+
+  it.each(['', 'a', 'text 🌍', '🌍🌍', '<:x:12>', '<:ok:123456789012345678', '<script>', 'x'.repeat(80)])('refuses %j as an icon', (value) => {
+    expect(isValidEmoji(value)).toBe(false);
+    expect(apply({ regionEmoji: value })).toEqual({ ok: false, error: 'invalid_emoji' });
   });
 });

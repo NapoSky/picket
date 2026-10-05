@@ -25,13 +25,8 @@
     },
     "timers": {
       "description": "Tableau de compte à rebours des timers Foxhole",
-      "groups": {
-        "board": "Gérer le tableau de timers d'un canal"
-      },
-      "board": {
-        "create": {
-          "description": "Créer le tableau de timers dans ce canal"
-        }
+      "create": {
+        "description": "Créer le tableau de timers dans ce canal"
       },
       "add": {
         "description": "Ajouter un timer au tableau de ce canal",
@@ -39,11 +34,8 @@
           "type": {
             "description": "Ce que le timer suit"
           },
-          "region": {
-            "description": "Région (hex) du timer"
-          },
-          "location": {
-            "description": "Ville ou lieu de cette région"
+          "place": {
+            "description": "Ville ou lieu (tapez un nom ; la région s'affiche)"
           },
           "owner": {
             "description": "Qui s'en occupe (vous par défaut)"
@@ -105,6 +97,12 @@
           },
           "resetOnNewWar": {
             "description": "Vider le tableau au début d'une nouvelle guerre"
+          },
+          "regionEmoji": {
+            "description": "Icône devant la région dans le tableau (un emoji, ou default)"
+          },
+          "locationEmoji": {
+            "description": "Icône devant la ville dans le tableau (un emoji, ou default)"
           }
         }
       }
@@ -239,9 +237,12 @@
   },
   "timers": {
     "board": {
-      "title": "⏱️ Timers",
+      "title": "⏱️ Gestion des timers et refreshs",
       "empty": "Aucun timer pour le moment. Ajoutez-en un avec /timers add.",
-      "footer": "⏱️ {{page}}/{{total}}"
+      "updated": "🕓 Dernière mise à jour",
+      "asset": "Asset",
+      "code": "Code",
+      "timer": "Timer"
     },
     "types": {
       "stockpile": "Stockpile",
@@ -276,7 +277,7 @@
     "nothingToClean": "Rien à nettoyer : aucun timer n'est barré.",
     "repaired": "Les messages du tableau ont été republiés.",
     "errors": {
-      "noBoard": "Ce canal n'a pas de tableau de timers. Un officier peut en créer un avec /timers board create.",
+      "noBoard": "Ce canal n'a pas de tableau de timers. Un officier peut en créer un avec /timers create.",
       "boardExists": "Ce canal a déjà un tableau de timers.",
       "boardQuota": "Ce serveur a déjà {{max}} tableaux de timers.",
       "missingPermissions": "Je ne peux pas publier ici. Permissions manquantes dans ce canal : {{missing}}.",
@@ -286,9 +287,10 @@
       "notFound": "Ce timer n'existe plus.",
       "alreadyStruck": "Ce timer est déjà barré.",
       "forbidden": "Sur ce tableau, seuls le propriétaire d'un timer et les officiers peuvent le modifier.",
-      "boardDisabled": "Le canal de ce tableau n'existe plus : le tableau est désactivé. Créez-en un nouveau avec /timers board create.",
+      "boardDisabled": "Le canal de ce tableau n'existe plus : le tableau est désactivé. Créez-en un nouveau avec /timers create.",
       "syncPending": "Enregistré, mais le message du tableau n'a pas pu être mis à jour pour l'instant ({{reason}}). Je réessaie seul.",
       "unknownType": "Type de timer inconnu.",
+      "unknownPlace": "Lieu inconnu. Commencez à taper le nom de la ville et choisissez l'une des suggestions.",
       "unknownRegion": "Région inconnue. Choisissez l'une des suggestions.",
       "unknownLocation": "Lieu inconnu. Choisissez l'une des suggestions de cette région.",
       "nameEmpty": "Le nom est vide.",
@@ -300,7 +302,7 @@
       "durationTooLong": "La durée est trop longue (maximum {{max}})."
     },
     "settings": {
-      "show": "Alertes : {{alerts}}\nSeuils d'alerte : {{thresholds}}\nRôles notifiés : {{roles}}\nMode des alertes : {{mode}}\nTimers identiques : {{duplicates}}\nBarrer et rafraîchir : {{changes}}\nTimers actifs : {{active}}/{{max}}\nPurge automatique : {{purge}}\nVidé à chaque nouvelle guerre : {{reset}}\nMessages du tableau : {{sync}}",
+      "show": "Alertes : {{alerts}}\nSeuils d'alerte : {{thresholds}}\nRôles notifiés : {{roles}}\nMode des alertes : {{mode}}\nTimers identiques : {{duplicates}}\nBarrer et rafraîchir : {{changes}}\nTimers actifs : {{active}}/{{max}}\nPurge automatique : {{purge}}\nVidé à chaque nouvelle guerre : {{reset}}\nIcônes d'en-tête : {{icons}}\nMessages du tableau : {{sync}}",
       "on": "activées",
       "off": "désactivées",
       "none": "aucun",
@@ -322,7 +324,8 @@
       "roleNeeded": "Indiquez un rôle à ajouter ou à retirer.",
       "invalidMaxActive": "La limite doit être comprise entre 1 et {{max}}.",
       "maxBelowCurrent": "Le tableau contient déjà plus de timers actifs que cette limite.",
-      "invalidPurge": "La purge automatique doit être comprise entre 0 (jamais) et {{max}} heures."
+      "invalidPurge": "La purge automatique doit être comprise entre 0 (jamais) et {{max}} heures.",
+      "invalidEmoji": "Indiquez un seul emoji, ou le mot default pour rétablir l'icône par défaut. Un emoji personnalisé ressemble à <:nom:123456789012345678>."
     }
   },
   "status": {

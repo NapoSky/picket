@@ -23,6 +23,8 @@ export interface AssetType {
   readonly code: CodeRule;
   /** Rang dans un lieu : les stockpiles d'abord. */
   readonly order: number;
+  /** Le propriétaire est-il affiché dans le tableau ? Pas pour un champ, qui n'a pas de responsable à relancer. */
+  readonly showOwner: boolean;
 }
 
 const HOUR = 3600;
@@ -40,12 +42,13 @@ export const ASSET_TYPES: Readonly<Record<AssetTypeId, AssetType>> = {
     defaultDurationS: 50 * HOUR,
     code: { mode: 'required', pattern: /^\d{6}$/u, maxLength: 6, uppercase: false },
     order: 1,
+    showOwner: true,
   },
-  facility: { id: 'facility', short: 'fa', icon: '🏭', direction: 'down', defaultDurationS: 50 * HOUR, code: NO_CODE, order: 2 },
-  field: { id: 'field', short: 'fi', icon: '⛏️', direction: 'up', defaultDurationS: HOUR, code: NO_CODE, order: 3 },
-  naval_ship: { id: 'naval_ship', short: 'ns', icon: '⚓', direction: 'down', defaultDurationS: 48 * HOUR, code: SHORT_CODE, order: 4 },
-  tank: { id: 'tank', short: 'ta', icon: '⚙️', direction: 'down', defaultDurationS: 48 * HOUR, code: SHORT_CODE, order: 5 },
-  train: { id: 'train', short: 'tr', icon: '🚂', direction: 'down', defaultDurationS: 48 * HOUR, code: SHORT_CODE, order: 6 },
+  facility: { id: 'facility', short: 'fa', icon: '🏭', direction: 'down', defaultDurationS: 50 * HOUR, code: NO_CODE, order: 2, showOwner: true },
+  field: { id: 'field', short: 'fi', icon: '⛏️', direction: 'up', defaultDurationS: HOUR, code: NO_CODE, order: 3, showOwner: false },
+  naval_ship: { id: 'naval_ship', short: 'ns', icon: '⚓', direction: 'down', defaultDurationS: 48 * HOUR, code: SHORT_CODE, order: 4, showOwner: true },
+  tank: { id: 'tank', short: 'ta', icon: '⚙️', direction: 'down', defaultDurationS: 48 * HOUR, code: SHORT_CODE, order: 5, showOwner: true },
+  train: { id: 'train', short: 'tr', icon: '🚂', direction: 'down', defaultDurationS: 48 * HOUR, code: SHORT_CODE, order: 6, showOwner: true },
 };
 
 export const isAssetTypeId = (value: string): value is AssetTypeId => (ASSET_TYPE_IDS as readonly string[]).includes(value);

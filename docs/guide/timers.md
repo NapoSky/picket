@@ -6,7 +6,7 @@ countdown ends.
 
 ## Set up a board
 
-An officer runs `/timers board create` in the channel that should hold the board. The bot needs **View Channel**,
+An officer runs `/timers create` in the channel that should hold the board. The bot needs **View Channel**,
 **Send Messages** (or **Send Messages in Threads**) and **Embed Links** there; PICKET tells you which one is missing.
 A channel has one board, and a server can have up to 10.
 
@@ -17,8 +17,7 @@ Anyone with the member level runs `/timers add`:
 | Option | Meaning |
 | --- | --- |
 | `type` | What the timer tracks (see the table below). |
-| `region` | The region (hex). Start typing and pick one of the suggestions. |
-| `location` | The town or location in that region, with suggestions too. |
+| `place` | The town. Start typing its name (or its region) and pick one of the suggestions. |
 | `owner` | Who looks after it. You, if you leave it empty. |
 
 A form then asks for the **name** (15 characters at most), the **code** when the type has one, and the **duration** when
@@ -40,16 +39,22 @@ PICKET never corrects a place on its own: pick a suggestion, or the command is r
 
 ## Read the board
 
-Each line shows a letter, the type, the name and code, the moment the countdown ends (or the time since the last
-refresh), and the owner:
+The board groups the timers by place. Each place has a header (region, then town), followed by three columns: **Asset**
+(letter, type and name), **Code**, and **Timer** (the moment the countdown ends, or the time since the last refresh,
+then the owner):
 
 ```text
-🇦・📦 **North depot** `123456`・in 2 days・@Jules
+[region] Allod's Bight
+[town] Mercy's Wail
+Asset                Code      Timer
+📦 🇦・North depot    123456    in 2 days・@Jules
 ```
 
 - The letter is the one on the button below the board. Letters restart on each message: a board holds **25 active
   timers per message**, and PICKET adds a message when it needs one.
-- ⌛ marks a timer whose countdown is over. It stays on the board until someone strikes it (or the board purges it).
+- A timer whose countdown is over stays on the board, with its time shown as past, until someone strikes it (or the
+  board purges it).
+- Under the last message, the board shows when it was last updated.
 - A struck timer is crossed out, has no button, and keeps its original duration.
 
 ## Refresh a timer
@@ -90,6 +95,8 @@ PICKET has the Discord permission **Mention @everyone, @here and All Roles**.
 | `max-active` | Active timers on the board (1 to 100). | 50 |
 | `purge-after` | Delete struck or expired timers after this many hours (0 = never). | 0 |
 | `reset-on-new-war` | Empty the board when a new war starts. Takes effect once the war log is released. | off |
+| `region-emoji` | Icon before the region in the board: an emoji, a custom emoji of your server (`<:name:id>`), or `default`. | PICKET icons |
+| `location-emoji` | Icon before the town in the board, same format. | PICKET icons |
 
 ## Who can do what
 
@@ -105,7 +112,7 @@ With `restrict-changes`, a member can only strike or refresh their own timers.
 - A moderator deleted a board message: the next change reposts it, or run `/timers repair`.
 - PICKET lacks a permission or Discord is slow: your change is saved, the answer tells you the board will be updated
   later, and PICKET retries on its own.
-- The channel was deleted: the board is disabled and its history kept. Create a new one with `/timers board create`.
+- The channel was deleted: the board is disabled and its history kept. Create a new one with `/timers create`.
 
 ## What PICKET stores
 

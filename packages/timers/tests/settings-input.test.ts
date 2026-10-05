@@ -51,4 +51,15 @@ describe('parseSettingsOptions', () => {
   it('ignores options of the wrong type and unknown choices instead of guessing', () => {
     expect(parseSettingsOptions({ alerts: 'yes', silent: 1, 'max-active': '20', duplicates: 'maybe' })).toEqual({ ok: true, value: {} });
   });
+
+  it('reads the header icons, and the word default as a return to the default icons', () => {
+    expect(parseSettingsOptions({ 'region-emoji': ' 🌍 ', 'location-emoji': '<:Storage:1173161948569944064>' })).toEqual({
+      ok: true,
+      value: { regionEmoji: '🌍', locationEmoji: '<:Storage:1173161948569944064>' },
+    });
+    expect(parseSettingsOptions({ 'region-emoji': 'Default', 'location-emoji': 'default' })).toEqual({
+      ok: true,
+      value: { regionEmoji: null, locationEmoji: null },
+    });
+  });
 });

@@ -9,8 +9,8 @@ la réponse).
 | `/picket permissions show` | membre | Montre qui a les niveaux officier et membre, votre propre niveau, et des avertissements sur la configuration. |
 | `/picket permissions set` | administrateur | Ajoute ou retire un rôle d'un niveau. |
 | `/todolist create` | membre | Ouvre un formulaire et publie une todolist dans le canal. Voir [Todolists](./todolists). |
-| `/timers board create` | officier | Crée le tableau de timers du canal. Voir [Timers](./timers). |
-| `/timers add` | membre | Ajoute un timer au tableau : type, région et lieu (suggestions pendant la frappe), puis un formulaire. |
+| `/timers create` | officier | Crée le tableau de timers du canal. Voir [Timers](./timers). |
+| `/timers add` | membre | Ajoute un timer au tableau : type et lieu (suggestions pendant la frappe), puis un formulaire. |
 | `/timers strike` | membre | Barre un timer du tableau. |
 | `/timers cleanup` | officier | Retire les timers barrés du tableau. |
 | `/timers repair` | officier | Republie les messages du tableau depuis les timers enregistrés. |

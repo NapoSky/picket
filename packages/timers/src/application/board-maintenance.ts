@@ -3,6 +3,7 @@ import { DiscordApiError, type Messaging } from '@picket/discord';
 import type { Translator } from '@picket/i18n';
 import type { Clock, GuildId, Logger, MessageId } from '@picket/kernel';
 import type { TimerAsset } from '../domain/asset';
+import { DEFAULT_LOCATION_EMOJI, DEFAULT_REGION_EMOJI } from '../domain/constants';
 import { nextWake, planAlerts, purgeCandidates, staleAlerts } from '../domain/schedule';
 import { renderBoard, type RenderedPage } from './board-view';
 import type { BoardRecord, Localizer, PageRecord, TimerStore } from './ports';
@@ -87,7 +88,11 @@ export class BoardMaintenance {
     const t = this.#deps.localizer.translator(locale);
 
     try {
-      const rendered = renderBoard({ assets, texts: boardTexts(t), now });
+      const icons = {
+        region: board.settings.regionEmoji ?? DEFAULT_REGION_EMOJI,
+        location: board.settings.locationEmoji ?? DEFAULT_LOCATION_EMOJI,
+      };
+      const rendered = renderBoard({ assets, texts: boardTexts(t), now, icons });
       await this.#syncPages(board, rendered, await store.pages(guildId, boardId), force);
     } catch (error) {
       return this.#failed(board, error, now);

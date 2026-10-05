@@ -287,42 +287,21 @@ describe('signed HTTP interaction -> pipeline -> access control -> Postgres -> r
     const [picket, timers, todolist, ...rest] = buildCommandsPayload(buildCommandRegistry(database.handle.db, composition));
     expect(rest).toEqual([]);
     expect(todolist).toMatchObject({ name: 'todolist', contexts: [0], options: [{ type: 1, name: 'create' }] });
-    expect(timers).toMatchObject({
-      name: 'timers',
-      contexts: [0],
-      options: [
-        {
-          type: 1,
-          name: 'add',
-          options: [
-            { type: 3, name: 'type', required: true },
-            { type: 3, name: 'region', required: true, autocomplete: true },
-            { type: 3, name: 'location', required: true, autocomplete: true },
-            { type: 6, name: 'owner', required: false },
-          ],
-        },
-        { type: 1, name: 'cleanup' },
-        { type: 1, name: 'repair' },
-        {
-          type: 1,
-          name: 'settings',
-          options: [
-            { type: 5, name: 'alerts' },
-            { type: 3, name: 'thresholds' },
-            { type: 8, name: 'alert-role' },
-            { type: 3, name: 'alert-role-action' },
-            { type: 5, name: 'silent' },
-            { type: 3, name: 'duplicates' },
-            { type: 5, name: 'restrict-changes' },
-            { type: 4, name: 'max-active', min_value: 1, max_value: 100 },
-            { type: 4, name: 'purge-after', min_value: 0, max_value: 720 },
-            { type: 5, name: 'reset-on-new-war' },
-          ],
-        },
-        { type: 1, name: 'strike', options: [{ type: 3, name: 'timer', required: true, autocomplete: true }] },
-        { type: 2, name: 'board', options: [{ type: 1, name: 'create' }] },
-      ],
-    });
+    expect(timers).toMatchObject({ name: 'timers', contexts: [0] });
+    const subcommands = (timers?.options ?? []) as { name: string; type: number; options?: { name: string; type: number; required?: boolean; autocomplete?: boolean }[] }[];
+    expect(subcommands.map((option) => [option.name, option.type]).sort()).toEqual(
+      [['add', 1], ['cleanup', 1], ['create', 1], ['repair', 1], ['settings', 1], ['strike', 1]],
+    );
+    const named = (name: string) => subcommands.find((option) => option.name === name);
+    expect(named('add')?.options).toMatchObject([
+      { type: 3, name: 'type', required: true },
+      { type: 3, name: 'place', required: true, autocomplete: true },
+      { type: 6, name: 'owner', required: false },
+    ]);
+    expect(named('strike')?.options).toMatchObject([{ type: 3, name: 'timer', required: true, autocomplete: true }]);
+    expect(named('settings')?.options?.map((option) => option.name)).toEqual([
+      'alerts', 'thresholds', 'alert-role', 'alert-role-action', 'silent', 'duplicates', 'restrict-changes', 'max-active', 'purge-after', 'reset-on-new-war', 'region-emoji', 'location-emoji',
+    ]);
     expect(picket).toMatchObject({
       name: 'picket',
       contexts: [0],

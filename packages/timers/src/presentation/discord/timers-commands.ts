@@ -7,7 +7,7 @@ import {
   type Reply,
   type RootDescriptor,
 } from '@picket/discord';
-import { findLocation, findRegion, resolveLocation, resolveRegion, searchLocations, searchRegions } from '@picket/game-data';
+import { findLocation, findRegion, placeLabel, placeValue, resolvePlace, searchPlaces } from '@picket/game-data';
 import type { MessageKey, Translator } from '@picket/i18n';
 import { UserId } from '@picket/kernel';
 import { ASSET_TYPES, ASSET_TYPE_IDS, isAssetTypeId, type AssetTypeId } from '../../domain/asset-types';
@@ -39,7 +39,7 @@ import type {
   UpdateBoardSettings,
 } from '../../application/timer-use-cases';
 import { missingBotPermissions, type BotPermission } from '../../domain/bot-permissions';
-import { MAX_NAME_LENGTH, MAX_ALERT_THRESHOLDS, MAX_ALERT_ROLES, MAX_PURGE_HOURS, MIN_THRESHOLD_MIN, HARD_MAX_ACTIVE } from '../../domain/constants';
+import { MAX_NAME_LENGTH, MAX_ALERT_THRESHOLDS, MAX_ALERT_ROLES, MAX_PURGE_HOURS, MIN_THRESHOLD_MIN, HARD_MAX_ACTIVE, DEFAULT_LOCATION_EMOJI, DEFAULT_REGION_EMOJI } from '../../domain/constants';
 import { formatDuration } from '../../domain/duration';
 import type { SettingsError } from '../../domain/board-settings';
 import type { ValidationError } from '../../domain/validation';
@@ -47,7 +47,6 @@ import type { ValidationError } from '../../domain/validation';
 export const TIMERS_ROOT: RootDescriptor = {
   name: 'timers',
   description: 'commands.timers.description',
-  groups: { board: 'commands.timers.groups.board' },
 };
 export const TIMERS_FEATURE = 'timers';
 
@@ -135,6 +134,8 @@ function settingsErrorText(error: SettingsError, t: T): string {
       return t('timers.settings.maxBelowCurrent');
     case 'invalid_purge':
       return t('timers.settings.invalidPurge', { max: MAX_PURGE_HOURS });
+    case 'invalid_emoji':
+      return t('timers.settings.invalidEmoji');
   }
 }
 
@@ -152,6 +153,7 @@ function describeSettings(board: BoardRecord, activeCount: number, t: T): string
     max: settings.maxActive,
     purge: settings.purgeAfterHours === null ? t('timers.settings.never') : t('timers.settings.purgeAfter', { hours: settings.purgeAfterHours }),
     reset: t(settings.resetOnNewWar ? 'timers.settings.on' : 'timers.settings.off'),
+    icons: `${settings.regionEmoji ?? DEFAULT_REGION_EMOJI} ${settings.locationEmoji ?? DEFAULT_LOCATION_EMOJI}`,
     sync: board.needsSync || board.syncError !== null ? t('timers.settings.syncFailed', { reason: board.syncError ?? 'pending' }) : t('timers.settings.syncOk'),
   });
 }
@@ -170,8 +172,8 @@ const typeChoices = ASSET_TYPE_IDS.map((id) => ({ name: `timers.types.${id}` as 
 
 export function timersCommands(deps: TimersCommandDeps): CommandEntry[] {
   const create: CommandEntry = {
-    path: ['timers', 'board', 'create'],
-    description: 'commands.timers.board.create.description',
+    path: ['timers', 'create'],
+    description: 'commands.timers.create.description',
     level: 'officer',
     feature: TIMERS_FEATURE,
     handler: async ({ interaction, guildId, t }) => {
@@ -180,7 +182,7 @@ export function timersCommands(deps: TimersCommandDeps): CommandEntry[] {
       const missing = missingPermissionsReply(interaction.appPermissions, t);
       if (missing) return missing;
       return deferred(async () => {
-        const result = await deps.createBoard.execute({ guildId, channelId, actor: interaction.userId, locale: interaction.guildLocale });
+        const result = await deps.createBoard.execute({ guildId, channelId, actor: interaction.userId, locale: interaction.locale });
         switch (result.kind) {
           case 'exists':
             return ephemeral(t('timers.errors.boardExists'));
@@ -200,26 +202,20 @@ export function timersCommands(deps: TimersCommandDeps): CommandEntry[] {
     feature: TIMERS_FEATURE,
     options: [
       { type: 'string', name: 'type', description: 'commands.timers.add.options.type.description', required: true, choices: typeChoices },
-      { type: 'string', name: 'region', description: 'commands.timers.add.options.region.description', required: true, autocomplete: true },
-      { type: 'string', name: 'location', description: 'commands.timers.add.options.location.description', required: true, autocomplete: true },
+      { type: 'string', name: 'place', description: 'commands.timers.add.options.place.description', required: true, autocomplete: true },
       { type: 'user', name: 'owner', description: 'commands.timers.add.options.owner.description' },
     ],
     autocomplete: {
-      region: async ({ focused }) => searchRegions(focused.value).map((region) => ({ name: region.name, value: region.key })),
-      location: async ({ interaction, focused }) => {
-        const region = resolveRegion(String(interaction.options.region ?? ''));
-        return region === undefined ? [] : searchLocations(region.key, focused.value).map((location) => ({ name: location.name, value: location.key }));
-      },
+      place: async ({ focused }) => searchPlaces(focused.value).map((place) => ({ name: placeLabel(place), value: placeValue(place) })),
     },
     handler: async ({ interaction, guildId, t }) => {
       const channelId = interaction.channelId;
       if (channelId === null) return ephemeral(t('timers.errors.noChannel'));
-      const { type, region: regionInput, location: locationInput, owner } = interaction.options;
+      const { type, place: placeInput, owner } = interaction.options;
       if (typeof type !== 'string' || !isAssetTypeId(type)) return ephemeral(t('timers.errors.unknownType'));
-      const region = resolveRegion(String(regionInput ?? ''));
-      if (region === undefined) return ephemeral(t('timers.errors.unknownRegion'));
-      const location = resolveLocation(region.key, String(locationInput ?? ''));
-      if (location === undefined) return ephemeral(t('timers.errors.unknownLocation'));
+      const place = resolvePlace(String(placeInput ?? ''));
+      if (place === undefined) return ephemeral(t('timers.errors.unknownPlace'));
+      const { region, location } = place;
       const parsedOwner = owner === undefined ? null : UserId.parse(owner);
       if (parsedOwner !== null && !parsedOwner.ok) return ephemeral(t('timers.errors.unknownType'));
       const ownerId = parsedOwner === null ? interaction.userId : (parsedOwner as { value: UserId }).value;
@@ -375,6 +371,8 @@ export function timersCommands(deps: TimersCommandDeps): CommandEntry[] {
       { type: 'integer', name: 'max-active', description: 'commands.timers.settings.options.maxActive.description', minValue: 1, maxValue: HARD_MAX_ACTIVE },
       { type: 'integer', name: 'purge-after', description: 'commands.timers.settings.options.purgeAfter.description', minValue: 0, maxValue: MAX_PURGE_HOURS },
       { type: 'boolean', name: 'reset-on-new-war', description: 'commands.timers.settings.options.resetOnNewWar.description' },
+      { type: 'string', name: 'region-emoji', description: 'commands.timers.settings.options.regionEmoji.description' },
+      { type: 'string', name: 'location-emoji', description: 'commands.timers.settings.options.locationEmoji.description' },
     ],
     handler: async ({ interaction, guildId, t }) => {
       const channelId = interaction.channelId;
