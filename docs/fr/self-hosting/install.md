@@ -83,8 +83,9 @@ Le dépôt fournit un workflow qui construit l'image, la pousse sur GitHub Conta
 2. Créez un environnement GitHub nommé `production`, avec des relecteurs obligatoires si vous voulez une validation
    manuelle, et ajoutez les secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` et `DEPLOY_KNOWN_HOSTS` (la clé d'hôte
    du serveur, épinglée, pour que la connexion ne fasse jamais confiance à un hôte inconnu).
-3. Permettez au serveur de lire le registre : rendez le paquet public, ou lancez `docker login ghcr.io` sur le serveur
-   avec un jeton en lecture seule.
+3. Rien à configurer pour le registre : le workflow envoie au serveur le jeton temporaire du job (lecture des paquets), qui
+   s'en sert pour télécharger l'image puis se déconnecte aussitôt. Aucun jeton personnel n'est stocké sur le serveur. Pour un
+   `./rollout.sh` manuel, rendez le paquet public ou lancez vous-même `docker login ghcr.io` avant.
 
 Le déploiement ne s'exécute qu'après une CI réussie sur `main`, jamais depuis une pull request.
 

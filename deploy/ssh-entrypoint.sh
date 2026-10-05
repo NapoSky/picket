@@ -11,4 +11,12 @@ if ! printf '%s' "$image" | grep -Eq '^ghcr\.io/[a-z0-9][a-z0-9._/-]*@sha256:[0-
   exit 2
 fi
 
-exec "$(dirname "$(readlink -f "$0")")/rollout.sh" "$image"
+# Le workflow envoie sur l'entrée standard le jeton éphémère du job (GITHUB_TOKEN, lecture des paquets) :
+# aucun jeton personnel n'est stocké sur le serveur, et celui-ci expire à la fin du job.
+IFS= read -r registry_token || true
+if [ -n "$registry_token" ]; then
+  printf '%s' "$registry_token" | docker login ghcr.io -u github-actions --password-stdin > /dev/null
+  trap 'docker logout ghcr.io > /dev/null 2>&1 || true' EXIT
+fi
+
+"$(dirname "$(readlink -f "$0")")/rollout.sh" "$image"

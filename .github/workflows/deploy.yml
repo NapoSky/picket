@@ -63,6 +63,9 @@ jobs:
     timeout-minutes: 15
     # Environnement protégé : relecteurs obligatoires et secrets limités à ce job.
     environment: production
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Prepare SSH
         env:
@@ -74,11 +77,13 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
       # La clé n'autorise qu'une commande forcée (deploy/ssh-entrypoint.sh), qui valide la référence d'image.
+      # Le jeton du job (lecture des paquets) passe par l'entrée standard : il n'apparaît ni dans la commande ni dans les journaux.
       - name: Roll out
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USER_NAME: ${{ secrets.DEPLOY_USER }}
           IMAGE: ${{ needs.publish.outputs.image }}
+          REGISTRY_TOKEN: ${{ github.token }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+          printf '%s\n' "$REGISTRY_TOKEN" | ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$USER_NAME@$HOST" "$IMAGE"

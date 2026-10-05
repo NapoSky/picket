@@ -78,8 +78,9 @@ The repository ships a workflow that builds the image, pushes it to GitHub Conta
 2. Create a GitHub environment named `production`, with required reviewers if you want a manual approval, and add the
    secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS` (the server's pinned host key, so the
    connection never trusts an unknown host).
-3. Let the server pull from the registry: make the package public, or run `docker login ghcr.io` on the server with a
-   read-only token.
+3. Nothing to configure for the registry: the workflow sends the job's temporary token (read access to packages) to the
+   server, which uses it for the pull and logs out right after. No personal token is ever stored on the server. For a
+   manual `./rollout.sh`, make the package public or run `docker login ghcr.io` yourself first.
 
 The deployment only runs after the CI succeeded on `main`, never from a pull request.
 
