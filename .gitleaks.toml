@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+# Les tests utilisent de faux identifiants d'application Discord (800000000000000001) : ce ne sont pas des secrets.
+[[allowlists]]
+description = "Fake Discord application ids in test fixtures"
+targetRules = ["discord-client-id"]
+paths = ['''(^|/)(packages|apps)/[^/]+/tests/.*''']
