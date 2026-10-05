@@ -44,7 +44,7 @@ Every effective change is recorded in the audit log, like permission changes. `/
 
 Run it without `confirm` to see exactly what will happen and when. With `confirm:True`, the server is **suspended**:
 PICKET refuses every command except `/picket data cancel-deletion` until the deletion date, then erases the data. See
-[Privacy and data](./privacy).
+[Privacy Policy](../legal/privacy).
 
 ## Coming next
 

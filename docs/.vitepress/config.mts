@@ -10,20 +10,24 @@ const t = {
     guide: 'Guide',
     selfHosting: 'Self-hosting',
     contributing: 'Contributing',
+    legal: 'Legal',
     sections: {
-      guide: ['Getting started', 'Commands', 'Todo lists', 'Permissions', 'Privacy and data'],
+      guide: ['Getting started', 'Commands', 'Todo lists', 'Permissions'],
       selfHosting: ['Installation', 'Configuration'],
       contributing: ['Translating', 'Architecture'],
+      legal: ['Terms of Service', 'Privacy Policy'],
     },
   },
   fr: {
     guide: 'Guide',
     selfHosting: 'Auto-hébergement',
     contributing: 'Contribuer',
+    legal: 'Mentions légales',
     sections: {
-      guide: ['Prise en main', 'Commandes', 'Todolists', 'Permissions', 'Confidentialité et données'],
+      guide: ['Prise en main', 'Commandes', 'Todolists', 'Permissions'],
       selfHosting: ['Installation', 'Configuration'],
       contributing: ['Traduire', 'Architecture'],
+      legal: ["Conditions d'utilisation", 'Politique de confidentialité'],
     },
   },
 } as const;
@@ -39,7 +43,6 @@ function sidebar(lang: Lang): DefaultTheme.Sidebar {
         { text: s.sections.guide[1], link: `${prefix}/guide/commands` },
         { text: s.sections.guide[2], link: `${prefix}/guide/todolists` },
         { text: s.sections.guide[3], link: `${prefix}/guide/permissions` },
-        { text: s.sections.guide[4], link: `${prefix}/guide/privacy` },
       ],
     },
     {
@@ -54,6 +57,13 @@ function sidebar(lang: Lang): DefaultTheme.Sidebar {
       items: [
         { text: s.sections.contributing[0], link: `${prefix}/contributing/translating` },
         { text: s.sections.contributing[1], link: `${prefix}/contributing/architecture` },
+      ],
+    },
+    {
+      text: s.legal,
+      items: [
+        { text: s.sections.legal[0], link: `${prefix}/legal/terms` },
+        { text: s.sections.legal[1], link: `${prefix}/legal/privacy` },
       ],
     },
   ];

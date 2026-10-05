@@ -40,7 +40,9 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 | `/picket settings language` / `timezone` / `audit-channel` / `feature` | officer | Changes the server settings |
 | `/picket data delete` / `cancel-deletion` | admin | Schedules or cancels the deletion of the server data |
 
-The full guide is in the [documentation](https://docs.picket-foxhole.com).
+The full guide is in the [documentation](https://docs.picket-foxhole.com). By using the official instance you accept its
+[Terms of Service](https://docs.picket-foxhole.com/legal/terms) and
+[Privacy Policy](https://docs.picket-foxhole.com/legal/privacy).
 
 ## Use it
 

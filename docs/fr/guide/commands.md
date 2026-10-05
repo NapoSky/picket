@@ -47,7 +47,7 @@ Chaque changement effectif est enregistré dans le journal d'audit, comme les ch
 
 Lancez-la sans `confirm` pour voir exactement ce qui va se passer et quand. Avec `confirm:True`, le serveur est
 **suspendu** : PICKET refuse toutes les commandes sauf `/picket data cancel-deletion` jusqu'à la date de suppression,
-puis efface les données. Voir [Confidentialité et données](./privacy).
+puis efface les données. Voir [Politique de confidentialité](../legal/privacy).
 
 ## À venir
 
