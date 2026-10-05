@@ -70,13 +70,26 @@ function sidebar(lang: Lang): DefaultTheme.Sidebar {
   ];
 }
 
+function footerLinks(lang: Lang): string {
+  const root = lang === 'en' ? base : `${base}fr/`;
+  const s = t[lang].sections.legal;
+  return `<a href="${root}legal/terms">${s[0]}</a><a href="${root}legal/privacy">${s[1]}</a>`;
+}
+
 export default defineConfig({
   title: 'PICKET',
   base,
   cleanUrls: true,
   lastUpdated: true,
+  appearance: 'dark',
+  head: [
+    ['link', { rel: 'icon', type: 'image/png', href: `${base}favicon.png` }],
+    ['meta', { name: 'theme-color', content: '#0d1013' }],
+  ],
   themeConfig: {
+    logo: '/logo.png',
     search: { provider: 'local' },
+    socialLinks: [{ icon: 'github', link: 'https://github.com/NapoSky/picket' }],
   },
   locales: {
     root: {
@@ -85,6 +98,10 @@ export default defineConfig({
       description: 'Operational watchpost for Foxhole regiments on Discord',
       themeConfig: {
         sidebar: sidebar('en'),
+        footer: {
+          message: footerLinks('en'),
+          copyright: 'PICKET is an independent community project, not affiliated with Siege Camp.',
+        },
         nav: [
           { text: t.en.guide, link: '/guide/getting-started' },
           { text: t.en.selfHosting, link: '/self-hosting/install' },
@@ -99,6 +116,10 @@ export default defineConfig({
       description: 'Poste de veille opérationnel pour les régiments Foxhole sur Discord',
       themeConfig: {
         sidebar: sidebar('fr'),
+        footer: {
+          message: footerLinks('fr'),
+          copyright: "PICKET est un projet communautaire indépendant, non affilié à Siege Camp.",
+        },
         nav: [
           { text: t.fr.guide, link: '/fr/guide/getting-started' },
           { text: t.fr.selfHosting, link: '/fr/self-hosting/install' },
