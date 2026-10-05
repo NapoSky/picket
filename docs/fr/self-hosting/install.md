@@ -9,14 +9,16 @@ Voir les fichiers `LICENSE` et `NOTICE`.
 :::
 
 PICKET tourne comme une seule image de conteneur en plusieurs réplicas identiques, adossée à PostgreSQL. Le dossier
-`deploy/` contient tout ce qu'il faut pour un hôte Docker Compose derrière Traefik.
+`deploy/` contient tout ce qu'il faut pour un hôte Docker Compose, Traefik compris.
 
 ## Prérequis
 
 - Un hôte Linux avec Docker et Docker Compose v2.
 - Le plugin [docker-rollout](https://github.com/wowu/docker-rollout), utilisé pour les mises à jour sans interruption.
-- Traefik avec le provider Docker, sur un réseau Docker que le conteneur PICKET peut rejoindre.
-- Un nom d'hôte public pointant vers Traefik, servi en HTTPS.
+- Un domaine dont le DNS est géré par Cloudflare, et un jeton d'API Cloudflare limité à cette zone (**Zone → DNS → Edit**).
+  La stack embarque son propre Traefik : il n'écoute que sur le port 443 et obtient ses certificats par le défi DNS, donc
+  le port 80 reste fermé. Le port 443 doit être libre sur l'hôte.
+- Un nom d'hôte pour le point d'accès, proxifié par Cloudflare, avec le mode SSL/TLS **Full (strict)**.
 
 ## 1. Créer l'application Discord
 
@@ -31,7 +33,8 @@ Copiez le dossier `deploy/` sur le serveur, puis :
 ```sh
 ./init-secrets.sh                 # génère les mots de passe et chaînes de connexion de la base dans ./secrets
 read -rsp 'Token du bot : ' TOKEN && printf '%s' "$TOKEN" > secrets/discord_bot_token; unset TOKEN   # hors de l'historique du shell
-cp .env.example .env              # puis éditez-le : image, nom d'hôte, identifiants Discord, noms Traefik
+read -rsp 'Token Cloudflare : ' TOKEN && printf '%s' "$TOKEN" > secrets/cloudflare_dns_token; unset TOKEN
+cp .env.example .env              # puis éditez-le : image, nom d'hôte, identifiants Discord
 docker compose up -d --wait postgres
 ```
 

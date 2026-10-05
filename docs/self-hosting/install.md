@@ -8,14 +8,16 @@ Camp and are not covered by this license; PICKET is not affiliated with Siege Ca
 :::
 
 PICKET runs as a single container image in several identical replicas, backed by PostgreSQL. The `deploy/` directory
-contains everything needed for a Docker Compose host behind Traefik.
+contains everything needed for a Docker Compose host, Traefik included.
 
 ## Requirements
 
 - A Linux host with Docker and Docker Compose v2.
 - The [docker-rollout](https://github.com/wowu/docker-rollout) plugin, used for zero-downtime updates.
-- Traefik with the Docker provider, on a Docker network the PICKET container can join.
-- A public host name pointing to Traefik, served over HTTPS.
+- A domain whose DNS is managed by Cloudflare, and a Cloudflare API token limited to that zone (**Zone → DNS → Edit**).
+  The stack includes its own Traefik: it listens on port 443 only and gets its certificates through the DNS challenge, so
+  port 80 stays closed. Port 443 must be free on the host.
+- A host name for the endpoint, proxied by Cloudflare, with SSL/TLS mode **Full (strict)**.
 
 ## 1. Create the Discord application
 
@@ -30,7 +32,8 @@ Copy the `deploy/` directory to the server, then:
 ```sh
 ./init-secrets.sh                 # generates the database passwords and connection strings in ./secrets
 read -rsp 'Bot token: ' TOKEN && printf '%s' "$TOKEN" > secrets/discord_bot_token; unset TOKEN   # keeps it out of the shell history
-cp .env.example .env              # then edit it: image, host name, Discord identifiers, Traefik names
+read -rsp 'Cloudflare token: ' TOKEN && printf '%s' "$TOKEN" > secrets/cloudflare_dns_token; unset TOKEN
+cp .env.example .env              # then edit it: image, host name, Discord identifiers
 docker compose up -d --wait postgres
 ```
 

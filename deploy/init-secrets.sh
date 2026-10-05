@@ -36,5 +36,11 @@ if [ ! -s secrets/discord_bot_token ]; then
   echo "ACTION REQUISE : collez le jeton du bot dans deploy/secrets/discord_bot_token"
 fi
 
+# Jeton d'API Cloudflare (Zone > DNS > Edit, limité à votre zone) : Traefik s'en sert pour les certificats (défi DNS-01).
+if [ ! -s secrets/cloudflare_dns_token ]; then
+  : > secrets/cloudflare_dns_token
+  echo "ACTION REQUISE : collez le jeton Cloudflare dans deploy/secrets/cloudflare_dns_token"
+fi
+
 # Lisibles par l'utilisateur du conteneur ; le répertoire parent (700) protège l'accès côté hôte.
 chmod 644 secrets/*
