@@ -5,6 +5,9 @@ name: Merge translations
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
+    # Ne se déclenche que pour les fichiers de langue : pas de ligne « skipped » sur chaque autre PR.
+    paths:
+      - packages/i18n/locales/**
 
 permissions:
   contents: write

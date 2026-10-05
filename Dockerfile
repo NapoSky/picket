@@ -25,11 +25,15 @@ FROM base AS production-dependencies
 COPY --from=build /out ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --prod --frozen-lockfile --filter "@picket/bot..."
+# i18next déclare TypeScript en peer optionnel : pnpm l'installe quand même (compilateur natif et ses CVE Go).
+RUN rm -rf node_modules/.pnpm/typescript@* node_modules/.pnpm/@typescript+*
 
 # Image finale : pas de pnpm, pas de sources, utilisateur non privilégié.
 FROM node:24-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
+# npm n'est pas utilisé à l'exécution et embarque ses propres dépendances vulnérables.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=production-dependencies --chown=node:node /app ./
 USER node
 EXPOSE 8080

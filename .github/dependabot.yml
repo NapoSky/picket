@@ -15,7 +15,15 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Une seule pull request pour toutes les actions, plutôt qu'une par action.
+    groups:
+      github-actions:
+        patterns: ["*"]
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+    # On reste sur la version LTS de Node (24) ; les mises à jour de version majeure se décident à la main.
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
