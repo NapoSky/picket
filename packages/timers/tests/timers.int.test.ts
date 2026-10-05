@@ -24,7 +24,7 @@ const edits = (h: TimerHarness) => h.messaging.calls.filter((call) => call.start
 const sends = (h: TimerHarness) => h.messaging.calls.filter((call) => call === 'send').length;
 
 describe('board creation', () => {
-  it('posts one empty message, records it, and plans nothing', async () => {
+  it('posts one empty message, records it, and plans only its own removal if nobody uses it', async () => {
     const h = timerHarness(database);
     const boardId = await h.boardWithMessage();
 
@@ -37,15 +37,31 @@ describe('board creation', () => {
     expect(board).toMatchObject({ id: boardId, needsSync: false, syncError: null, settings: DEFAULT_BOARD_SETTINGS, archivedAt: null });
     expect(await h.store.pages(h.ids.guild, boardId)).toEqual([{ page: 0, messageId: messages[0]?.id, contentHash: expect.any(String) }]);
     expect(await queryAsAdmin(database, 'SELECT action FROM timer_events')).toEqual([{ action: 'board_create' }]);
-    expect(await count('SELECT count(*) AS n FROM timer_schedule')).toBe('0');
+    expect(await queryAsAdmin(database, 'SELECT wake_at FROM timer_schedule')).toEqual([{ wake_at: new Date(NOW.getTime() + 30 * 24 * HOUR_MS) }]);
   });
 
-  it('refuses a second board in the same channel without posting anything', async () => {
+  it('does not create a second board in the same channel, and posts nothing when its message is still there', async () => {
     const h = timerHarness(database);
     await h.boardWithMessage();
     const before = sends(h);
-    expect(await h.createBoard.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, locale: null })).toEqual({ kind: 'exists' });
+    const again = await h.createBoard.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, locale: null });
+    expect(again).toMatchObject({ kind: 'exists' });
     expect(sends(h)).toBe(before);
+    expect(await count('SELECT count(*) AS n FROM timer_boards')).toBe('1');
+  });
+
+  it('reposts the board when create is run again after its messages were deleted by hand, with or without timers', async () => {
+    const h = timerHarness(database);
+    await h.boardWithMessage();
+    await h.add();
+    const gone = h.boardMessages()[0];
+    if (gone === undefined) throw new Error('no board message');
+    await h.messaging.delete(h.ids.channel, gone.id);
+    expect(h.boardMessages()).toHaveLength(0);
+
+    expect(await h.createBoard.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, locale: null })).toMatchObject({ kind: 'exists', sync: { synced: true } });
+    expect(h.boardMessages()).toHaveLength(1);
+    expect(h.lines()).toHaveLength(1);
     expect(await count('SELECT count(*) AS n FROM timer_boards')).toBe('1');
   });
 
@@ -497,7 +513,8 @@ describe('alerts (TIM-RQ-09)', () => {
     expect(h.messaging.calls.filter((call) => call.startsWith("edit:")).length).toBe(edited);
     expect(h.lines()).toHaveLength(1);
     expect(await count("SELECT count(*) AS n FROM timer_assets WHERE status = 'active'")).toBe('1');
-    expect(await count('SELECT count(*) AS n FROM timer_schedule')).toBe('0');
+    // Reste à purger : 24 h après l'échéance (10 h).
+    expect(await queryAsAdmin(database, 'SELECT wake_at FROM timer_schedule')).toEqual([{ wake_at: new Date(NOW.getTime() + 34 * HOUR_MS) }]);
   });
 
   it('notifies the roles of the board and can use a push notification', async () => {
@@ -674,5 +691,51 @@ describe('isolation between servers', () => {
       expect(await count(`SELECT count(*) AS n FROM ${table} WHERE guild_id = $1`, [h.ids.guild])).toBe('0');
     }
     expect(await count('SELECT count(*) AS n FROM timer_assets WHERE guild_id = $1', [other.ids.guild])).toBe('1');
+  });
+});
+
+describe('abandoned boards', () => {
+  const DAY_MS = 24 * HOUR_MS;
+
+  it('deletes an empty board nobody has touched for 30 days, with its message and data, and keeps the audit trail', async () => {
+    const h = timerHarness(database);
+    const boardId = await h.boardWithMessage();
+    h.clock.set(new Date(NOW.getTime() + 29 * DAY_MS));
+    expect(await h.sweep.tick()).toBe(0);
+    expect(h.boardMessages()).toHaveLength(1);
+
+    h.clock.set(new Date(NOW.getTime() + 30 * DAY_MS));
+    expect(await h.sweep.tick()).toBe(1);
+    expect(h.boardMessages()).toHaveLength(0);
+    expect(await count('SELECT count(*) AS n FROM timer_boards')).toBe('0');
+    expect(await count('SELECT count(*) AS n FROM timer_board_messages')).toBe('0');
+    expect(await count('SELECT count(*) AS n FROM timer_schedule')).toBe('0');
+    expect(await queryAsAdmin(database, "SELECT detail FROM timer_events WHERE action = 'board_delete'")).toEqual([{ detail: { reason: 'inactive' } }]);
+
+    const again = await h.createBoard.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, locale: null });
+    expect(again).toMatchObject({ kind: 'created' });
+    expect(again).not.toMatchObject({ boardId });
+  });
+
+  it('keeps a board that has a timer, and starts the 30 days again after any change', async () => {
+    const h = timerHarness(database);
+    await h.boardWithMessage();
+    h.clock.set(new Date(NOW.getTime() + 20 * DAY_MS));
+    await h.add();
+    expect(await h.sweep.tick()).toBeGreaterThanOrEqual(0);
+    h.clock.set(new Date(NOW.getTime() + 60 * DAY_MS));
+    await h.sweep.tick();
+    expect(await count('SELECT count(*) AS n FROM timer_boards')).toBe('1');
+  });
+
+  it('deletes a board even if its message cannot be removed any more', async () => {
+    const h = timerHarness(database);
+    await h.boardWithMessage();
+    const message = h.boardMessages()[0];
+    if (message === undefined) throw new Error('no board message');
+    await h.messaging.delete(h.ids.channel, message.id);
+    h.clock.set(new Date(NOW.getTime() + 31 * DAY_MS));
+    await h.sweep.tick();
+    expect(await count('SELECT count(*) AS n FROM timer_boards')).toBe('0');
   });
 });

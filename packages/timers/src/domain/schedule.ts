@@ -1,5 +1,6 @@
 import { deadline, type TimerAsset } from './asset';
 import type { BoardSettings } from './board-settings';
+import { ABANDONED_AFTER_DAYS } from './constants';
 
 /** Une alerte déjà réclamée en base pour (asset, échéance, seuil). */
 export interface AlertRow {
@@ -78,16 +79,26 @@ export function purgeCandidates(assets: readonly TimerAsset[], settings: BoardSe
   });
 }
 
+const DAY_MS = 24 * 3_600_000;
+
+/** Instant où un board sans timer est supprimé, faute d'activité. */
+export const abandonedAt = (lastActivityAt: Date): Date => new Date(lastActivityAt.getTime() + ABANDONED_AFTER_DAYS * DAY_MS);
+
+/** Board vide, sans modification depuis `ABANDONED_AFTER_DAYS` : plus personne ne s'en sert. */
+export const isAbandoned = (assets: readonly TimerAsset[], lastActivityAt: Date, now: Date): boolean =>
+  assets.length === 0 && abandonedAt(lastActivityAt).getTime() <= now.getTime();
+
 export interface WakeInput {
   readonly assets: readonly TimerAsset[];
   readonly settings: BoardSettings;
   readonly now: Date;
   readonly needsSync: boolean;
+  readonly lastActivityAt: Date;
 }
 
 /**
  * Prochain instant où ce board demande du travail : rendu en attente, seuil d'alerte, échéance (le board affiche
- * alors « expiré »), purge. `null` : rien à planifier.
+ * alors « expiré »), purge, suppression d'un board vide inactif. `null` : rien à planifier.
  */
 export function nextWake(input: WakeInput): Date | null {
   const { assets, settings, now } = input;
@@ -113,5 +124,6 @@ export function nextWake(input: WakeInput): Date | null {
       }
     }
   }
+  if (assets.length === 0) candidates.push(Math.max(abandonedAt(input.lastActivityAt).getTime(), nowMs));
   return candidates.length === 0 ? null : new Date(Math.min(...candidates));
 }

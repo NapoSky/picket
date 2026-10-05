@@ -17,6 +17,8 @@ export interface BoardRecord {
   readonly syncError: string | null;
   readonly createdBy: UserId;
   readonly createdAt: Date;
+  /** Dernière mutation du board : au-delà de `ABANDONED_AFTER_DAYS` sans timer, il est supprimé. */
+  readonly lastActivityAt: Date;
   readonly archivedAt: Date | null;
 }
 
@@ -38,6 +40,7 @@ export interface AlertRecord extends AlertRow {
 export type TimerAction =
   | 'board_create'
   | 'board_disabled'
+  | 'board_delete'
   | 'add'
   | 'reactivate'
   | 'refresh'
@@ -113,6 +116,8 @@ export interface TimerStore {
   /** Marque le board à jour si aucune mutation n'est arrivée depuis `result.rev` ; `false` : un rendu reste à faire. */
   markSynced(guildId: GuildId, boardId: string, result: SyncResult): Promise<boolean>;
   markSyncFailed(guildId: GuildId, boardId: string, syncError: string): Promise<void>;
+  /** Supprime le board et tout ce qui en dépend (timers, messages, alertes) ; seul le journal d'audit reste. */
+  deleteBoard(guildId: GuildId, boardId: string, reason: string): Promise<void>;
   /** Désactive le board (canal disparu) : plus de rendu ni d'alerte, historique conservé. */
   archive(guildId: GuildId, boardId: string, reason: string, now: Date): Promise<void>;
 

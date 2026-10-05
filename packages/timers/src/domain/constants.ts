@@ -8,6 +8,8 @@ export const MAX_DURATION_S = 30 * 24 * 3600;
 export const DEFAULT_MAX_ACTIVE = 50;
 export const HARD_MAX_ACTIVE = 100;
 export const MAX_BOARDS_PER_GUILD = 10;
+/** Un board sans aucun timer et sans modification depuis ce délai est supprimé avec ses données. */
+export const ABANDONED_AFTER_DAYS = 30;
 
 export const MAX_ALERT_THRESHOLDS = 4;
 export const MIN_THRESHOLD_MIN = 5;

@@ -35,6 +35,7 @@ const toBoard = (row: BoardRow): BoardRecord => ({
   syncError: row.sync_error,
   createdBy: UserId.assert(row.created_by),
   createdAt: new Date(row.created_at),
+  lastActivityAt: new Date(row.last_activity_at),
   archivedAt: row.archived_at === null ? null : new Date(row.archived_at),
 });
 
@@ -137,6 +138,7 @@ export class PostgresTimerStore implements TimerStore {
           settings: JSON.stringify(input.settings),
           created_by: input.createdBy,
           created_at: now,
+          last_activity_at: now,
         })
         .onConflict((conflict) => conflict.columns(['guild_id', 'channel_id']).where('archived_at', 'is', null).doNothing())
         .returningAll()
@@ -232,6 +234,7 @@ export class PostgresTimerStore implements TimerStore {
         .set({
           rev: sql<number>`rev + 1`,
           needs_sync: true,
+          last_activity_at: now,
           ...(mutation.settings !== undefined ? { settings: JSON.stringify(mutation.settings) } : {}),
         })
         .where('id', '=', boardId)
@@ -281,6 +284,13 @@ export class PostgresTimerStore implements TimerStore {
   markSyncFailed(guildId: GuildId, boardId: string, syncError: string): Promise<void> {
     return withTenant(this.#db, guildId, async (trx) => {
       await trx.updateTable('timer_boards').set({ sync_error: syncError, needs_sync: true }).where('id', '=', boardId).execute();
+    });
+  }
+
+  deleteBoard(guildId: GuildId, boardId: string, reason: string): Promise<void> {
+    return withTenant(this.#db, guildId, async (trx) => {
+      await recordEvents(trx, guildId, boardId, [{ actor: 'system', action: 'board_delete', detail: { reason } }]);
+      await trx.deleteFrom('timer_boards').where('id', '=', boardId).execute();
     });
   }
 

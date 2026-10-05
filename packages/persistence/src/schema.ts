@@ -73,6 +73,7 @@ export interface TimerBoardsTable {
   sync_error: Nullable<string>;
   created_by: string;
   created_at: Timestamp;
+  last_activity_at: Timestamp;
   archived_at: Nullable<Date>;
 }
 

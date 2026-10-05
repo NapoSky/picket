@@ -44,7 +44,7 @@ export const DEFAULT_BOARD_SETTINGS: BoardSettings = {
   duplicates: 'warn',
   restrictChanges: false,
   maxActive: DEFAULT_MAX_ACTIVE,
-  purgeAfterHours: null,
+  purgeAfterHours: 24,
   resetOnNewWar: false,
   regionEmoji: null,
   locationEmoji: null,
@@ -82,7 +82,11 @@ export function parseBoardSettings(raw: unknown): BoardSettings {
         ? maxActive
         : defaults.maxActive,
     purgeAfterHours:
-      typeof purge === 'number' && Number.isInteger(purge) && purge >= 1 && purge <= MAX_PURGE_HOURS ? purge : null,
+      typeof purge === 'number' && Number.isInteger(purge) && purge >= 1 && purge <= MAX_PURGE_HOURS
+        ? purge
+        : purge === null
+          ? null
+          : defaults.purgeAfterHours,
     resetOnNewWar: typeof source['resetOnNewWar'] === 'boolean' ? source['resetOnNewWar'] : defaults.resetOnNewWar,
     regionEmoji: typeof source['regionEmoji'] === 'string' && isValidEmoji(source['regionEmoji']) ? source['regionEmoji'] : null,
     locationEmoji: typeof source['locationEmoji'] === 'string' && isValidEmoji(source['locationEmoji']) ? source['locationEmoji'] : null,

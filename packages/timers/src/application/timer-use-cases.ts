@@ -27,6 +27,7 @@ export function syncStatusOf(outcome: MaintenanceOutcome): SyncStatus {
     case 'busy':
       return { synced: true };
     case 'gone':
+    case 'deleted':
       return { synced: false, reason: 'gone' };
     case 'disabled':
     case 'retry':
@@ -52,7 +53,7 @@ export function mayChange(board: BoardRecord, asset: TimerAsset, userId: UserId,
 
 export type CreateBoardResult =
   | { readonly kind: 'created'; readonly boardId: string; readonly sync: SyncStatus }
-  | { readonly kind: 'exists' }
+  | { readonly kind: 'exists'; readonly sync: SyncStatus }
   | { readonly kind: 'quota'; readonly max: number };
 
 export class CreateBoard {
@@ -63,12 +64,17 @@ export class CreateBoard {
   }
 
   async execute(input: { guildId: GuildId; channelId: ChannelId; actor: UserId; locale: string | null }): Promise<CreateBoardResult> {
-    const { store, coalescer, clock } = this.#deps;
+    const { store, coalescer, maintenance, clock } = this.#deps;
     const created = await store.createBoard(
       { ...input, createdBy: input.actor, settings: DEFAULT_BOARD_SETTINGS, maxBoards: MAX_BOARDS_PER_GUILD },
       clock.now(),
     );
-    if (created.kind === 'exists') return { kind: 'exists' };
+    // Le tableau existe en base : créer le republie, car ses messages ont pu être supprimés à la main.
+    if (created.kind === 'exists') {
+      // Compte comme une activité : un board qu'on vient de réclamer n'est pas un board abandonné.
+      await store.mutate(input.guildId, created.board.id, () => ({ result: null, events: [{ actor: input.actor, action: 'repair' }] }), clock.now());
+      return { kind: 'exists', sync: syncStatusOf(await maintenance.run(input.guildId, created.board.id, { force: true })) };
+    }
     if (created.kind === 'quota') return { kind: 'quota', max: created.max };
     const outcome = await coalescer.request(input.guildId, created.board.id);
     return { kind: 'created', boardId: created.board.id, sync: syncStatusOf(outcome) };

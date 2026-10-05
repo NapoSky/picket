@@ -97,12 +97,23 @@ const stockpileModal = (h: TimerHarness) => `tm:1:a:st:allodsbight:mercyswail:${
 const choicesOf = (reply: Reply) => (reply.kind === 'autocomplete' ? reply.choices : []);
 
 describe('/timers create', () => {
-  it('creates the board, answers privately, and refuses a second one', async () => {
+  it('creates the board, answers privately, and reposts it rather than creating a second one', async () => {
     const h = timerHarness(database);
     const { command, said } = app(h);
     expect(await said(command(['create']))).toBe('Timer board created. Timers added with /timers add appear here.');
     expect(h.boardMessages()).toHaveLength(1);
-    expect(await said(command(['create']))).toBe('This channel already has a timer board.');
+    expect(await said(command(['create']))).toBe('This channel already had a timer board: it was reposted with its timers.');
+    expect(h.boardMessages()).toHaveLength(1);
+  });
+
+  it('puts the board back when its message was deleted, instead of asking for a repair', async () => {
+    const h = timerHarness(database);
+    const { command, said } = app(h);
+    await said(command(['create']));
+    const gone = h.boardMessages()[0];
+    if (gone === undefined) throw new Error('no board message');
+    await h.messaging.delete(h.ids.channel, gone.id);
+    expect(await said(command(['create']))).toBe('This channel already had a timer board: it was reposted with its timers.');
     expect(h.boardMessages()).toHaveLength(1);
   });
 
@@ -354,7 +365,7 @@ describe('/timers settings', () => {
     expect(shown).toContain('Alerts: on');
     expect(shown).toContain('Alert thresholds: 2h');
     expect(shown).toContain('Active timers: 1/50');
-    expect(shown).toContain('Auto-purge: never');
+    expect(shown).toContain('Auto-purge: after 24 h');
     expect(shown).toContain('Board messages: up to date');
 
     const changed = await said(

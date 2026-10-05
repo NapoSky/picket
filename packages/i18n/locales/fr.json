@@ -276,9 +276,9 @@
     },
     "nothingToClean": "Rien à nettoyer : aucun timer n'est barré.",
     "repaired": "Les messages du tableau ont été republiés.",
+    "restored": "Ce canal avait déjà un tableau de timers : il a été republié avec ses timers.",
     "errors": {
       "noBoard": "Ce canal n'a pas de tableau de timers. Un officier peut en créer un avec /timers create.",
-      "boardExists": "Ce canal a déjà un tableau de timers.",
       "boardQuota": "Ce serveur a déjà {{max}} tableaux de timers.",
       "missingPermissions": "Je ne peux pas publier ici. Permissions manquantes dans ce canal : {{missing}}.",
       "noChannel": "Ce canal ne peut pas accueillir un tableau de timers.",

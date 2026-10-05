@@ -185,7 +185,7 @@ export function timersCommands(deps: TimersCommandDeps): CommandEntry[] {
         const result = await deps.createBoard.execute({ guildId, channelId, actor: interaction.userId, locale: interaction.locale });
         switch (result.kind) {
           case 'exists':
-            return ephemeral(t('timers.errors.boardExists'));
+            return ephemeral(`${t('timers.restored')}${syncNote(result.sync, t)}`);
           case 'quota':
             return ephemeral(t('timers.errors.boardQuota', { max: result.max }));
           case 'created':

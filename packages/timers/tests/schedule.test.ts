@@ -1,4 +1,4 @@
-import { DEFAULT_BOARD_SETTINGS, nextWake, planAlerts, purgeCandidates, staleAlerts, strikeAsset, type AlertRow, type BoardSettings } from '@picket/timers';
+import { DEFAULT_BOARD_SETTINGS, abandonedAt, isAbandoned, nextWake, planAlerts, purgeCandidates, staleAlerts, strikeAsset, type AlertRow, type BoardSettings } from '@picket/timers';
 import { HOUR_MS, NOW, makeAsset } from './fixtures';
 
 const MINUTE_MS = 60_000;
@@ -68,12 +68,12 @@ describe('staleAlerts', () => {
 });
 
 describe('purgeCandidates', () => {
-  it('is off by default, then removes struck and expired assets after the delay', () => {
+  it('is off when the delay is null, then removes struck and expired assets after the delay', () => {
     const struck = strikeAsset(makeAsset(), at(0));
     const expired = makeAsset({ durationS: 3_600 });
     const fresh = makeAsset();
     const all = [struck, expired, fresh];
-    expect(purgeCandidates(all, settings(), at(1_000 * HOUR_MS))).toEqual([]);
+    expect(purgeCandidates(all, settings({ purgeAfterHours: null }), at(1_000 * HOUR_MS))).toEqual([]);
     expect(purgeCandidates(all, settings({ purgeAfterHours: 24 }), at(10 * HOUR_MS))).toEqual([]);
     expect(purgeCandidates(all, settings({ purgeAfterHours: 24 }), at(24 * HOUR_MS))).toEqual([struck]);
     expect(purgeCandidates(all, settings({ purgeAfterHours: 24 }), at(25 * HOUR_MS))).toEqual([struck, expired]);
@@ -83,7 +83,7 @@ describe('purgeCandidates', () => {
 
 describe('nextWake', () => {
   const wake = (assets: Parameters<typeof nextWake>[0]['assets'], now: Date, patch: Partial<BoardSettings> = {}, needsSync = false) =>
-    nextWake({ assets, settings: settings(patch), now, needsSync });
+    nextWake({ assets, settings: settings(patch), now, needsSync, lastActivityAt: NOW });
 
   it('wakes now while a render is pending', () => {
     expect(wake([], NOW, {}, true)).toEqual(NOW);
@@ -93,7 +93,8 @@ describe('nextWake', () => {
     expect(wake([asset], NOW)).toEqual(remaining(360));
     expect(wake([asset], remaining(359))).toEqual(remaining(120));
     expect(wake([asset], remaining(29))).toEqual(due);
-    expect(wake([asset], at(10 * HOUR_MS + 1))).toBeNull();
+    expect(wake([asset], at(10 * HOUR_MS + 1), { purgeAfterHours: null })).toBeNull();
+    expect(wake([asset], at(10 * HOUR_MS + 1))).toEqual(at(34 * HOUR_MS));
   });
 
   it('skips thresholds when alerts are off, but still wakes at the deadline', () => {
@@ -105,8 +106,22 @@ describe('nextWake', () => {
     expect(wake([strikeAsset(asset, NOW)], at(48 * HOUR_MS), { purgeAfterHours: 24 })).toEqual(at(48 * HOUR_MS));
   });
 
-  it('has nothing to plan for an age, or an empty board', () => {
+  it('has nothing to plan for an age', () => {
     expect(wake([makeAsset({ type: 'field', direction: 'up' })], NOW)).toBeNull();
-    expect(wake([], NOW)).toBeNull();
+  });
+
+  it('plans the removal of an empty board, immediately when it is already overdue', () => {
+    expect(wake([], NOW)).toEqual(abandonedAt(NOW));
+    expect(wake([], at(40 * 24 * HOUR_MS))).toEqual(at(40 * 24 * HOUR_MS));
+  });
+});
+
+describe('isAbandoned', () => {
+  const day = 24 * HOUR_MS;
+  it('is true only for a board with no timer at all, idle for 30 days', () => {
+    expect(isAbandoned([], NOW, at(29 * day))).toBe(false);
+    expect(isAbandoned([], NOW, at(30 * day))).toBe(true);
+    expect(isAbandoned([makeAsset()], NOW, at(90 * day))).toBe(false);
+    expect(isAbandoned([strikeAsset(makeAsset(), NOW)], NOW, at(90 * day))).toBe(false);
   });
 });

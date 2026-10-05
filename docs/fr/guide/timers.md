@@ -8,7 +8,8 @@ remettre à zéro. PICKET vous prévient avant la fin d'un compte à rebours.
 
 Un officier lance `/timers create` dans le canal qui doit accueillir le tableau. Le bot y a besoin de **Voir le
 salon**, **Envoyer des messages** (ou **Envoyer des messages dans les fils**) et **Intégrer des liens** ; PICKET vous dit
-laquelle manque. Un canal a un seul tableau, et un serveur peut en avoir 10 au plus.
+laquelle manque. Un canal a un seul tableau, et un serveur peut en avoir 10 au plus. Si le canal en a déjà un (par exemple parce que ses
+messages ont été supprimés à la main), `/timers create` le republie avec ses timers au lieu d'en créer un second.
 
 ## Ajouter un timer
 
@@ -66,7 +67,11 @@ temps sont tous pris en compte, et le tableau est mis à jour une fois, pas une 
 
 - `/timers strike` propose les timers actifs du canal. Un timer barré reste visible, rayé.
 - Ajouter à nouveau le même timer (même type, nom, lieu et code) ramène le timer barré au lieu de créer un doublon.
-- `/timers cleanup` retire les timers barrés. Le tableau garde toujours au moins un message.
+- `/timers cleanup` retire tout de suite les timers barrés. Sinon ils sont supprimés définitivement 24 heures plus tard
+  (voir `purge-after`), comme les timers expirés.
+- Un tableau sans aucun timer et sans modification depuis 30 jours est supprimé, avec son message et ses données.
+  `/timers create` en recrée un. Le tableau n'est pas supprimé tant qu'il contient un timer.
+- Après `/timers cleanup`, le tableau garde au moins un message.
 
 ## Alertes
 
@@ -93,7 +98,7 @@ ou si PICKET a la permission Discord **Mentionner @everyone, @here et tous les r
 | `duplicates` | Timer actif identique : l'ajouter en prévenant, ou le refuser. | prévenir |
 | `restrict-changes` | Seuls le propriétaire d'un timer et les officiers peuvent le barrer ou le rafraîchir. | non |
 | `max-active` | Timers actifs sur le tableau (1 à 100). | 50 |
-| `purge-after` | Supprimer les timers barrés ou expirés après N heures (0 = jamais). | 0 |
+| `purge-after` | Supprimer les timers barrés ou expirés après N heures (0 = jamais). | 24 |
 | `reset-on-new-war` | Vider le tableau au début d'une nouvelle guerre. Prend effet à la sortie du war-log. | non |
 | `region-emoji` | Icône devant la région dans le tableau : un emoji, un emoji personnalisé de votre serveur (`<:nom:id>`), ou `default`. | icônes de PICKET |
 | `location-emoji` | Icône devant la ville dans le tableau, même format. | icônes de PICKET |

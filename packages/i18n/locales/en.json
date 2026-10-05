@@ -276,9 +276,9 @@
     },
     "nothingToClean": "Nothing to clean up: no timer is struck.",
     "repaired": "The board messages were reposted.",
+    "restored": "This channel already had a timer board: it was reposted with its timers.",
     "errors": {
       "noBoard": "This channel has no timer board. An officer can create one with /timers create.",
-      "boardExists": "This channel already has a timer board.",
       "boardQuota": "This server already has {{max}} timer boards.",
       "missingPermissions": "I cannot post here. Missing permissions in this channel: {{missing}}.",
       "noChannel": "This channel cannot hold a timer board.",

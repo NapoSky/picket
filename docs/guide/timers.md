@@ -8,7 +8,8 @@ countdown ends.
 
 An officer runs `/timers create` in the channel that should hold the board. The bot needs **View Channel**,
 **Send Messages** (or **Send Messages in Threads**) and **Embed Links** there; PICKET tells you which one is missing.
-A channel has one board, and a server can have up to 10.
+A channel has one board, and a server can have up to 10. If the channel already has one (for example because its
+messages were deleted by hand), `/timers create` reposts it with its timers instead of creating a second one.
 
 ## Add a timer
 
@@ -67,7 +68,11 @@ all taken into account, and the board is updated once, not once per click.
 - `/timers strike` suggests the active timers of the channel. A struck timer stays visible, crossed out.
 - Adding the same timer again (same type, name, place and code) brings the struck one back instead of creating a
   duplicate.
-- `/timers cleanup` removes the struck timers. The board always keeps at least one message.
+- `/timers cleanup` removes the struck timers right away. Otherwise they are deleted for good 24 hours later (see
+  `purge-after`), as are expired timers.
+- A board with no timer at all and no change for 30 days is deleted, with its message and its data. `/timers create`
+  makes a new one. The board is not deleted while it holds a timer.
+- After `/timers cleanup`, the board keeps at least one message.
 
 ## Alerts
 
@@ -93,7 +98,7 @@ PICKET has the Discord permission **Mention @everyone, @here and All Roles**.
 | `duplicates` | Identical active timer: add it with a warning, or refuse it. | warn |
 | `restrict-changes` | Only the owner of a timer and officers can strike or refresh it. | off |
 | `max-active` | Active timers on the board (1 to 100). | 50 |
-| `purge-after` | Delete struck or expired timers after this many hours (0 = never). | 0 |
+| `purge-after` | Delete struck or expired timers after this many hours (0 = never). | 24 |
 | `reset-on-new-war` | Empty the board when a new war starts. Takes effect once the war log is released. | off |
 | `region-emoji` | Icon before the region in the board: an emoji, a custom emoji of your server (`<:name:id>`), or `default`. | PICKET icons |
 | `location-emoji` | Icon before the town in the board, same format. | PICKET icons |

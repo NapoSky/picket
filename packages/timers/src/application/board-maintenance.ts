@@ -4,7 +4,7 @@ import type { Translator } from '@picket/i18n';
 import type { Clock, GuildId, Logger, MessageId } from '@picket/kernel';
 import type { TimerAsset } from '../domain/asset';
 import { DEFAULT_LOCATION_EMOJI, DEFAULT_REGION_EMOJI } from '../domain/constants';
-import { nextWake, planAlerts, purgeCandidates, staleAlerts } from '../domain/schedule';
+import { isAbandoned, nextWake, planAlerts, purgeCandidates, staleAlerts } from '../domain/schedule';
 import { renderBoard, type RenderedPage } from './board-view';
 import type { BoardRecord, Localizer, PageRecord, TimerStore } from './ports';
 import { boardTexts, buildAlertView } from './texts';
@@ -13,6 +13,8 @@ export type MaintenanceOutcome =
   | { readonly kind: 'ok' }
   /** Board inconnu ou déjà archivé. */
   | { readonly kind: 'gone' }
+  /** Board vide et inactif depuis trop longtemps : supprimé avec ses données. */
+  | { readonly kind: 'deleted' }
   /** Le canal a disparu : le board est désactivé, son historique est conservé. */
   | { readonly kind: 'disabled'; readonly reason: string }
   /** Discord a refusé : le rendu reste en attente et sera retenté. */
@@ -84,6 +86,7 @@ export class BoardMaintenance {
     }
 
     const { board, assets } = state;
+    if (isAbandoned(assets, board.lastActivityAt, now)) return this.#abandon(board);
     const locale = await this.#deps.localizer.localeFor(guildId, board.locale);
     const t = this.#deps.localizer.translator(locale);
 
@@ -100,7 +103,7 @@ export class BoardMaintenance {
 
     const current = await store.markSynced(guildId, boardId, { rev: board.rev, syncError: null });
     const alertRetry = await this.#alerts(board, state.assets, t, now);
-    const wake = current ? nextWake({ assets, settings: board.settings, now, needsSync: false }) : now;
+    const wake = current ? nextWake({ assets, settings: board.settings, now, needsSync: false, lastActivityAt: board.lastActivityAt }) : now;
     const retryAt = alertRetry ? new Date(now.getTime() + ALERT_RETRY_MS) : null;
     await store.schedule(guildId, boardId, wake === null ? retryAt : retryAt !== null && retryAt < wake ? retryAt : wake);
     logger.debug({ board_id: boardId, assets: assets.length }, 'board maintained');
@@ -138,6 +141,17 @@ export class BoardMaintenance {
       }
     }
     if (extra.length > 0) await store.removePages(board.guildId, board.id, extra.map((page) => page.page));
+  }
+
+  async #abandon(board: BoardRecord): Promise<MaintenanceOutcome> {
+    const { store, messaging, logger } = this.#deps;
+    // Le ménage du canal est facultatif : un message déjà supprimé ou un droit retiré ne doit pas garder le board.
+    for (const page of await store.pages(board.guildId, board.id)) {
+      await messaging.delete(board.channelId, page.messageId).catch(() => undefined);
+    }
+    await store.deleteBoard(board.guildId, board.id, 'inactive');
+    logger.info({ board_id: board.id, guild_id: board.guildId }, 'inactive empty board deleted');
+    return { kind: 'deleted' };
   }
 
   async #failed(board: BoardRecord, error: unknown, now: Date): Promise<MaintenanceOutcome> {
