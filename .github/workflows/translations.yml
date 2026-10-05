@@ -1,0 +1,41 @@
+name: Merge translations
+
+# Weblate ouvre des pull requests limitées aux fichiers de langue. `pull_request_target` s'exécute avec les
+# droits du dépôt : ce workflow ne récupère donc JAMAIS le code de la PR, il n'appelle que l'API GitHub.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    # Variable de dépôt à renseigner avec le compte qui ouvre les PR Weblate ; sans elle, rien ne se fusionne.
+    if: vars.WEBLATE_BOT_LOGIN != '' && github.event.pull_request.user.login == vars.WEBLATE_BOT_LOGIN
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Only translation files changed?
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          files="$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename')"
+          echo "$files"
+          if [ -z "$files" ] || echo "$files" | grep -qvE '^packages/i18n/locales/[A-Za-z-]+\.json$'; then
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      # La fusion n'a lieu que si les contrôles requis par la protection de branche (dont la CI) passent.
+      - name: Enable auto-merge
+        if: steps.scope.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: gh pr merge "$PR" --repo "$REPO" --auto --squash

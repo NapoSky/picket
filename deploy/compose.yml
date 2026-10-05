@@ -1,0 +1,162 @@
+# Déploiement : `./rollout.sh <image>` (voir le script). Aucun `container_name` ni port publié :
+# docker-rollout doit pouvoir faire cohabiter deux répliques le temps de la bascule.
+name: picket
+
+x-picket-environment: &picket-environment
+  NODE_ENV: production
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  DISCORD_APPLICATION_ID: ${DISCORD_APPLICATION_ID:?set DISCORD_APPLICATION_ID in .env}
+  DISCORD_PUBLIC_KEY: ${DISCORD_PUBLIC_KEY:?set DISCORD_PUBLIC_KEY in .env}
+  DISCORD_BOT_TOKEN_FILE: /run/secrets/discord_bot_token
+  DATABASE_URL_FILE: /run/secrets/database_url
+  GUILD_RETENTION_DAYS: ${GUILD_RETENTION_DAYS:-30}
+  SHARD_COUNT: ${SHARD_COUNT:-1}
+
+x-hardening: &hardening
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: picket
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      PICKET_MIGRATOR_PASSWORD_FILE: /run/secrets/picket_migrator_password
+      PICKET_APP_PASSWORD_FILE: /run/secrets/picket_app_password
+    secrets:
+      - postgres_password
+      - picket_migrator_password
+      - picket_app_password
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./postgres/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d picket"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  picket:
+    image: ${PICKET_IMAGE:?set PICKET_IMAGE}
+    init: true
+    restart: unless-stopped
+    <<: *hardening
+    environment:
+      <<: *picket-environment
+      ROLES: http-ingress,shard-runner
+      # Laisse Traefik retirer la réplique (healthcheck KO) avant de refuser des connexions.
+      SHUTDOWN_DRAIN_MS: "15000"
+    secrets:
+      - discord_bot_token
+      - database_url
+    depends_on:
+      postgres:
+        condition: service_healthy
+    stop_grace_period: 45s
+    networks:
+      - internal
+      - proxy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 1
+      start_period: 10s
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:-proxy}
+      # Seule route exposée : les interactions Discord. Santé et métriques restent internes.
+      traefik.http.routers.picket.rule: Host(`${PICKET_HOST:?set PICKET_HOST}`) && Path(`/interactions`) && Method(`POST`)
+      traefik.http.routers.picket.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.picket.tls.certresolver: ${TRAEFIK_CERT_RESOLVER:-letsencrypt}
+      traefik.http.services.picket.loadbalancer.server.port: "8080"
+
+  # Tâches ponctuelles : `docker compose run --rm migrate`.
+  migrate:
+    image: ${PICKET_IMAGE:?set PICKET_IMAGE}
+    profiles: [tools]
+    restart: "no"
+    <<: *hardening
+    command: ["node", "apps/bot/dist/cli.js", "migrate"]
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_MIGRATOR_URL_FILE: /run/secrets/database_migrator_url
+    secrets:
+      - database_migrator_url
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  deploy-commands:
+    image: ${PICKET_IMAGE:?set PICKET_IMAGE}
+    profiles: [tools]
+    restart: "no"
+    <<: *hardening
+    command: ["node", "apps/bot/dist/cli.js", "deploy-commands"]
+    environment:
+      <<: *picket-environment
+    secrets:
+      - discord_bot_token
+      - database_url
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+      - proxy
+
+  # Suppression définitive des données des guildes dont la rétention est échue.
+  # À planifier (cron de l'hôte) : `docker compose run --rm purge` ; code de sortie 1 si une guilde a échoué.
+  purge:
+    image: ${PICKET_IMAGE:?set PICKET_IMAGE}
+    profiles: [tools]
+    restart: "no"
+    <<: *hardening
+    command: ["node", "apps/bot/dist/cli.js", "purge"]
+    environment:
+      <<: *picket-environment
+    secrets:
+      - discord_bot_token
+      - database_url
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+networks:
+  internal:
+    internal: true
+  proxy:
+    name: ${TRAEFIK_NETWORK:-proxy}
+    external: true
+
+volumes:
+  pgdata:
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password
+  picket_migrator_password:
+    file: ./secrets/picket_migrator_password
+  picket_app_password:
+    file: ./secrets/picket_app_password
+  database_url:
+    file: ./secrets/database_url
+  database_migrator_url:
+    file: ./secrets/database_migrator_url
+  discord_bot_token:
+    file: ./secrets/discord_bot_token

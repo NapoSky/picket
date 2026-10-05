@@ -1,0 +1,21 @@
+{
+  "name": "@picket/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@picket/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "locales"],
+  "dependencies": {
+    "i18next": "^26.4.2"
+  },
+  "devDependencies": {
+    "discord-api-types": "^0.38.56"
+  }
+}

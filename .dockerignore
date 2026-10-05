@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+.git
+.github
+.vscode
+coverage
+secrets
+deploy/secrets
+draft
+.env
+.env.*
+!.env.example

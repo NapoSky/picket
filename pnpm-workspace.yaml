@@ -1,0 +1,16 @@
+packages:
+  - apps/*
+  - packages/*
+  - docs
+
+allowBuilds:
+  '@parcel/watcher': false
+  '@swc/core': true
+  cpu-features: false
+  esbuild: true
+  protobufjs: false
+  ssh2: false
+  unrs-resolver: true
+
+# Bloque toute version publiée depuis moins de 48 h (supply chain).
+minimumReleaseAge: 2880

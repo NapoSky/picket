@@ -1,0 +1,26 @@
+{
+  "name": "@picket/testing",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@picket/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@picket/discord": "workspace:*",
+    "@picket/i18n": "workspace:*",
+    "@picket/kernel": "workspace:*",
+    "@picket/persistence": "workspace:*",
+    "@testcontainers/postgresql": "^12.2.0",
+    "pg": "^8.23.1",
+    "testcontainers": "^12.2.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1"
+  }
+}

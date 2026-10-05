@@ -1,0 +1,21 @@
+{
+  "name": "@picket/bot",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/main.js",
+  "scripts": {
+    "start": "node dist/main.js",
+    "cli": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@picket/config": "workspace:*",
+    "@picket/coordination": "workspace:*",
+    "@picket/discord": "workspace:*",
+    "@picket/guild": "workspace:*",
+    "@picket/i18n": "workspace:*",
+    "@picket/kernel": "workspace:*",
+    "@picket/observability": "workspace:*",
+    "@picket/persistence": "workspace:*",
+    "@picket/todolist": "workspace:*"
+  }
+}

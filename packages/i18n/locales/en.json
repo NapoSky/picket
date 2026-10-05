@@ -1,0 +1,221 @@
+{
+  "errors": {
+    "duplicate": "This interaction has already been processed.",
+    "guildOnly": "This command can only be used in a server.",
+    "denied": "You do not have access to this command (required level: {{level}}).",
+    "unknownCommand": "This command is no longer available.",
+    "expired": "This interaction is no longer available.",
+    "failure": "Something went wrong. Please try again later.",
+    "timeout": "The request took too long. Please try again.",
+    "featureDisabled": "This feature is disabled on this server. An officer can enable it with /picket settings feature.",
+    "suspended": "This server's PICKET data is scheduled for deletion on {{date}}. A server administrator can cancel it with /picket data cancel-deletion."
+  },
+  "levels": {
+    "member": "member",
+    "officer": "officer",
+    "admin": "admin",
+    "none": "none"
+  },
+  "commands": {
+    "todolist": {
+      "description": "Interactive todo lists",
+      "create": {
+        "description": "Post a todo list in this channel"
+      }
+    },
+    "picket": {
+      "description": "PICKET administration and information",
+      "groups": {
+        "permissions": "Manage who can use PICKET on this server",
+        "settings": "Change the PICKET settings of this server",
+        "data": "Manage the data PICKET keeps for this server"
+      },
+      "status": {
+        "description": "Show the PICKET status for this server"
+      },
+      "permissions": {
+        "show": {
+          "description": "Show who can use PICKET on this server"
+        },
+        "set": {
+          "description": "Add or remove a role from an access level",
+          "options": {
+            "level": {
+              "description": "Access level to change",
+              "choices": {
+                "officer": "Officer (manage the bot)",
+                "member": "Member (use the bot)"
+              }
+            },
+            "role": {
+              "description": "Role to add or remove (@everyone allowed for member)"
+            },
+            "action": {
+              "description": "Add or remove the role",
+              "choices": {
+                "add": "Add",
+                "remove": "Remove"
+              }
+            },
+            "confirm": {
+              "description": "Confirm a change that opens access to everyone"
+            }
+          }
+        }
+      },
+      "settings": {
+        "language": {
+          "description": "Set the language PICKET uses on this server",
+          "options": {
+            "language": {
+              "description": "Language of the server, or automatic"
+            }
+          }
+        },
+        "timezone": {
+          "description": "Set the time zone of this server",
+          "options": {
+            "timezone": {
+              "description": "IANA time zone name, for example Europe/Paris"
+            }
+          }
+        },
+        "auditChannel": {
+          "description": "Set the channel that receives the audit log",
+          "options": {
+            "channel": {
+              "description": "Audit channel (leave empty to remove it)"
+            }
+          }
+        },
+        "feature": {
+          "description": "Enable or disable a feature on this server",
+          "options": {
+            "feature": {
+              "description": "Feature to change"
+            },
+            "enabled": {
+              "description": "Enable (True) or disable (False) the feature"
+            }
+          }
+        }
+      },
+      "data": {
+        "delete": {
+          "description": "Schedule the deletion of all PICKET data for this server",
+          "options": {
+            "confirm": {
+              "description": "Confirm the scheduled deletion"
+            }
+          }
+        },
+        "cancelDeletion": {
+          "description": "Cancel a scheduled deletion of this server data"
+        }
+      }
+    }
+  },
+  "discordPermissions": {
+    "viewChannel": "View Channel",
+    "sendMessages": "Send Messages",
+    "embedLinks": "Embed Links"
+  },
+  "todolist": {
+    "title": "📋 Todolist",
+    "footer": "📋 {{page}}/{{total}}",
+    "modal": {
+      "title": "New todolist",
+      "label": "Items (one per line)",
+      "placeholder": "__Prep__\nA・Crates (x2)\n🇧- Trucks\nFree text stays as written"
+    },
+    "created": {
+      "one": "Todolist posted.",
+      "many": "Todolist posted in {{count}} messages."
+    },
+    "completed": "Todolist complete: its message was removed.",
+    "completedPage": "Page {{page}}/{{total}} complete: its message was removed.",
+    "alreadyDone": "This item was already completed.",
+    "errors": {
+      "empty": "Nothing to post: the text is empty.",
+      "inputTooLong": "The text is too long (maximum {{max}} characters).",
+      "noItems": "No item found. Start an item line with a letter emoji (🇦- Crates) or a capital letter and ・ (A・Crates).",
+      "tooManyItems": "Too many items (maximum {{max}}).",
+      "itemTooLong": "Line {{line}}: the item is too long (maximum {{max}} characters).",
+      "tooLongToRender": "This list is too long to be displayed. Shorten the free text.",
+      "yourText": "Your text, to copy back:",
+      "missingPermissions": "I cannot post here. Missing permissions in this channel: {{missing}}.",
+      "cannotPost": "I could not post in this channel. Check my permissions there and try again.",
+      "cannotEdit": "I could not update this list. Check my permissions in this channel.",
+      "unreadable": "This list can no longer be read. Delete it and create a new one.",
+      "busy": "This list is busy. Please try again.",
+      "noChannel": "This channel cannot hold a todolist."
+    }
+  },
+  "status": {
+    "body": "PICKET is up and running.\nLanguage: {{locale}} - Timezone: {{timezone}}\nEnabled features: {{features}}\nAudit channel: {{audit}}",
+    "auditConfigured": "configured",
+    "auditMissing": "not configured",
+    "languageAuto": "automatic"
+  },
+  "features": {
+    "timers": "Timers",
+    "todolists": "Todo lists",
+    "warlog": "War log"
+  },
+  "settings": {
+    "invalidOption": "Invalid value.",
+    "unchanged": "Nothing to change: already set to {{value}}.",
+    "rejected": {
+      "unsupportedLanguage": "This language is not available.",
+      "invalidTimezone": "Unknown time zone. Use an IANA name such as Europe/Paris, America/New_York or UTC."
+    },
+    "language": {
+      "auto": "Automatic (each user's Discord language)",
+      "changed": "Server language set to: {{value}}."
+    },
+    "timezone": {
+      "changed": "Time zone set to {{value}}."
+    },
+    "auditChannel": {
+      "changed": "Audit channel set to: {{value}}."
+    },
+    "feature": {
+      "enabled": "{{feature}} enabled.",
+      "disabled": "{{feature}} disabled.",
+      "alreadyEnabled": "Nothing to change: {{feature}} is already enabled.",
+      "alreadyDisabled": "Nothing to change: {{feature}} is already disabled."
+    }
+  },
+  "permissions": {
+    "show": {
+      "level": "Your access level: {{level}}",
+      "officers": "Officer roles: {{roles}}",
+      "members": "Member roles: {{roles}}",
+      "noOfficers": "none (server administrators only)",
+      "noMembers": "none",
+      "warning": "Warning: {{text}}"
+    },
+    "warnings": {
+      "no_officer_role": "No officer role is configured: only server administrators can use officer commands.",
+      "member_open_to_everyone": "Everyone on the server can use member commands."
+    },
+    "set": {
+      "invalidLevel": "Invalid level.",
+      "invalidAction": "Invalid action.",
+      "invalidRole": "Invalid role.",
+      "everyoneNotOfficer": "@everyone cannot be an officer role.",
+      "confirmationRequired": "This opens member commands to everyone on the server. Run the command again with confirm:True to apply it.",
+      "alreadyPresent": "Nothing to change: {{target}} already has the {{level}} level.",
+      "notPresent": "Nothing to change: {{target}} does not have the {{level}} level.",
+      "added": "{{target}} now has the {{level}} level.",
+      "removed": "{{target}} no longer has the {{level}} level."
+    }
+  },
+  "data": {
+    "confirmPrompt": "This schedules the permanent deletion of all PICKET data for this server (permissions, settings, audit log) on {{date}}. PICKET stops answering commands until then. You can cancel at any time before that date. Run the command again with confirm:True to proceed.",
+    "scheduled": "Deletion scheduled for {{date}}. Cancel it with /picket data cancel-deletion.",
+    "alreadyScheduled": "A deletion is already scheduled for {{date}}.",
+    "cancelled": "The scheduled deletion has been cancelled. PICKET is active again.",
+    "nothingScheduled": "No deletion is scheduled for this server."
+  }
+}

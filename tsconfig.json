@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/kernel" },
+    { "path": "packages/config" },
+    { "path": "packages/observability" },
+    { "path": "packages/i18n" },
+    { "path": "packages/coordination" },
+    { "path": "packages/discord" },
+    { "path": "packages/guild" },
+    { "path": "packages/todolist" },
+    { "path": "apps/bot" }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@picket/discord",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@picket/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@discordjs/rest": "^2.6.3",
+    "@picket/coordination": "workspace:*",
+    "@discordjs/ws": "^2.0.4",
+    "@picket/i18n": "workspace:*",
+    "@picket/kernel": "workspace:*",
+    "@picket/persistence": "workspace:*",
+    "discord-api-types": "^0.38.56",
+    "fastify": "^5.12.5"
+  }
+}
