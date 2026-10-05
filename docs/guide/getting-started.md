@@ -3,10 +3,10 @@
 ## Add PICKET to your server
 
 Invite the bot with the `bot` and `applications.commands` scopes. Commands reply directly to the person who used them,
-so they need no channel permission. **Todo lists post public messages**: in the channels where you use them, the bot needs
-**View Channel**, **Send Messages** (or **Send Messages in Threads**) and **Embed Links**. PICKET tells you which one is
-missing before it opens the form. Other features that post messages (timers, war log) will say what they need before you
-enable them.
+so they need no channel permission. **Todo lists and timer boards post public messages**: in the channels where you use
+them, the bot needs **View Channel**, **Send Messages** (or **Send Messages in Threads**) and **Embed Links**. PICKET tells
+you which one is missing before it opens the form. Other features that post messages (war log) will say what they need
+before you enable them.
 
 PICKET only requests the non-privileged `Guilds` gateway intent. It never reads message content and does not need the
 members intent.

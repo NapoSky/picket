@@ -3,10 +3,11 @@
 ## Ajouter PICKET à votre serveur
 
 Invitez le bot avec les scopes `bot` et `applications.commands`. Les commandes répondent directement à la personne qui les
-a utilisées : elles n'ont besoin d'aucune permission de canal. **Les todolists publient des messages publics** : dans les
-canaux où vous les utilisez, le bot a besoin de **Voir le salon**, **Envoyer des messages** (ou **Envoyer des messages dans
-les fils**) et **Intégrer des liens**. PICKET vous dit laquelle manque avant d'ouvrir le formulaire. Les autres
-fonctionnalités qui publient des messages (timers, war-log) indiqueront ce qu'elles demandent avant que vous les activiez.
+a utilisées : elles n'ont besoin d'aucune permission de canal. **Les todolists et les tableaux de timers publient des
+messages publics** : dans les canaux où vous les utilisez, le bot a besoin de **Voir le salon**, **Envoyer des messages**
+(ou **Envoyer des messages dans les fils**) et **Intégrer des liens**. PICKET vous dit laquelle manque avant d'ouvrir le
+formulaire. Les autres fonctionnalités qui publient des messages (war-log) indiqueront ce qu'elles demandent avant que
+vous les activiez.
 
 PICKET ne demande que l'intent Gateway `Guilds`, non privilégié. Il ne lit jamais le contenu des messages et n'a pas
 besoin de l'intent des membres.

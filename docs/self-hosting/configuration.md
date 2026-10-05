@@ -12,7 +12,7 @@ suffixing the name with `_FILE` (Docker secrets); giving both is an error.
 | `DISCORD_BOT_TOKEN` / `_FILE` | required | Bot token. Never logged. |
 | `DATABASE_URL` / `_FILE` | required | PostgreSQL connection string of the **application role** (no ownership, subject to row security). |
 | `DATABASE_POOL_MAX` | `10` | Maximum connections per replica (1 to 100). |
-| `ROLES` | `http-ingress` | Comma-separated roles of this process: `http-ingress` (receives interactions) and `shard-runner` (Gateway connection). |
+| `ROLES` | `http-ingress` | Comma-separated roles of this process: `http-ingress` (receives interactions), `shard-runner` (Gateway connection) and `job-runner` (timer alerts, board updates and purges). Every replica can run all of them: shards and jobs are held by one replica at a time, through a lease. |
 | `SHARD_COUNT` | `1` | Total number of Gateway shards (1 to 256). One shard is enough up to roughly 2,500 servers. |
 | `GUILD_RETENTION_DAYS` | `30` | Days between a server becoming inactive and the erasure of its data (1 to 365). |
 | `LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug` or `trace`. |

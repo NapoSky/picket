@@ -23,6 +23,92 @@
         "description": "Post a todo list in this channel"
       }
     },
+    "timers": {
+      "description": "Countdown board for Foxhole timers",
+      "groups": {
+        "board": "Manage the timer board of a channel"
+      },
+      "board": {
+        "create": {
+          "description": "Create the timer board in this channel"
+        }
+      },
+      "add": {
+        "description": "Add a timer to the board of this channel",
+        "options": {
+          "type": {
+            "description": "What the timer tracks"
+          },
+          "region": {
+            "description": "Region (hex) of the timer"
+          },
+          "location": {
+            "description": "Town or location in that region"
+          },
+          "owner": {
+            "description": "Who looks after it (you by default)"
+          }
+        }
+      },
+      "strike": {
+        "description": "Strike a timer off the board",
+        "options": {
+          "timer": {
+            "description": "Timer to strike"
+          }
+        }
+      },
+      "cleanup": {
+        "description": "Remove the struck timers from the board"
+      },
+      "repair": {
+        "description": "Repost the board messages from the saved timers"
+      },
+      "settings": {
+        "description": "Show or change the settings of this channel's board",
+        "options": {
+          "alerts": {
+            "description": "Send expiry alerts"
+          },
+          "thresholds": {
+            "description": "When to alert before expiry, for example 6h, 2h, 30m"
+          },
+          "alertRole": {
+            "description": "Role to notify in alerts"
+          },
+          "alertRoleAction": {
+            "description": "Add or remove that role, or clear all roles",
+            "choices": {
+              "add": "Add",
+              "remove": "Remove",
+              "clear": "Clear all roles"
+            }
+          },
+          "silent": {
+            "description": "Alerts without push notification"
+          },
+          "duplicates": {
+            "description": "What to do when an identical active timer exists",
+            "choices": {
+              "warn": "Add it and warn",
+              "refuse": "Refuse it"
+            }
+          },
+          "restrictChanges": {
+            "description": "Only the owner and officers can strike or refresh a timer"
+          },
+          "maxActive": {
+            "description": "Maximum number of active timers on the board"
+          },
+          "purgeAfter": {
+            "description": "Delete struck or expired timers after this many hours (0 = never)"
+          },
+          "resetOnNewWar": {
+            "description": "Empty the board when a new war starts"
+          }
+        }
+      }
+    },
     "picket": {
       "description": "PICKET administration and information",
       "groups": {
@@ -149,6 +235,94 @@
       "unreadable": "This list can no longer be read. Delete it and create a new one.",
       "busy": "This list is busy. Please try again.",
       "noChannel": "This channel cannot hold a todolist."
+    }
+  },
+  "timers": {
+    "board": {
+      "title": "⏱️ Timers",
+      "empty": "No timer yet. Add one with /timers add.",
+      "footer": "⏱️ {{page}}/{{total}}"
+    },
+    "types": {
+      "stockpile": "Stockpile",
+      "facility": "Facility",
+      "field": "Field",
+      "naval_ship": "Naval ship",
+      "tank": "Tank",
+      "train": "Train"
+    },
+    "alert": {
+      "text": "{{icon}} **{{name}}** ({{place}}) expires {{time}}."
+    },
+    "modal": {
+      "title": "New timer: {{type}}",
+      "name": "Name",
+      "namePlaceholder": "Short name, 15 characters at most",
+      "code": "Code",
+      "codeStockpile": "6-digit stockpile code",
+      "codeShort": "3 to 6 letters or digits (optional)",
+      "duration": "Duration",
+      "durationPlaceholder": "Hours (50, 1.5) or 2h30m, 1d 12h"
+    },
+    "created": "Timer board created. Timers added with /timers add appear here.",
+    "added": "Timer added: {{name}} ({{place}}), {{time}}.",
+    "reactivated": "Timer back on the board: {{name}} ({{place}}), {{time}}.",
+    "duplicateWarning": "Heads up: an identical active timer was already on the board.",
+    "struck": "Timer struck: {{name}}.",
+    "cleaned": {
+      "one": "Removed 1 struck timer.",
+      "many": "Removed {{count}} struck timers."
+    },
+    "nothingToClean": "Nothing to clean up: no timer is struck.",
+    "repaired": "The board messages were reposted.",
+    "errors": {
+      "noBoard": "This channel has no timer board. An officer can create one with /timers board create.",
+      "boardExists": "This channel already has a timer board.",
+      "boardQuota": "This server already has {{max}} timer boards.",
+      "missingPermissions": "I cannot post here. Missing permissions in this channel: {{missing}}.",
+      "noChannel": "This channel cannot hold a timer board.",
+      "quota": "This board already holds {{max}} active timers. Strike some, or ask an officer to raise the limit.",
+      "duplicate": "An identical active timer is already on this board.",
+      "notFound": "This timer no longer exists.",
+      "alreadyStruck": "This timer is already struck.",
+      "forbidden": "On this board only the owner of a timer and officers can change it.",
+      "boardDisabled": "The channel of this board no longer exists, so the board is disabled. Create a new one with /timers board create.",
+      "syncPending": "Saved, but the board message could not be updated yet ({{reason}}). I will retry on my own.",
+      "unknownType": "Unknown timer type.",
+      "unknownRegion": "Unknown region. Pick one of the suggestions.",
+      "unknownLocation": "Unknown location. Pick one of the suggestions for that region.",
+      "nameEmpty": "The name is empty.",
+      "nameTooLong": "The name is too long (maximum {{max}} characters).",
+      "codeRequired": "A 6-digit code is required for a stockpile.",
+      "codeInvalid": "Invalid code. A stockpile code has 6 digits; other codes have 3 to 6 letters or digits.",
+      "durationInvalid": "Invalid duration. Use hours (50, 1.5) or units (2h30m, 1d 12h).",
+      "durationTooShort": "The duration is too short (minimum {{min}}).",
+      "durationTooLong": "The duration is too long (maximum {{max}})."
+    },
+    "settings": {
+      "show": "Alerts: {{alerts}}\nAlert thresholds: {{thresholds}}\nNotified roles: {{roles}}\nAlert mode: {{mode}}\nIdentical timers: {{duplicates}}\nStrike and refresh: {{changes}}\nActive timers: {{active}}/{{max}}\nAuto-purge: {{purge}}\nEmpty on a new war: {{reset}}\nBoard messages: {{sync}}",
+      "on": "on",
+      "off": "off",
+      "none": "none",
+      "never": "never",
+      "silent": "silent",
+      "notifying": "with push notification",
+      "duplicatesWarn": "added with a warning",
+      "duplicatesRefuse": "refused",
+      "changesEveryone": "every member",
+      "changesRestricted": "owner and officers only",
+      "purgeAfter": "after {{hours}} h",
+      "syncOk": "up to date",
+      "syncFailed": "pending ({{reason}})",
+      "updated": "Board settings updated.",
+      "unchanged": "Nothing to change.",
+      "invalidThresholds": "Invalid thresholds. Example: 6h, 2h, 30m (at most {{max}}, each between {{min}} minutes and 7 days).",
+      "tooManyRoles": "At most {{max}} roles can be notified.",
+      "invalidRole": "Invalid role.",
+      "roleNeeded": "Give a role to add or remove.",
+      "invalidMaxActive": "The limit must be between 1 and {{max}}.",
+      "maxBelowCurrent": "The board already holds more active timers than that limit.",
+      "invalidPurge": "Auto-purge must be between 0 (never) and {{max}} hours."
     }
   },
   "status": {

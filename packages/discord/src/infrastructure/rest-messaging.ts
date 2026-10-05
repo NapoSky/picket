@@ -2,6 +2,7 @@ import { DiscordAPIError, HTTPError, RateLimitError, REST, type RESTOptions } fr
 import {
   ButtonStyle,
   ComponentType,
+  MessageFlags,
   Routes,
   type APIMessage,
   type RESTPatchAPIChannelMessageJSONBody,
@@ -13,6 +14,13 @@ import {
   DiscordApiError,
   MAX_BUTTONS_PER_MESSAGE,
   MAX_EMBED_DESCRIPTION,
+  MAX_EMBED_FIELDS,
+  MAX_EMBEDS_PER_MESSAGE,
+  MAX_EMBEDS_TOTAL_LENGTH,
+  MAX_FIELD_NAME,
+  MAX_FIELD_VALUE,
+  MAX_MESSAGE_CONTENT,
+  embedsLength,
   type DiscordErrorReason,
   type MessageView,
   type Messaging,
@@ -58,11 +66,18 @@ export function mapRestError(error: unknown): DiscordApiError {
   return new DiscordApiError('unknown', 'Unexpected Discord client error');
 }
 
-/** Corps REST d'un message du bot : jamais de mention, boutons répartis en lignes de 5. */
+/** Corps REST d'un message du bot : seules les mentions de rôles explicitement demandées sont résolues, boutons en lignes de 5. */
 export function toRestMessage(view: MessageView): RESTPostAPIChannelMessageJSONBody & RESTPatchAPIChannelMessageJSONBody {
   if (view.buttons.length > MAX_BUTTONS_PER_MESSAGE) throw new RangeError('Too many buttons for one message');
+  if (view.embeds.length > MAX_EMBEDS_PER_MESSAGE) throw new RangeError('Too many embeds for one message');
+  if (embedsLength(view.embeds) > MAX_EMBEDS_TOTAL_LENGTH) throw new RangeError('Embeds too long for one message');
+  if ((view.content?.length ?? 0) > MAX_MESSAGE_CONTENT) throw new RangeError('Message content too long');
   for (const embed of view.embeds) {
-    if (embed.description.length > MAX_EMBED_DESCRIPTION) throw new RangeError('Embed description too long');
+    if ((embed.description?.length ?? 0) > MAX_EMBED_DESCRIPTION) throw new RangeError('Embed description too long');
+    if ((embed.fields?.length ?? 0) > MAX_EMBED_FIELDS) throw new RangeError('Too many embed fields');
+    for (const field of embed.fields ?? []) {
+      if (field.name.length > MAX_FIELD_NAME || field.value.length > MAX_FIELD_VALUE) throw new RangeError('Embed field too long');
+    }
   }
   const components = [];
   for (let start = 0; start < view.buttons.length; start += BUTTONS_PER_ROW) {
@@ -77,14 +92,19 @@ export function toRestMessage(view: MessageView): RESTPostAPIChannelMessageJSONB
     });
   }
   return {
+    ...(view.content !== undefined ? { content: view.content } : {}),
     embeds: view.embeds.map((embed) => ({
       ...(embed.title !== undefined ? { title: embed.title } : {}),
-      description: embed.description,
+      ...(embed.description !== undefined && embed.description !== '' ? { description: embed.description } : {}),
+      ...(embed.fields !== undefined && embed.fields.length > 0
+        ? { fields: embed.fields.map((field) => ({ name: field.name, value: field.value, inline: field.inline ?? false })) }
+        : {}),
       ...(embed.footer !== undefined ? { footer: { text: embed.footer } } : {}),
       ...(embed.color !== undefined ? { color: embed.color } : {}),
     })),
     components,
-    allowed_mentions: { parse: [] },
+    allowed_mentions: { parse: [], ...(view.mentionRoleIds !== undefined && view.mentionRoleIds.length > 0 ? { roles: [...view.mentionRoleIds] } : {}) },
+    ...(view.silent === true ? { flags: MessageFlags.SuppressNotifications } : {}),
   };
 }
 

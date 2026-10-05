@@ -12,7 +12,9 @@ packages/persistence  accès à la base, migrations, sécurité par ligne
 packages/coordination baux avec fencing, verrous par clé, stockage des sessions Gateway
 packages/discord    pipeline d'interactions, registres de commandes et de composants, adaptateurs HTTP et Gateway, ports REST
 packages/guild      serveurs : réglages, permissions, cycle de vie
+packages/game-data  régions et lieux du jeu, et la recherche derrière l'autocomplétion
 packages/todolist   todolists : grammaire, rendu, cochage (l'état vit dans le message Discord)
+packages/timers     tableaux de timers : état en base, rendu pur, alertes, entretien des tableaux
 packages/testing    outils partagés par les tests
 ```
 
@@ -30,8 +32,12 @@ son API publique, ou quand du code hors de `@picket/config` lit `process.env`.
   politique. L'application se connecte avec un rôle qui ne possède rien et ne peut pas contourner la politique.
 - **Idempotence.** Les interactions sont réclamées une seule fois entre les réplicas ; les écritures utilisent des clés
   naturelles et des mises à jour conditionnelles.
-- **Les singletons utilisent des baux.** Un travail qui ne doit tourner qu'une fois (un shard Gateway) est tenu par un bail
-  avec jeton de fencing, vérifié par les écritures du détenteur.
+- **Les singletons utilisent des baux.** Un travail qui ne doit tourner qu'une fois (un shard Gateway, les tâches
+  périodiques) est tenu par un bail avec jeton de fencing, vérifié par les écritures du détenteur.
+- **La base est la vérité, Discord n'est qu'une vue.** Les timers gardent leur état dans PostgreSQL et le rendent par une
+  fonction pure (le même état donne toujours les mêmes messages, comparés par empreinte). Un changement et le rendu qu'il
+  appelle sont écrits dans la même transaction : un arrêt entre les deux est réparé par le planificateur. Un rendu lit
+  l'état le plus récent sous un verrou par tableau, et une rafale de changements partage un seul rendu.
 - **Mises à jour sans interruption.** Les migrations ne font qu'ajouter ; les charges utiles et identifiants qui
   traversent les versions sont versionnés.
 - **Les commandes sont déclarées une fois.** Le registre valide noms, options et textes au démarrage et génère le JSON

@@ -284,9 +284,45 @@ describe('signed HTTP interaction -> pipeline -> access control -> Postgres -> r
   });
 
   it('declares every command with its options in the generated global payload', () => {
-    const [picket, todolist, ...rest] = buildCommandsPayload(buildCommandRegistry(database.handle.db, composition));
+    const [picket, timers, todolist, ...rest] = buildCommandsPayload(buildCommandRegistry(database.handle.db, composition));
     expect(rest).toEqual([]);
     expect(todolist).toMatchObject({ name: 'todolist', contexts: [0], options: [{ type: 1, name: 'create' }] });
+    expect(timers).toMatchObject({
+      name: 'timers',
+      contexts: [0],
+      options: [
+        {
+          type: 1,
+          name: 'add',
+          options: [
+            { type: 3, name: 'type', required: true },
+            { type: 3, name: 'region', required: true, autocomplete: true },
+            { type: 3, name: 'location', required: true, autocomplete: true },
+            { type: 6, name: 'owner', required: false },
+          ],
+        },
+        { type: 1, name: 'cleanup' },
+        { type: 1, name: 'repair' },
+        {
+          type: 1,
+          name: 'settings',
+          options: [
+            { type: 5, name: 'alerts' },
+            { type: 3, name: 'thresholds' },
+            { type: 8, name: 'alert-role' },
+            { type: 3, name: 'alert-role-action' },
+            { type: 5, name: 'silent' },
+            { type: 3, name: 'duplicates' },
+            { type: 5, name: 'restrict-changes' },
+            { type: 4, name: 'max-active', min_value: 1, max_value: 100 },
+            { type: 4, name: 'purge-after', min_value: 0, max_value: 720 },
+            { type: 5, name: 'reset-on-new-war' },
+          ],
+        },
+        { type: 1, name: 'strike', options: [{ type: 3, name: 'timer', required: true, autocomplete: true }] },
+        { type: 2, name: 'board', options: [{ type: 1, name: 'create' }] },
+      ],
+    });
     expect(picket).toMatchObject({
       name: 'picket',
       contexts: [0],

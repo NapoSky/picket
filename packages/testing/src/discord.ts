@@ -41,6 +41,7 @@ export function makeInteraction(overrides: Partial<IncomingInteraction> = {}): I
     appPermissions: 0n,
     commandPath: ['picket', 'status'],
     options: {},
+    focusedOption: null,
     customId: null,
     message: null,
     fields: {},

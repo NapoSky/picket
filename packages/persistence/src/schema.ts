@@ -62,6 +62,78 @@ export interface GuildAuditLogTable {
   at: Timestamp;
 }
 
+export interface TimerBoardsTable {
+  id: Generated<string>;
+  guild_id: string;
+  channel_id: string;
+  locale: Nullable<string>;
+  settings: ColumnType<Record<string, unknown>, string | undefined, string>;
+  rev: Generated<number>;
+  needs_sync: Generated<boolean>;
+  sync_error: Nullable<string>;
+  created_by: string;
+  created_at: Timestamp;
+  archived_at: Nullable<Date>;
+}
+
+export interface TimerBoardMessagesTable {
+  board_id: string;
+  guild_id: string;
+  page: number;
+  message_id: string;
+  content_hash: string;
+}
+
+export interface TimerAssetsTable {
+  id: string;
+  board_id: string;
+  guild_id: string;
+  type: string;
+  name: string;
+  code: Nullable<string>;
+  region_key: string;
+  location_key: string;
+  owner_user_id: string;
+  direction: 'down' | 'up';
+  duration_s: number;
+  started_at: Date | string;
+  status: Generated<'active' | 'struck'>;
+  struck_at: Nullable<Date>;
+  frozen_at: Nullable<Date>;
+  rev: Generated<number>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface TimerEventsTable {
+  id: Generated<string>;
+  guild_id: string;
+  board_id: string;
+  asset_id: Nullable<string>;
+  actor_id: string;
+  action: string;
+  detail: ColumnType<unknown, string | null | undefined, never>;
+  at: Timestamp;
+}
+
+export interface TimerAlertsTable {
+  asset_id: string;
+  guild_id: string;
+  board_id: string;
+  due_at: Date | string;
+  threshold_min: number;
+  message_id: Nullable<string>;
+  sent_at: Timestamp;
+  acked_by: Nullable<string>;
+  acked_at: Nullable<Date>;
+}
+
+export interface TimerScheduleTable {
+  board_id: string;
+  guild_id: string;
+  wake_at: Date | string;
+}
+
 export interface Schema {
   guild_settings: GuildSettingsTable;
   guild_registry: GuildRegistryTable;
@@ -71,4 +143,10 @@ export interface Schema {
   guild_audit_log: GuildAuditLogTable;
   interaction_receipts: InteractionReceiptsTable;
   app_state: AppStateTable;
+  timer_boards: TimerBoardsTable;
+  timer_board_messages: TimerBoardMessagesTable;
+  timer_assets: TimerAssetsTable;
+  timer_events: TimerEventsTable;
+  timer_alerts: TimerAlertsTable;
+  timer_schedule: TimerScheduleTable;
 }

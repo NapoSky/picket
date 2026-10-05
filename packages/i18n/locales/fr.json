@@ -23,6 +23,92 @@
         "description": "Publier une todolist dans ce canal"
       }
     },
+    "timers": {
+      "description": "Tableau de compte à rebours des timers Foxhole",
+      "groups": {
+        "board": "Gérer le tableau de timers d'un canal"
+      },
+      "board": {
+        "create": {
+          "description": "Créer le tableau de timers dans ce canal"
+        }
+      },
+      "add": {
+        "description": "Ajouter un timer au tableau de ce canal",
+        "options": {
+          "type": {
+            "description": "Ce que le timer suit"
+          },
+          "region": {
+            "description": "Région (hex) du timer"
+          },
+          "location": {
+            "description": "Ville ou lieu de cette région"
+          },
+          "owner": {
+            "description": "Qui s'en occupe (vous par défaut)"
+          }
+        }
+      },
+      "strike": {
+        "description": "Barrer un timer du tableau",
+        "options": {
+          "timer": {
+            "description": "Timer à barrer"
+          }
+        }
+      },
+      "cleanup": {
+        "description": "Retirer les timers barrés du tableau"
+      },
+      "repair": {
+        "description": "Republier les messages du tableau depuis les timers enregistrés"
+      },
+      "settings": {
+        "description": "Voir ou modifier les réglages du tableau de ce canal",
+        "options": {
+          "alerts": {
+            "description": "Envoyer les alertes d'expiration"
+          },
+          "thresholds": {
+            "description": "Quand alerter avant l'expiration, par exemple 6h, 2h, 30m"
+          },
+          "alertRole": {
+            "description": "Rôle à notifier dans les alertes"
+          },
+          "alertRoleAction": {
+            "description": "Ajouter ou retirer ce rôle, ou vider la liste",
+            "choices": {
+              "add": "Ajouter",
+              "remove": "Retirer",
+              "clear": "Vider tous les rôles"
+            }
+          },
+          "silent": {
+            "description": "Alertes sans notification push"
+          },
+          "duplicates": {
+            "description": "Que faire si un timer actif identique existe",
+            "choices": {
+              "warn": "L'ajouter et prévenir",
+              "refuse": "Le refuser"
+            }
+          },
+          "restrictChanges": {
+            "description": "Seuls le propriétaire et les officiers peuvent barrer ou rafraîchir"
+          },
+          "maxActive": {
+            "description": "Nombre maximal de timers actifs sur le tableau"
+          },
+          "purgeAfter": {
+            "description": "Supprimer les timers barrés ou expirés après N heures (0 = jamais)"
+          },
+          "resetOnNewWar": {
+            "description": "Vider le tableau au début d'une nouvelle guerre"
+          }
+        }
+      }
+    },
     "picket": {
       "description": "Administration et informations PICKET",
       "groups": {
@@ -149,6 +235,94 @@
       "unreadable": "Cette liste n'est plus lisible. Supprimez-la et créez-en une nouvelle.",
       "busy": "Cette liste est occupée. Réessayez.",
       "noChannel": "Ce canal ne peut pas accueillir de todolist."
+    }
+  },
+  "timers": {
+    "board": {
+      "title": "⏱️ Timers",
+      "empty": "Aucun timer pour le moment. Ajoutez-en un avec /timers add.",
+      "footer": "⏱️ {{page}}/{{total}}"
+    },
+    "types": {
+      "stockpile": "Stockpile",
+      "facility": "Installation",
+      "field": "Champ",
+      "naval_ship": "Navire",
+      "tank": "Char",
+      "train": "Train"
+    },
+    "alert": {
+      "text": "{{icon}} **{{name}}** ({{place}}) expire {{time}}."
+    },
+    "modal": {
+      "title": "Nouveau timer : {{type}}",
+      "name": "Nom",
+      "namePlaceholder": "Nom court, 15 caractères au plus",
+      "code": "Code",
+      "codeStockpile": "Code du stockpile (6 chiffres)",
+      "codeShort": "3 à 6 lettres ou chiffres (facultatif)",
+      "duration": "Durée",
+      "durationPlaceholder": "Heures (50, 1.5) ou 2h30m, 1d 12h"
+    },
+    "created": "Tableau de timers créé. Les timers ajoutés avec /timers add apparaissent ici.",
+    "added": "Timer ajouté : {{name}} ({{place}}), {{time}}.",
+    "reactivated": "Timer de retour sur le tableau : {{name}} ({{place}}), {{time}}.",
+    "duplicateWarning": "Attention : un timer actif identique était déjà sur le tableau.",
+    "struck": "Timer barré : {{name}}.",
+    "cleaned": {
+      "one": "1 timer barré retiré.",
+      "many": "{{count}} timers barrés retirés."
+    },
+    "nothingToClean": "Rien à nettoyer : aucun timer n'est barré.",
+    "repaired": "Les messages du tableau ont été republiés.",
+    "errors": {
+      "noBoard": "Ce canal n'a pas de tableau de timers. Un officier peut en créer un avec /timers board create.",
+      "boardExists": "Ce canal a déjà un tableau de timers.",
+      "boardQuota": "Ce serveur a déjà {{max}} tableaux de timers.",
+      "missingPermissions": "Je ne peux pas publier ici. Permissions manquantes dans ce canal : {{missing}}.",
+      "noChannel": "Ce canal ne peut pas accueillir un tableau de timers.",
+      "quota": "Ce tableau contient déjà {{max}} timers actifs. Barrez-en, ou demandez à un officier de relever la limite.",
+      "duplicate": "Un timer actif identique est déjà sur ce tableau.",
+      "notFound": "Ce timer n'existe plus.",
+      "alreadyStruck": "Ce timer est déjà barré.",
+      "forbidden": "Sur ce tableau, seuls le propriétaire d'un timer et les officiers peuvent le modifier.",
+      "boardDisabled": "Le canal de ce tableau n'existe plus : le tableau est désactivé. Créez-en un nouveau avec /timers board create.",
+      "syncPending": "Enregistré, mais le message du tableau n'a pas pu être mis à jour pour l'instant ({{reason}}). Je réessaie seul.",
+      "unknownType": "Type de timer inconnu.",
+      "unknownRegion": "Région inconnue. Choisissez l'une des suggestions.",
+      "unknownLocation": "Lieu inconnu. Choisissez l'une des suggestions de cette région.",
+      "nameEmpty": "Le nom est vide.",
+      "nameTooLong": "Le nom est trop long ({{max}} caractères maximum).",
+      "codeRequired": "Un code à 6 chiffres est obligatoire pour un stockpile.",
+      "codeInvalid": "Code invalide. Un code de stockpile a 6 chiffres ; les autres codes ont 3 à 6 lettres ou chiffres.",
+      "durationInvalid": "Durée invalide. Utilisez des heures (50, 1.5) ou des unités (2h30m, 1d 12h).",
+      "durationTooShort": "La durée est trop courte (minimum {{min}}).",
+      "durationTooLong": "La durée est trop longue (maximum {{max}})."
+    },
+    "settings": {
+      "show": "Alertes : {{alerts}}\nSeuils d'alerte : {{thresholds}}\nRôles notifiés : {{roles}}\nMode des alertes : {{mode}}\nTimers identiques : {{duplicates}}\nBarrer et rafraîchir : {{changes}}\nTimers actifs : {{active}}/{{max}}\nPurge automatique : {{purge}}\nVidé à chaque nouvelle guerre : {{reset}}\nMessages du tableau : {{sync}}",
+      "on": "activées",
+      "off": "désactivées",
+      "none": "aucun",
+      "never": "jamais",
+      "silent": "silencieux",
+      "notifying": "avec notification push",
+      "duplicatesWarn": "ajoutés avec un avertissement",
+      "duplicatesRefuse": "refusés",
+      "changesEveryone": "tous les membres",
+      "changesRestricted": "propriétaire et officiers seulement",
+      "purgeAfter": "après {{hours}} h",
+      "syncOk": "à jour",
+      "syncFailed": "en attente ({{reason}})",
+      "updated": "Réglages du tableau mis à jour.",
+      "unchanged": "Rien à modifier.",
+      "invalidThresholds": "Seuils invalides. Exemple : 6h, 2h, 30m ({{max}} au plus, chacun entre {{min}} minutes et 7 jours).",
+      "tooManyRoles": "{{max}} rôles au plus peuvent être notifiés.",
+      "invalidRole": "Rôle invalide.",
+      "roleNeeded": "Indiquez un rôle à ajouter ou à retirer.",
+      "invalidMaxActive": "La limite doit être comprise entre 1 et {{max}}.",
+      "maxBelowCurrent": "Le tableau contient déjà plus de timers actifs que cette limite.",
+      "invalidPurge": "La purge automatique doit être comprise entre 0 (jamais) et {{max}} heures."
     }
   },
   "status": {

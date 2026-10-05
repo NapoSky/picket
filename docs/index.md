@@ -22,5 +22,5 @@ features:
 
 ::: info Status
 The foundation is in place: permissions, per-server data management and the interaction pipeline.
-Todo lists, timers and the war log are being built on top of it.
+Todo lists and timers are available. The war log is next.
 :::

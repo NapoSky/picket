@@ -12,7 +12,9 @@ packages/persistence  database access, migrations, row-level security
 packages/coordination leases with fencing, per-key locks, Gateway session store
 packages/discord    interaction pipeline, command and component registries, HTTP and Gateway adapters, REST ports
 packages/guild      servers: settings, permissions, lifecycle
+packages/game-data  regions and locations of the game, with the search behind the autocomplete
 packages/todolist   todo lists: grammar, layout, ticking (state lives in the Discord message)
+packages/timers     timer boards: state in the database, pure rendering, alerts, board upkeep
 packages/testing    helpers shared by the tests
 ```
 
@@ -29,8 +31,12 @@ database, HTTP or Node modules, when a package reaches into another one instead 
   reads `app.guild_id`; code reaches it through `withTenant`. A test fails when such a table lacks the policy. The
   application connects with a role that owns nothing and cannot bypass the policy.
 - **Idempotence.** Interactions are claimed once across replicas; writes use natural keys and conditional updates.
-- **Singletons use leases.** Work that must run once (a Gateway shard) is held through a lease with a fencing token,
-  checked by the writes of the holder.
+- **Singletons use leases.** Work that must run once (a Gateway shard, the periodic jobs) is held through a lease with a
+  fencing token, checked by the writes of the holder.
+- **The database is the truth, Discord is a view.** Timers keep their state in PostgreSQL and render it with a pure
+  function (the same state always gives the same messages, compared by hash). A change and its pending render are
+  written in the same transaction, so a crash between the two is repaired by the planner. A render reads the latest
+  state under a per-board lock, and a burst of changes shares a single render.
 - **Rolling updates.** Migrations only add; payloads and identifiers that cross versions are versioned.
 - **Commands are declared once.** The registry validates names, options and texts at startup and generates the JSON sent
   to Discord. Every command states its required level explicitly.

@@ -12,7 +12,7 @@ en suffixant le nom par `_FILE` (Docker secrets) ; fournir les deux est une erre
 | `DISCORD_BOT_TOKEN` / `_FILE` | obligatoire | Token du bot. Jamais journalisé. |
 | `DATABASE_URL` / `_FILE` | obligatoire | Chaîne de connexion PostgreSQL du **rôle applicatif** (ne possède rien, soumis à la sécurité par ligne). |
 | `DATABASE_POOL_MAX` | `10` | Connexions maximales par réplica (1 à 100). |
-| `ROLES` | `http-ingress` | Rôles du processus, séparés par des virgules : `http-ingress` (reçoit les interactions) et `shard-runner` (connexion Gateway). |
+| `ROLES` | `http-ingress` | Rôles du processus, séparés par des virgules : `http-ingress` (reçoit les interactions), `shard-runner` (connexion Gateway) et `job-runner` (alertes de timers, mise à jour des tableaux et purges). Chaque réplica peut tous les exécuter : les shards et les tâches sont tenus par une seule réplique à la fois, grâce à un bail. |
 | `SHARD_COUNT` | `1` | Nombre total de shards Gateway (1 à 256). Un shard suffit jusqu'à environ 2 500 serveurs. |
 | `GUILD_RETENTION_DAYS` | `30` | Jours entre le moment où un serveur devient inactif et l'effacement de ses données (1 à 365). |
 | `LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug` ou `trace`. |

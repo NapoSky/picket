@@ -28,12 +28,19 @@ data in one. For anything sensitive, use a
 | Server identifier and settings (language, time zone, enabled features) | Make the bot work | While the bot is on the server, then the retention period |
 | Identifiers of the roles attached to the officer and member levels | Check access | Same |
 | Audit log: who changed what, when, before and after (Discord user identifier) | Accountability | Same |
+| Timer boards: channel, settings (alert thresholds, identifiers of the notified roles, limits) and identifiers of the messages PICKET published | Show and update the board | Same |
+| Timers: type, name, code, place, owner (Discord user identifier), start and duration, as typed by members | Show the countdowns and send alerts | Same, or until the timer is cleaned up or purged |
+| Timer history: who added, refreshed, struck or cleaned up which timer, and when (Discord user identifier) | Accountability | Same |
+| Alerts sent for each timer | Never send the same alert twice | Same |
 | Identifier of each processed interaction and its server | Avoid handling the same command twice | 7 days |
-| Application logs: server, user, channel and message identifiers of each todo list creation and click, never the list content | Operate, secure and debug the service | 30 days |
+| Application logs: server, user, channel and message identifiers of each todo list or timer creation and click, never the list content nor the timer names | Operate, secure and debug the service | 30 days |
 | Database backups of the data above | Recover from a failure | 30 days at most |
 
 Discord sends PICKET the identifiers of the server, channel, user and roles involved in each command or button click.
 They are used to answer that interaction and to check permissions. Only the data listed above is kept.
+
+The names and codes typed in a timer are shown to everyone who can read the channel and are stored as typed: members are
+asked not to put personal data in them.
 
 ### What PICKET does not process
 

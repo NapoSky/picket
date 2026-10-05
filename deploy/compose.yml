@@ -93,7 +93,7 @@ services:
     <<: *hardening
     environment:
       <<: *picket-environment
-      ROLES: http-ingress,shard-runner
+      ROLES: http-ingress,shard-runner,job-runner
       # Laisse Traefik retirer la réplique (healthcheck KO) avant de refuser des connexions.
       SHUTDOWN_DRAIN_MS: "15000"
     secrets:

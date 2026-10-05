@@ -7,10 +7,10 @@ import { createI18n } from '@picket/i18n';
 import { systemClock } from '@picket/kernel';
 import { createHealthServer, createLogger } from '@picket/observability';
 import { createDatabase } from '@picket/persistence';
-import { buildPipeline, buildShardRunner } from './composition';
+import { buildJobRunner, buildPipeline, buildShardRunner } from './composition';
 
 const FORCE_EXIT_AFTER_MS = 30_000;
-const IMPLEMENTED_ROLES: ReadonlySet<Role> = new Set(['http-ingress', 'shard-runner']);
+const IMPLEMENTED_ROLES: ReadonlySet<Role> = new Set(['http-ingress', 'shard-runner', 'job-runner']);
 
 async function run(): Promise<void> {
   const config = loadConfig(process.env);
@@ -63,18 +63,21 @@ async function run(): Promise<void> {
         clock: systemClock,
       })
     : null;
+  const holder = `${hostname()}:${process.pid}:${randomBytes(3).toString('hex')}`;
   const shards = config.roles.includes('shard-runner')
     ? buildShardRunner(database.db, logger, {
         ...composition,
         botToken: config.discord.botToken,
         shardCount: config.shardCount,
-        holder: `${hostname()}:${process.pid}:${randomBytes(3).toString('hex')}`,
+        holder,
       })
     : null;
+  const jobs = config.roles.includes('job-runner') ? buildJobRunner(database.db, logger, { ...composition, holder }) : null;
 
   await interactions?.listen({ host: '0.0.0.0', port: config.http.port });
   await new Promise<void>((resolve) => health.listen(config.http.healthPort, '0.0.0.0', resolve));
   shards?.start();
+  jobs?.start();
   logger.info(
     { roles: config.roles, port: config.http.port, healthPort: config.http.healthPort, shardCount: config.shardCount },
     'picket started',
@@ -91,6 +94,8 @@ async function run(): Promise<void> {
 
     // Cède d'abord les baux Gateway : une autre réplique reprend la session pendant que celle-ci se vide.
     await shards?.stop();
+    // Les passes périodiques s'achèvent avant la fermeture de la base : le bail est rendu à la réplique suivante.
+    await jobs?.stop();
 
     // Laisse le reverse proxy retirer cette réplique (readiness KO) avant de refuser des connexions.
     draining = true;

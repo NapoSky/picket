@@ -22,6 +22,7 @@ type Operation = 'send' | 'fetch' | 'edit' | 'delete';
 interface Stored {
   message: StoredMessage;
   buttons: readonly ButtonView[];
+  view: MessageView;
 }
 
 /** Adaptateur de messagerie en mémoire : mêmes erreurs typées que l'adaptateur REST, pannes et latence injectables. */
@@ -58,7 +59,13 @@ export class InMemoryMessaging implements Messaging {
   }
 
   /** Messages encore présents dans un canal, dans l'ordre de publication. */
-  list(channelId: ChannelId): readonly { id: MessageId; description: string; buttons: readonly ButtonView[]; footer: string | null }[] {
+  list(channelId: ChannelId): readonly {
+    id: MessageId;
+    description: string;
+    buttons: readonly ButtonView[];
+    footer: string | null;
+    view: MessageView;
+  }[] {
     return [...this.#messages.values()]
       .filter((stored) => stored.message.channelId === channelId)
       .map((stored) => ({
@@ -66,6 +73,7 @@ export class InMemoryMessaging implements Messaging {
         description: stored.message.embeds[0]?.description ?? '',
         buttons: stored.buttons,
         footer: stored.message.embeds[0]?.footer ?? null,
+        view: stored.view,
       }));
   }
 
@@ -79,7 +87,7 @@ export class InMemoryMessaging implements Messaging {
     this.#check('send');
     this.#counter += 1;
     const id = MessageId.assert(String(900000000000000000n + BigInt(this.#counter)));
-    this.#messages.set(this.#key(channelId, id), { message: toStored(id, channelId, message), buttons: message.buttons });
+    this.#messages.set(this.#key(channelId, id), { message: toStored(id, channelId, message), buttons: message.buttons, view: message });
     return id;
   }
 
@@ -101,6 +109,7 @@ export class InMemoryMessaging implements Messaging {
     this.#messages.set(this.#key(channelId, messageId), {
       message: toStored(messageId, channelId, message),
       buttons: message.buttons,
+      view: message,
     });
   }
 
@@ -118,7 +127,7 @@ function toStored(id: MessageId, channelId: ChannelId, message: MessageView): St
     channelId,
     embeds: message.embeds.map((embed) => ({
       title: embed.title ?? null,
-      description: embed.description,
+      description: embed.description ?? null,
       footer: embed.footer ?? null,
       color: embed.color ?? null,
     })),

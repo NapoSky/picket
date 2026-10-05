@@ -4,8 +4,8 @@ PICKET uses two levels that you attach to roles, plus an implicit administrator 
 
 | Level | Meant for | Examples |
 | --- | --- | --- |
-| `member` | Everyday users of the bot | Check the status, (soon) add a timer or a todo list |
-| `officer` | People who manage the bot | (soon) create boards, configure the war log |
+| `member` | Everyday users of the bot | Check the status, add, strike and refresh a timer, create a todo list |
+| `officer` | People who manage the bot | Create and configure timer boards, change the server settings |
 | administrator | Server owner and Administrator role holders | Manage permissions, delete the server data |
 
 An officer is also a member. An administrator is also an officer.

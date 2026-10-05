@@ -37,6 +37,8 @@ export interface IncomingInteraction {
   readonly commandPath: readonly string[];
   /** Valeurs des options de la commande (hors sous-commandes et groupes). */
   readonly options: Readonly<Record<string, OptionValue>>;
+  /** Pour un autocomplete : nom de l'option en cours de saisie (sa valeur partielle est dans `options`). */
+  readonly focusedOption: string | null;
   readonly customId: string | null;
   /** Pour un composant : le message cliqué. */
   readonly message: MessageRef | null;
@@ -51,6 +53,8 @@ export interface ModalInput {
   readonly minLength?: number;
   readonly maxLength?: number;
   readonly required?: boolean;
+  /** Valeur préremplie du champ. */
+  readonly value?: string;
   /** `paragraph` : saisie multiligne. */
   readonly style: 'short' | 'paragraph';
 }

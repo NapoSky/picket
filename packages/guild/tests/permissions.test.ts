@@ -65,6 +65,7 @@ function setup() {
       interaction: makeInteraction({ userId: adminUser, ...overrides }),
       guildId,
       logger: noopLogger,
+      level: 'admin',
       t: englishT,
     });
     return reply.kind === 'message' ? reply.content : '';

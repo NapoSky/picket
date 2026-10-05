@@ -22,5 +22,5 @@ features:
 
 ::: info État d'avancement
 Le socle est en place : permissions, gestion des données par serveur et pipeline d'interactions.
-Les todolists, les timers et le war-log se construisent par-dessus.
+Les todolists et les timers sont disponibles. Le war-log est la prochaine étape.
 :::

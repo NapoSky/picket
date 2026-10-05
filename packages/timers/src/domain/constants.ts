@@ -1,0 +1,18 @@
+/** Un asset occupe un bouton : 25 par message (limite Discord). */
+export const MAX_ACTIVE_PER_PAGE = 25;
+export const MAX_NAME_LENGTH = 15;
+
+export const MIN_DURATION_S = 60;
+export const MAX_DURATION_S = 30 * 24 * 3600;
+
+export const DEFAULT_MAX_ACTIVE = 50;
+export const HARD_MAX_ACTIVE = 100;
+export const MAX_BOARDS_PER_GUILD = 10;
+
+export const MAX_ALERT_THRESHOLDS = 4;
+export const MIN_THRESHOLD_MIN = 5;
+export const MAX_THRESHOLD_MIN = 7 * 24 * 60;
+export const MAX_ALERT_ROLES = 5;
+export const MAX_PURGE_HOURS = 30 * 24;
+
+export const BOARD_COLOR = 0x2b5fb3;

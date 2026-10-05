@@ -11,7 +11,7 @@ must be done, what must be monitored, and what happened while you were away.
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-docs.picket--foxhole.com-informational)](https://docs.picket-foxhole.com)
 
-> **Status: v1.0, running in real conditions.** The foundation and the todo lists are done. Timers and the war log are
+> **Status: v1.0, running in real conditions.** The foundation, the todo lists and the timers are done. The war log is
 > next. See [what is built](#what-is-built).
 
 PICKET is faction-neutral (Wardens and Colonials alike), lightweight, and built for regiment-scale collaboration. It is a
@@ -22,19 +22,23 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 | Area | State |
 | --- | --- |
 | **Todo lists** | `/todolist create` posts an interactive list; one button per item; quantities `(x3)`, categories, pagination beyond 25 items; the list lives in the Discord message, nothing is stored in the database |
+| **Timers** | A countdown board per channel for stockpiles, facilities, fields, ships, tanks and trains; region and location suggestions as you type; one button per timer to refresh it, however many people click at once; silent expiry alerts with configurable thresholds and roles; strike, clean up, repair; the state lives in the database, so a deleted message is simply reposted |
 | **Permissions** | Three levels (`member`, `officer`, `admin`), roles configurable per server, audit log of every change |
 | **Server settings** | Language, time zone, audit channel, per-feature switches |
 | **Multi-server** | Every server is isolated at the database level (row-level security) |
 | **Data management** | Retention period after the bot is removed, scheduled deletion on demand, nothing kept longer than needed |
 | **Languages** | English and French; add one by dropping a JSON file in [`packages/i18n/locales`](packages/i18n/locales) (Weblate-ready) |
 | **Operations** | Zero-downtime rolling updates, several identical replicas, signed requests only, secrets kept out of the repository and the logs |
-| Timers, war log | Planned |
+| War log | Planned |
 
 ### Commands
 
 | Command | Level | What it does |
 | --- | --- | --- |
 | `/todolist create` | member | Opens a form and posts a todo list in the channel |
+| `/timers board create` | officer | Creates the timer board of the channel |
+| `/timers add` / `strike` | member | Adds a timer (type, region, location, then a form) or strikes one |
+| `/timers cleanup` / `repair` / `settings` | officer | Removes struck timers, reposts the board, shows or changes its settings |
 | `/picket status` | member | Shows the server configuration |
 | `/picket permissions show` / `set` | member / admin | Shows or changes who can use PICKET |
 | `/picket settings language` / `timezone` / `audit-channel` / `feature` | officer | Changes the server settings |
@@ -81,13 +85,15 @@ A modular monolith in a pnpm workspace, organised in clean layers (`domain`, `ap
 | [`packages/coordination`](packages/coordination) | Leases with fencing, per-key locks, Gateway session store |
 | [`packages/discord`](packages/discord) | Interaction pipeline, command and component registries, REST and Gateway adapters |
 | [`packages/guild`](packages/guild) | Servers: settings, permissions, lifecycle |
+| [`packages/game-data`](packages/game-data) | Regions and locations of the game, and the search behind the autocomplete |
 | [`packages/todolist`](packages/todolist) | Todo lists: grammar, layout, ticking |
+| [`packages/timers`](packages/timers) | Timer boards: database state, pure rendering, alerts, board upkeep |
 
 - **PostgreSQL** is the single source of truth. Every table that holds server data has row-level security.
 - Interactions arrive as **signed HTTP requests** (Ed25519); the Gateway is only used for server lifecycle events, with
   the non-privileged `Guilds` intent.
-- Work that must run once (a Gateway shard) is held through a **lease with a fencing token**; interactions are claimed once
-  across replicas.
+- Work that must run once (a Gateway shard, the periodic jobs) is held through a **lease with a fencing token**;
+  interactions are claimed once across replicas.
 - Buttons and forms share one chain with commands: duplicate detection, access level, feature switch, suspension,
   language, error handling.
 

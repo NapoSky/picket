@@ -214,6 +214,9 @@ importers:
       '@picket/persistence':
         specifier: workspace:*
         version: link:../../packages/persistence
+      '@picket/timers':
+        specifier: workspace:*
+        version: link:../../packages/timers
       '@picket/todolist':
         specifier: workspace:*
         version: link:../../packages/todolist
@@ -268,6 +271,8 @@ importers:
       fastify:
         specifier: ^5.12.5
         version: 5.12.5
+
+  packages/game-data: {}
 
   packages/guild:
     dependencies:
@@ -348,6 +353,27 @@ importers:
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
+
+  packages/timers:
+    dependencies:
+      '@picket/coordination':
+        specifier: workspace:*
+        version: link:../coordination
+      '@picket/discord':
+        specifier: workspace:*
+        version: link:../discord
+      '@picket/game-data':
+        specifier: workspace:*
+        version: link:../game-data
+      '@picket/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@picket/kernel':
+        specifier: workspace:*
+        version: link:../kernel
+      '@picket/persistence':
+        specifier: workspace:*
+        version: link:../persistence
 
   packages/todolist:
     dependencies:

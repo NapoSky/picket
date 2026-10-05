@@ -101,7 +101,7 @@ describe('schema conventions (integration)', () => {
   let database: TestDatabase;
 
   // Tables portant `guild_id` sans contenu de tenant : enumérées par des tâches système.
-  const NOT_TENANT_CONTENT = ['guild_registry', 'interaction_receipts'];
+  const NOT_TENANT_CONTENT = ['guild_registry', 'interaction_receipts', 'timer_schedule'];
 
   beforeAll(async () => {
     database = await createTestDatabase();

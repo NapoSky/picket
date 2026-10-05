@@ -1,0 +1,118 @@
+# Timers
+
+Un tableau de timers est un message, dans un canal, qui liste les ressources que votre régiment doit surveiller
+(stockpiles, installations, champs, navires, chars, trains), chacune avec son compte à rebours et un bouton pour le
+remettre à zéro. PICKET vous prévient avant la fin d'un compte à rebours.
+
+## Mettre en place un tableau
+
+Un officier lance `/timers board create` dans le canal qui doit accueillir le tableau. Le bot y a besoin de **Voir le
+salon**, **Envoyer des messages** (ou **Envoyer des messages dans les fils**) et **Intégrer des liens** ; PICKET vous dit
+laquelle manque. Un canal a un seul tableau, et un serveur peut en avoir 10 au plus.
+
+## Ajouter un timer
+
+Toute personne de niveau membre lance `/timers add` :
+
+| Option | Signification |
+| --- | --- |
+| `type` | Ce que le timer suit (voir le tableau ci-dessous). |
+| `region` | La région (hex). Commencez à taper et choisissez une suggestion. |
+| `location` | La ville ou le lieu de cette région, avec des suggestions aussi. |
+| `owner` | Qui s'en occupe. Vous, si vous laissez vide. |
+
+Un formulaire demande ensuite le **nom** (15 caractères au plus), le **code** quand le type en a un, et la **durée**
+quand le timer décompte.
+
+| Type | Compte | Code | Durée par défaut |
+| --- | --- | --- | --- |
+| Stockpile | à rebours | 6 chiffres, obligatoire | 50 h |
+| Installation | à rebours | aucun | 50 h |
+| Champ | en avant (temps depuis le dernier refresh) | aucun | non demandée |
+| Navire | à rebours | 3 à 6 lettres ou chiffres, facultatif | 48 h |
+| Char | à rebours | 3 à 6 lettres ou chiffres, facultatif | 48 h |
+| Train | à rebours | 3 à 6 lettres ou chiffres, facultatif | 48 h |
+
+Les durées de 50 h et 48 h sont celles du bot d'origine ; vous pouvez saisir n'importe quelle durée entre 1 minute et
+30 jours. Écrivez des heures (`50`, `1.5`) ou des unités (`90m`, `2h30m`, `1d 12h`).
+
+PICKET ne corrige jamais un lieu de lui-même : choisissez une suggestion, sinon la commande est refusée.
+
+## Lire le tableau
+
+Chaque ligne montre une lettre, le type, le nom et le code, le moment où le compte à rebours se termine (ou le temps
+écoulé depuis le dernier refresh) et le propriétaire :
+
+```text
+🇦・📦 **Dépôt nord** `123456`・dans 2 jours・@Jules
+```
+
+- La lettre est celle du bouton sous le tableau. Les lettres repartent de A à chaque message : un tableau contient
+  **25 timers actifs par message**, et PICKET ajoute un message quand il en faut un.
+- ⌛ signale un timer dont le compte à rebours est terminé. Il reste sur le tableau jusqu'à ce que quelqu'un le barre
+  (ou que le tableau le purge).
+- Un timer barré est rayé, n'a plus de bouton et garde sa durée d'origine.
+
+## Rafraîchir un timer
+
+Cliquez sur son bouton lettre. Le compte à rebours repart de sa durée (ou de zéro pour un champ). Plusieurs clics en même
+temps sont tous pris en compte, et le tableau est mis à jour une fois, pas une fois par clic.
+
+## Barrer et nettoyer
+
+- `/timers strike` propose les timers actifs du canal. Un timer barré reste visible, rayé.
+- Ajouter à nouveau le même timer (même type, nom, lieu et code) ramène le timer barré au lieu de créer un doublon.
+- `/timers cleanup` retire les timers barrés. Le tableau garde toujours au moins un message.
+
+## Alertes
+
+Par défaut, PICKET publie une alerte **silencieuse** dans le canal 2 heures avant la fin d'un compte à rebours, avec un
+bouton ✅ qui la retire. L'alerte disparaît d'elle-même quand le timer est rafraîchi, barré ou expiré, et revient pour
+l'échéance suivante après un refresh.
+
+Si PICKET a été interrompu, il envoie une seule alerte, celle du seuil le plus proche atteint, jamais une rafale
+d'anciennes alertes.
+
+Pour notifier un rôle, ajoutez-le avec `/timers settings alert-role`. Un rôle peut être notifié s'il est mentionnable,
+ou si PICKET a la permission Discord **Mentionner @everyone, @here et tous les rôles**.
+
+## Réglages
+
+`/timers settings` sans option montre les réglages. Avec des options, il les modifie.
+
+| Option | Signification | Défaut |
+| --- | --- | --- |
+| `alerts` | Envoyer les alertes. | activées |
+| `thresholds` | Quand alerter avant la fin, par exemple `6h, 2h, 30m` (4 au plus, de 5 minutes à 7 jours). | `2h` |
+| `alert-role`, `alert-role-action` | Rôles à notifier (5 au plus) : ajouter, retirer, ou tout vider. | aucun |
+| `silent` | Alertes sans notification push. | oui |
+| `duplicates` | Timer actif identique : l'ajouter en prévenant, ou le refuser. | prévenir |
+| `restrict-changes` | Seuls le propriétaire d'un timer et les officiers peuvent le barrer ou le rafraîchir. | non |
+| `max-active` | Timers actifs sur le tableau (1 à 100). | 50 |
+| `purge-after` | Supprimer les timers barrés ou expirés après N heures (0 = jamais). | 0 |
+| `reset-on-new-war` | Vider le tableau au début d'une nouvelle guerre. Prend effet à la sortie du war-log. | non |
+
+## Qui peut faire quoi
+
+| Niveau | Peut |
+| --- | --- |
+| membre | Ajouter, barrer et rafraîchir des timers, acquitter des alertes. |
+| officier | Créer un tableau, le nettoyer, le réparer, modifier ses réglages. |
+
+Avec `restrict-changes`, un membre ne peut barrer ou rafraîchir que ses propres timers.
+
+## Quand quelque chose se passe mal
+
+- Un modérateur a supprimé un message du tableau : le prochain changement le republie, ou lancez `/timers repair`.
+- PICKET n'a pas une permission ou Discord est lent : votre changement est enregistré, la réponse vous dit que le
+  tableau sera mis à jour plus tard, et PICKET réessaie seul.
+- Le canal a été supprimé : le tableau est désactivé et son historique conservé. Créez-en un nouveau avec
+  `/timers board create`.
+
+## Ce que PICKET conserve
+
+Contrairement aux todolists, les timers vivent dans la base de PICKET, car les comptes à rebours et les alertes doivent
+survivre à un message supprimé ou à un redémarrage. PICKET conserve les réglages du tableau, chaque timer (type, nom,
+code, lieu, propriétaire, début, durée) et un historique de qui a fait quoi. Les noms et les codes sont visibles de toute
+personne qui peut lire le canal : n'y saisissez pas de donnée personnelle. Voir la
+[Politique de confidentialité](../legal/privacy).

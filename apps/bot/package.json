@@ -16,6 +16,7 @@
     "@picket/kernel": "workspace:*",
     "@picket/observability": "workspace:*",
     "@picket/persistence": "workspace:*",
+    "@picket/timers": "workspace:*",
     "@picket/todolist": "workspace:*"
   }
 }

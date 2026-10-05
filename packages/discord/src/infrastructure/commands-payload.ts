@@ -33,6 +33,10 @@ function toApiOption(registry: CommandRegistry, option: OptionDescriptor): APIAp
   const common = { name: option.name, required, ...describe(registry, option.description) };
   switch (option.type) {
     case 'string':
+      // Discord interdit de combiner choix fermés et autocomplete.
+      if (option.autocomplete === true) {
+        return { type: ApplicationCommandOptionType.String, ...common, autocomplete: true };
+      }
       return {
         type: ApplicationCommandOptionType.String,
         ...common,
@@ -53,6 +57,15 @@ function toApiOption(registry: CommandRegistry, option: OptionDescriptor): APIAp
       };
     case 'role':
       return { type: ApplicationCommandOptionType.Role, ...common };
+    case 'user':
+      return { type: ApplicationCommandOptionType.User, ...common };
+    case 'integer':
+      return {
+        type: ApplicationCommandOptionType.Integer,
+        ...common,
+        ...(option.minValue !== undefined ? { min_value: option.minValue } : {}),
+        ...(option.maxValue !== undefined ? { max_value: option.maxValue } : {}),
+      };
     case 'channel':
       return {
         type: ApplicationCommandOptionType.Channel,

@@ -27,13 +27,14 @@ interface OptionNode {
   readonly type: number;
   readonly name: string;
   readonly value?: string | number | boolean | undefined;
+  readonly focused?: boolean | undefined;
   readonly options?: readonly OptionNode[] | undefined;
 }
 
 function parseCommand(
   name: string,
   options: readonly OptionNode[] | undefined,
-): { path: string[]; values: Record<string, OptionValue> } {
+): { path: string[]; values: Record<string, OptionValue>; focused: string | null } {
   const path = [name];
   let current = options;
   for (;;) {
@@ -46,10 +47,12 @@ function parseCommand(
     current = next.options;
   }
   const values: Record<string, OptionValue> = {};
+  let focused: string | null = null;
   for (const option of current ?? []) {
     if (option.value !== undefined) values[option.name] = option.value;
+    if (option.focused === true) focused = option.name;
   }
-  return { path, values };
+  return { path, values, focused };
 }
 
 /** Champs texte d'une modale, qu'ils soient dans une rangée d'actions ou dans un libellé. */
@@ -79,6 +82,7 @@ export function toIncomingInteraction(
   let kind: InteractionKind;
   let path: string[] = [];
   let values: Record<string, OptionValue> = {};
+  let focusedOption: string | null = null;
   let customId: string | null = null;
   let message: MessageRef | null = null;
   let fields: Record<string, string> = {};
@@ -90,7 +94,7 @@ export function toIncomingInteraction(
       break;
     case InteractionType.ApplicationCommandAutocomplete:
       kind = 'autocomplete';
-      ({ path, values } = parseCommand(payload.data.name, payload.data.options));
+      ({ path, values, focused: focusedOption } = parseCommand(payload.data.name, payload.data.options));
       break;
     case InteractionType.MessageComponent: {
       kind = 'component';
@@ -151,6 +155,7 @@ export function toIncomingInteraction(
     appPermissions: parseBigInt(payload.app_permissions),
     commandPath: path,
     options: values,
+    focusedOption,
     customId,
     message,
     fields,

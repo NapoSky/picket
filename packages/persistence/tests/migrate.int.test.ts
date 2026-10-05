@@ -29,10 +29,11 @@ describe('migrate (integration)', () => {
       '003_guild_lifecycle',
       '004_coordination',
       '005_guild_locale_auto',
+      '006_timers',
     ]);
 
     const second = await run();
-    expect(second).toEqual({ applied: [], alreadyApplied: 5 });
+    expect(second).toEqual({ applied: [], alreadyApplied: 6 });
   });
 
   it('serialises concurrent runs with the advisory lock', async () => {
@@ -44,6 +45,7 @@ describe('migrate (integration)', () => {
       '003_guild_lifecycle',
       '004_coordination',
       '005_guild_locale_auto',
+      '006_timers',
     ]);
   });
 

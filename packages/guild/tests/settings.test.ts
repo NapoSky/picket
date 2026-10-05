@@ -66,6 +66,7 @@ function setup() {
       interaction: makeInteraction({ userId: officer, options }),
       guildId,
       logger: noopLogger,
+      level: 'officer',
       t: englishT,
     });
     return reply.kind === 'message' ? reply.content : '';

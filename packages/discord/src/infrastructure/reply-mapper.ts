@@ -11,6 +11,8 @@ const MODAL_TITLE_MAX = 45;
 const MODAL_LABEL_MAX = 45;
 const PLACEHOLDER_MAX = 100;
 const TEXT_INPUT_MAX = 4000;
+const AUTOCOMPLETE_MAX_CHOICES = 25;
+const AUTOCOMPLETE_TEXT_MAX = 100;
 
 const clip = (text: string, max: number): string => (text.length <= max ? text : `${text.slice(0, max - 1)}\u2026`);
 
@@ -24,6 +26,7 @@ function toTextInput(input: ModalInput) {
         label: clip(input.label, MODAL_LABEL_MAX),
         style: input.style === 'paragraph' ? TextInputStyle.Paragraph : TextInputStyle.Short,
         required: input.required ?? true,
+        ...(input.value !== undefined ? { value: clip(input.value, TEXT_INPUT_MAX) } : {}),
         ...(input.placeholder !== undefined ? { placeholder: clip(input.placeholder, PLACEHOLDER_MAX) } : {}),
         ...(input.minLength !== undefined ? { min_length: Math.max(0, Math.min(input.minLength, TEXT_INPUT_MAX)) } : {}),
         ...(input.maxLength !== undefined ? { max_length: Math.max(1, Math.min(input.maxLength, TEXT_INPUT_MAX)) } : {}),
@@ -38,7 +41,12 @@ export function toWireResponse(reply: Reply): APIInteractionResponse {
     case 'autocomplete':
       return {
         type: InteractionResponseType.ApplicationCommandAutocompleteResult,
-        data: { choices: reply.choices.map((choice) => ({ name: choice.name, value: choice.value })) },
+        data: {
+          choices: reply.choices
+            .filter((choice) => choice.value.length <= AUTOCOMPLETE_TEXT_MAX)
+            .slice(0, AUTOCOMPLETE_MAX_CHOICES)
+            .map((choice) => ({ name: clip(choice.name, AUTOCOMPLETE_TEXT_MAX), value: choice.value })),
+        },
       };
     case 'modal':
       return {

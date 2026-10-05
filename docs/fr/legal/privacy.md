@@ -28,13 +28,20 @@ donnée personnelle. Pour tout sujet sensible, utilisez un
 | Identifiant du serveur et réglages (langue, fuseau horaire, fonctionnalités activées) | Faire fonctionner le bot | Tant que le bot est sur le serveur, puis la période de rétention |
 | Identifiants des rôles rattachés aux niveaux officier et membre | Contrôler l'accès | Idem |
 | Journal d'audit : qui a changé quoi, quand, avant et après (identifiant d'utilisateur Discord) | Traçabilité | Idem |
+| Tableaux de timers : canal, réglages (seuils d'alerte, identifiants des rôles notifiés, limites) et identifiants des messages publiés par PICKET | Afficher et mettre à jour le tableau | Idem |
+| Timers : type, nom, code, lieu, propriétaire (identifiant d'utilisateur Discord), début et durée, tels que saisis par les membres | Afficher les comptes à rebours et envoyer les alertes | Idem, ou jusqu'au nettoyage ou à la purge du timer |
+| Historique des timers : qui a ajouté, rafraîchi, barré ou nettoyé quel timer, et quand (identifiant d'utilisateur Discord) | Traçabilité | Idem |
+| Alertes envoyées pour chaque timer | Ne jamais envoyer deux fois la même alerte | Idem |
 | Identifiant de chaque interaction traitée et son serveur | Ne pas traiter deux fois la même commande | 7 jours |
-| Journaux de l'application : identifiants de serveur, d'utilisateur, de canal et de message pour chaque création et chaque clic de todolist, jamais le contenu de la liste | Exploiter, sécuriser et dépanner le service | 30 jours |
+| Journaux de l'application : identifiants de serveur, d'utilisateur, de canal et de message pour chaque création et chaque clic de todolist ou de timer, jamais le contenu de la liste ni les noms de timers | Exploiter, sécuriser et dépanner le service | 30 jours |
 | Sauvegardes de la base contenant les données ci-dessus | Se rétablir après une panne | 30 jours au plus |
 
 Discord envoie à PICKET les identifiants du serveur, du canal, de l'utilisateur et des rôles concernés par chaque commande
 ou clic de bouton. Ils servent à répondre à cette interaction et à contrôler les permissions. Seules les données listées
 ci-dessus sont conservées.
+
+Les noms et les codes saisis dans un timer sont visibles de toute personne qui peut lire le canal et sont conservés tels
+que saisis : il est demandé aux membres de n'y mettre aucune donnée personnelle.
 
 ### Ce que PICKET ne traite pas
 

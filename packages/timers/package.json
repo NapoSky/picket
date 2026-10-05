@@ -1,0 +1,23 @@
+{
+  "name": "@picket/timers",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@picket/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "@picket/coordination": "workspace:*",
+    "@picket/discord": "workspace:*",
+    "@picket/game-data": "workspace:*",
+    "@picket/i18n": "workspace:*",
+    "@picket/kernel": "workspace:*",
+    "@picket/persistence": "workspace:*"
+  }
+}

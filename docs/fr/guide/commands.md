@@ -1,6 +1,6 @@
 # Commandes
 
-Toutes les commandes commencent par `/picket`, ne fonctionnent que dans un serveur et répondent en privé (vous seul voyez
+Les commandes commencent par `/picket`, `/todolist` ou `/timers`, ne fonctionnent que dans un serveur et répondent en privé (vous seul voyez
 la réponse).
 
 | Commande | Niveau | Effet |
@@ -9,6 +9,12 @@ la réponse).
 | `/picket permissions show` | membre | Montre qui a les niveaux officier et membre, votre propre niveau, et des avertissements sur la configuration. |
 | `/picket permissions set` | administrateur | Ajoute ou retire un rôle d'un niveau. |
 | `/todolist create` | membre | Ouvre un formulaire et publie une todolist dans le canal. Voir [Todolists](./todolists). |
+| `/timers board create` | officier | Crée le tableau de timers du canal. Voir [Timers](./timers). |
+| `/timers add` | membre | Ajoute un timer au tableau : type, région et lieu (suggestions pendant la frappe), puis un formulaire. |
+| `/timers strike` | membre | Barre un timer du tableau. |
+| `/timers cleanup` | officier | Retire les timers barrés du tableau. |
+| `/timers repair` | officier | Republie les messages du tableau depuis les timers enregistrés. |
+| `/timers settings` | officier | Montre ou modifie les réglages du tableau : alertes, limites, purge. |
 | `/picket settings language` | officier | Définit la langue du serveur, ou revient à l'automatique. |
 | `/picket settings timezone` | officier | Définit le fuseau horaire du serveur. |
 | `/picket settings audit-channel` | officier | Définit (ou retire) le canal d'audit. |
@@ -37,8 +43,8 @@ d'audit avec l'auteur, l'heure et l'état avant et après.
   regroupements des heures ; les heures sont stockées en UTC.
 - **`audit-channel`** : le canal destiné à recevoir le journal d'audit. Laissez l'option vide pour le retirer. PICKET n'y
   publie pas encore : en attendant, les changements sont enregistrés dans le journal d'audit en base.
-- **`feature`** : `Timers`, `Todolists` ou `War log`, et `enabled` vrai ou faux. Les fonctionnalités elles-mêmes arrivent
-  progressivement ; l'interrupteur est mémorisé dès maintenant pour que votre choix soit déjà en place.
+- **`feature`** : `Timers`, `Todolists` ou `War log`, et `enabled` vrai ou faux. Les timers et les todolists sont
+  disponibles ; l'interrupteur `War log` est mémorisé dès maintenant pour que votre choix soit déjà en place à sa sortie.
 
 Chaque changement effectif est enregistré dans le journal d'audit, comme les changements de permissions.
 `/picket status` montre les valeurs actuelles.
@@ -51,4 +57,4 @@ puis efface les données. Voir [Politique de confidentialité](../legal/privacy)
 
 ## À venir
 
-Les timers de ressources et le war-log Foxhole. Ils apparaîtront ici au fil des versions.
+Le war-log Foxhole. Il apparaîtra ici à sa sortie.

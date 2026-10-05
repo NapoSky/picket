@@ -52,7 +52,7 @@ describe('/picket status', () => {
     const command = statusCommand(new GetGuildStatus(repositoryReturning(settings())));
     expect(command.path).toEqual(['picket', 'status']);
 
-    const reply = await command.handler({ interaction: makeInteraction(), guildId, logger: noopLogger, t: englishT });
+    const reply = await command.handler({ interaction: makeInteraction(), guildId, logger: noopLogger, level: 'member', t: englishT });
 
     expect(reply).toMatchObject({ kind: 'message', ephemeral: true });
     expect(reply).not.toEqual(ephemeral(''));
@@ -64,7 +64,7 @@ describe('/picket status', () => {
   it('says so when no feature is enabled', async () => {
     const none = settings({ features: { timers: false, todolists: false, warlog: false } });
     const command = statusCommand(new GetGuildStatus(repositoryReturning(none)));
-    const reply = await command.handler({ interaction: makeInteraction(), guildId, logger: noopLogger, t: englishT });
+    const reply = await command.handler({ interaction: makeInteraction(), guildId, logger: noopLogger, level: 'member', t: englishT });
     expect(reply.kind === 'message' && reply.content).toContain('Enabled features: none');
   });
 });

@@ -1,8 +1,15 @@
-import { DomainError, type ApplicationId, type ChannelId, type MessageId, type Secret } from '@picket/kernel';
+import { DomainError, type ApplicationId, type ChannelId, type MessageId, type RoleId, type Secret } from '@picket/kernel';
+
+export interface EmbedFieldView {
+  readonly name: string;
+  readonly value: string;
+  readonly inline?: boolean;
+}
 
 export interface EmbedView {
   readonly title?: string;
-  readonly description: string;
+  readonly description?: string;
+  readonly fields?: readonly EmbedFieldView[];
   readonly footer?: string;
   readonly color?: number;
 }
@@ -17,11 +24,34 @@ export interface ButtonView {
 export interface MessageView {
   readonly embeds: readonly EmbedView[];
   readonly buttons: readonly ButtonView[];
+  /** Texte hors embed (par exemple une alerte qui mentionne des rôles). */
+  readonly content?: string;
+  /** Seuls rôles qui seront réellement notifiés ; aucune autre mention n'est jamais résolue. */
+  readonly mentionRoleIds?: readonly RoleId[];
+  /** Sans notification push, même pour les rôles mentionnés. */
+  readonly silent?: boolean;
 }
 
 export const MAX_BUTTONS_PER_MESSAGE = 25;
 export const BUTTONS_PER_ROW = 5;
 export const MAX_EMBED_DESCRIPTION = 4096;
+export const MAX_EMBEDS_PER_MESSAGE = 10;
+export const MAX_EMBED_FIELDS = 25;
+export const MAX_FIELD_NAME = 256;
+export const MAX_FIELD_VALUE = 1024;
+export const MAX_MESSAGE_CONTENT = 2000;
+/** Total de caractères (titre, description, champs, pied de page) de tous les embeds d'un même message. */
+export const MAX_EMBEDS_TOTAL_LENGTH = 6000;
+
+/** Caractères que Discord compte dans la limite des 6 000 d'un message. */
+export function embedsLength(embeds: readonly EmbedView[]): number {
+  let total = 0;
+  for (const embed of embeds) {
+    total += (embed.title?.length ?? 0) + (embed.description?.length ?? 0) + (embed.footer?.length ?? 0);
+    for (const field of embed.fields ?? []) total += field.name.length + field.value.length;
+  }
+  return total;
+}
 
 export interface StoredEmbed {
   readonly title: string | null;

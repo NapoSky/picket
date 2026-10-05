@@ -4,8 +4,8 @@ PICKET utilise deux niveaux que vous rattachez à des rôles, plus un niveau adm
 
 | Niveau | Destiné à | Exemples |
 | --- | --- | --- |
-| `member` (membre) | Les utilisateurs courants du bot | Consulter l'état, (bientôt) ajouter un timer ou une todolist |
-| `officer` (officier) | Les personnes qui gèrent le bot | (bientôt) créer des boards, configurer le war-log |
+| `member` (membre) | Les utilisateurs courants du bot | Consulter l'état, ajouter, barrer et rafraîchir un timer, créer une todolist |
+| `officer` (officier) | Les personnes qui gèrent le bot | Créer et configurer les tableaux de timers, modifier les réglages du serveur |
 | administrateur | Propriétaire et détenteurs de la permission Administrateur | Gérer les permissions, supprimer les données du serveur |
 
 Un officier est aussi un membre. Un administrateur est aussi un officier.

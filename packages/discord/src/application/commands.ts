@@ -10,6 +10,8 @@ export interface CommandContext {
   readonly interaction: IncomingInteraction;
   readonly guildId: GuildId;
   readonly logger: Logger;
+  /** Niveau d'accès de l'utilisateur, déjà vérifié par le pipeline (utile aux règles propres à une fonctionnalité). */
+  readonly level: AccessLevel;
   /** Traducteur : langue du serveur si elle est imposée, sinon celle de l'utilisateur, puis l'anglais. */
   readonly t: Translator['t'];
 }
@@ -20,6 +22,19 @@ export type AccessLevel = 'member' | 'officer' | 'admin';
 
 export const ACCESS_RANK: Readonly<Record<AccessLevel, number>> = { member: 1, officer: 2, admin: 3 };
 
+export interface AutocompleteChoice {
+  readonly name: string;
+  readonly value: string;
+}
+
+export interface AutocompleteContext extends CommandContext {
+  /** Option en cours de saisie et son texte partiel ; les autres options déjà remplies sont dans `interaction.options`. */
+  readonly focused: { readonly name: string; readonly value: string };
+}
+
+/** Discord n'affiche que 25 suggestions ; la réponse doit arriver en moins de 3 s, sans accusé différé. */
+export type AutocompleteHandler = (context: AutocompleteContext) => Promise<readonly AutocompleteChoice[]>;
+
 export type ChannelKind = 'text' | 'announcement';
 
 /** Libellé traduit (clé de catalogue) ou littéral (par exemple le nom d'une langue dans sa propre langue). */
@@ -28,12 +43,17 @@ export type ChoiceDescriptor =
   | { readonly label: string; readonly value: string };
 
 export interface OptionDescriptor {
-  readonly type: 'string' | 'role' | 'boolean' | 'channel';
+  readonly type: 'string' | 'role' | 'boolean' | 'channel' | 'user' | 'integer';
   readonly name: string;
   readonly description: MessageKey;
   readonly required?: boolean;
   /** Uniquement pour `string` : liste fermée de valeurs proposées par Discord. */
   readonly choices?: readonly ChoiceDescriptor[];
+  /** Uniquement pour `string` : suggestions calculées au fil de la saisie (voir `CommandEntry.autocomplete`). */
+  readonly autocomplete?: boolean;
+  /** Uniquement pour `integer`. */
+  readonly minValue?: number;
+  readonly maxValue?: number;
   /** Uniquement pour `channel` : types de canaux proposés (tous les canaux de texte par défaut). */
   readonly channelKinds?: readonly ChannelKind[];
 }
@@ -56,6 +76,8 @@ export interface CommandEntry {
   /** Fonctionnalité de la guilde qui doit être activée (par exemple `todolists`). */
   readonly feature?: string;
   readonly options?: readonly OptionDescriptor[];
+  /** Suggestions des options `autocomplete: true`, par nom d'option (même niveau et même fonctionnalité que la commande). */
+  readonly autocomplete?: Readonly<Record<string, AutocompleteHandler>>;
   readonly handler: CommandHandler;
 }
 
@@ -109,6 +131,7 @@ export class CommandRegistry {
       const label = entry.path.join(' ');
       assertText(label, i18n.text(entry.description));
       this.#assertOptions(label, entry.options ?? []);
+      this.#assertAutocomplete(label, entry);
 
       if (this.#byPath.has(label)) throw new RegistryError(`Duplicate command "${label}"`);
 
@@ -166,6 +189,30 @@ export class CommandRegistry {
       if (option.channelKinds !== undefined && option.type !== 'channel') {
         throw new RegistryError(`Channel kinds are only allowed on channel options (${label})`);
       }
+      if (option.autocomplete === true) {
+        if (option.type !== 'string') throw new RegistryError(`Autocomplete is only allowed on string options (${label})`);
+        if (option.choices !== undefined) {
+          throw new RegistryError(`Option "${option.name}" of ${label} cannot have both choices and autocomplete`);
+        }
+      }
+      if (option.minValue !== undefined || option.maxValue !== undefined) {
+        if (option.type !== 'integer') throw new RegistryError(`Value bounds are only allowed on integer options (${label})`);
+        if (option.minValue !== undefined && option.maxValue !== undefined && option.minValue > option.maxValue) {
+          throw new RegistryError(`Invalid value bounds for ${label} option ${option.name}`);
+        }
+      }
+    }
+  }
+
+  /** Chaque option `autocomplete` a un gestionnaire, et chaque gestionnaire une option : un oubli n'atteint jamais la production. */
+  #assertAutocomplete(label: string, entry: CommandEntry): void {
+    const declared = new Set((entry.options ?? []).filter((option) => option.autocomplete === true).map((option) => option.name));
+    const handled = new Set(Object.keys(entry.autocomplete ?? {}));
+    for (const name of declared) {
+      if (!handled.has(name)) throw new RegistryError(`Missing autocomplete handler for option "${name}" of ${label}`);
+    }
+    for (const name of handled) {
+      if (!declared.has(name)) throw new RegistryError(`Autocomplete handler "${name}" of ${label} has no autocomplete option`);
     }
   }
 

@@ -60,7 +60,7 @@ interface Target {
   readonly level: AccessLevel;
   readonly feature: string | undefined;
   readonly availableWhenSuspended: boolean;
-  readonly invoke: (guildId: GuildId) => Promise<Reply>;
+  readonly invoke: (guildId: GuildId, level: AccessLevel) => Promise<Reply>;
 }
 
 /** Chemin unique pour slash, autocomplete, boutons et modales ; ne lève jamais. */
@@ -83,40 +83,45 @@ export class InteractionPipeline {
     const { t } = i18n.translator(i18n.resolve(serverLocale, interaction.locale, interaction.guildLocale));
 
     try {
-      const isNew = await this.#deps.receipts.claim(interaction.id, interaction.guildId);
-      if (!isNew) {
-        logger.warn({}, 'duplicate interaction');
-        return this.#fallback(interaction, t('errors.duplicate'));
+      // Un autocomplete est une lecture répétée à chaque frappe : pas de reçu (rien à dédoublonner, tout à perdre en écritures).
+      if (interaction.kind !== 'autocomplete') {
+        const isNew = await this.#deps.receipts.claim(interaction.id, interaction.guildId);
+        if (!isNew) {
+          logger.warn({}, 'duplicate interaction');
+          return this.#fallback(interaction, t('errors.duplicate'));
+        }
       }
 
       const resolved = this.#resolveTarget(interaction, logger, t);
       if ('reply' in resolved) return resolved.reply;
       const target = resolved.target;
-      if (interaction.guildId === null) return ephemeral(t('errors.guildOnly'));
+      if (interaction.guildId === null) return this.#fallback(interaction, t('errors.guildOnly'));
       const guildId = interaction.guildId;
 
       const level = await this.#deps.access.levelOf(interaction, guildId);
       if (level === null || ACCESS_RANK[level] < ACCESS_RANK[target.level]) {
         logger.warn({ command: target.label, required: target.level, actual: level }, 'access denied');
-        return ephemeral(t('errors.denied', { level: t(`levels.${target.level}`) }));
+        return this.#fallback(interaction, t('errors.denied', { level: t(`levels.${target.level}`) }));
       }
 
       if (target.feature !== undefined && !(await this.#deps.features.isEnabled(guildId, target.feature))) {
-        return ephemeral(t('errors.featureDisabled'));
+        return this.#fallback(interaction, t('errors.featureDisabled'));
       }
 
       if (!target.availableWhenSuspended) {
         const suspension = await this.#deps.gate.suspensionOf(guildId);
-        if (suspension) return ephemeral(t('errors.suspended', { date: suspension.purgeAt.toISOString().slice(0, 10) }));
+        if (suspension) {
+          return this.#fallback(interaction, t('errors.suspended', { date: suspension.purgeAt.toISOString().slice(0, 10) }));
+        }
       }
 
-      const reply = await this.#withTimeout(target.invoke(guildId), this.#deps.handlerTimeoutMs ?? DEFAULT_HANDLER_TIMEOUT_MS);
+      const reply = await this.#withTimeout(target.invoke(guildId, level), this.#deps.handlerTimeoutMs ?? DEFAULT_HANDLER_TIMEOUT_MS);
       return reply.kind === 'deferred' ? { ...reply, run: () => this.#runDeferred(reply.run, target.label, logger, t) } : reply;
     } catch (error) {
       const label = interaction.commandPath.join(' ') || interaction.customId;
       if (error instanceof HandlerTimeoutError) {
         logger.error({ command: label }, 'handler timeout');
-        return ephemeral(t('errors.timeout'));
+        return this.#fallback(interaction, t('errors.timeout'));
       }
       logger.error({ err: error, command: label }, 'interaction failed');
       return this.#fallback(interaction, t('errors.failure'));
@@ -128,19 +133,31 @@ export class InteractionPipeline {
     logger: Logger,
     t: Translator['t'],
   ): { target: Target } | { reply: Reply } {
-    if (interaction.kind === 'command') {
+    if (interaction.kind === 'command' || interaction.kind === 'autocomplete') {
       const entry = this.#deps.registry.resolve(interaction.commandPath);
       if (!entry) {
         logger.warn({ command: interaction.commandPath.join(' ') }, 'unknown command');
-        return { reply: ephemeral(t('errors.unknownCommand')) };
+        return { reply: this.#fallback(interaction, t('errors.unknownCommand')) };
       }
+      const label = interaction.commandPath.join(' ');
+      const base = { label, level: entry.level, feature: entry.feature, availableWhenSuspended: entry.availableWhenSuspended === true };
+      if (interaction.kind === 'command') {
+        return { target: { ...base, invoke: (guildId, level) => entry.handler({ interaction, guildId, logger, level, t }) } };
+      }
+      const focused = interaction.focusedOption;
+      const handler = focused === null ? undefined : entry.autocomplete?.[focused];
+      if (focused === null || handler === undefined) {
+        logger.warn({ command: label, option: focused }, 'autocomplete without handler');
+        return { reply: { kind: 'autocomplete', choices: [] } };
+      }
+      const value = String(interaction.options[focused] ?? '');
       return {
         target: {
-          label: interaction.commandPath.join(' '),
-          level: entry.level,
-          feature: entry.feature,
-          availableWhenSuspended: entry.availableWhenSuspended === true,
-          invoke: (guildId) => entry.handler({ interaction, guildId, logger, t }),
+          ...base,
+          invoke: async (guildId, level) => ({
+            kind: 'autocomplete',
+            choices: await handler({ interaction, guildId, logger, level, t, focused: { name: focused, value } }),
+          }),
         },
       };
     }
@@ -158,7 +175,7 @@ export class InteractionPipeline {
           level: family.level,
           feature: family.feature,
           availableWhenSuspended: family.availableWhenSuspended === true,
-          invoke: (guildId) => handler({ interaction, guildId, logger, t, payload }),
+          invoke: (guildId, level) => handler({ interaction, guildId, logger, level, t, payload }),
         },
       };
     }

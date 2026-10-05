@@ -8,7 +8,9 @@
     { "path": "packages/coordination" },
     { "path": "packages/discord" },
     { "path": "packages/guild" },
+    { "path": "packages/game-data" },
     { "path": "packages/todolist" },
+    { "path": "packages/timers" },
     { "path": "apps/bot" }
   ]
 }

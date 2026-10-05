@@ -15,6 +15,7 @@
     { "path": "../../packages/i18n" },
     { "path": "../../packages/discord" },
     { "path": "../../packages/guild" },
+    { "path": "../../packages/timers" },
     { "path": "../../packages/todolist" }
   ]
 }

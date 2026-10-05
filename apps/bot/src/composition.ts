@@ -15,7 +15,7 @@ import {
   type InteractionReplies,
   type Messaging,
 } from '@picket/discord';
-import { PostgresGatewaySessionStore, PostgresKeyedLock, PostgresLeaseStore } from '@picket/coordination';
+import { PostgresGatewaySessionStore, PostgresKeyedLock, PostgresLeaseStore, LeaderElector, startLeasedLoop } from '@picket/coordination';
 import {
   CancelGuildDeletion,
   GetGuildLocale,
@@ -46,7 +46,7 @@ import {
   statusCommand,
 } from '@picket/guild';
 import type { I18n } from '@picket/i18n';
-import type { Clock, Logger, Secret } from '@picket/kernel';
+import { noopLogger, type Clock, type Logger, type Secret } from '@picket/kernel';
 import type { Db } from '@picket/persistence';
 import {
   CreateTodolist,
@@ -55,6 +55,29 @@ import {
   todolistCommands,
   todolistFamily,
 } from '@picket/todolist';
+import {
+  AcknowledgeAlert,
+  AddAsset,
+  BoardMaintenance,
+  CleanupBoard,
+  CreateBoard,
+  GetBoardSettings,
+  ListActiveAssets,
+  PostgresTimerStore,
+  RandomAssetIds,
+  RefreshAsset,
+  RenderCoalescer,
+  RepairBoard,
+  StrikeAsset,
+  TIMERS_FEATURE,
+  TIMERS_ROOT,
+  TimerSweep,
+  UpdateBoardSettings,
+  timersCommands,
+  timersFamily,
+  type Localizer,
+  type TimerUseCaseDeps,
+} from '@picket/timers';
 
 /** Accès à l'API REST de Discord : seul le serveur d'interactions en a besoin. */
 export interface DiscordPorts {
@@ -88,11 +111,12 @@ interface FeatureModule {
   readonly features: FeatureGate;
 }
 
-function guildModule(db: Db, options: CompositionOptions): FeatureModule {
+function guildModule(db: Db, options: CompositionOptions, logger: Logger): FeatureModule {
   const settings = new PostgresGuildSettingsRepository(db);
   const permissions = new PostgresPermissionRepository(db);
   const lifecycle = new PostgresGuildLifecycleRepository(db);
   const messaging = (options.discord ?? offlineDiscordPorts).messaging;
+  const timers = timerServices(db, options, logger, settings);
   return {
     entries: [
       statusCommand(new GetGuildStatus(settings)),
@@ -103,9 +127,23 @@ function guildModule(db: Db, options: CompositionOptions): FeatureModule {
         cancel: new CancelGuildDeletion(lifecycle),
       }),
       ...todolistCommands(),
+      ...timersCommands({
+        createBoard: new CreateBoard(timers.deps),
+        strike: new StrikeAsset(timers.deps),
+        cleanup: new CleanupBoard(timers.deps),
+        repair: new RepairBoard(timers.deps),
+        updateSettings: new UpdateBoardSettings(timers.deps),
+        getSettings: new GetBoardSettings(timers.store),
+        listActive: new ListActiveAssets(timers.store),
+      }),
     ],
     families: [
       todolistFamily({ create: new CreateTodolist(messaging), tick: new TickTodolistItem(messaging, new PostgresKeyedLock(db)) }),
+      timersFamily({
+        add: new AddAsset(timers.deps),
+        refresh: new RefreshAsset(timers.deps),
+        acknowledge: new AcknowledgeAlert(timers.deps),
+      }),
     ],
     access: createGuildAccessPolicy(new ResolveAccess(permissions)),
     gate: createGuildGate(new GetSuspension(lifecycle, options.guildRetentionDays)),
@@ -114,15 +152,45 @@ function guildModule(db: Db, options: CompositionOptions): FeatureModule {
   };
 }
 
-const ROOTS = [PICKET_ROOT, TODOLIST_ROOT];
+/** Tout ce que les timers partagent : la persistance, le rendu des boards et leur entretien. */
+function timerServices(db: Db, options: CompositionOptions, logger: Logger, settings: PostgresGuildSettingsRepository) {
+  const store = new PostgresTimerStore(db);
+  const messaging = (options.discord ?? offlineDiscordPorts).messaging;
+  const guildLocale = new GetGuildLocale(settings);
+  const localizer: Localizer = {
+    // Langue imposée au serveur, puis celle du canal à la création du board, puis l'anglais.
+    localeFor: async (guildId, boardLocale) => options.i18n.resolve(await guildLocale.execute(guildId), boardLocale),
+    translator: (locale) => options.i18n.translator(locale).t,
+  };
+  const maintenance = new BoardMaintenance({
+    store,
+    messaging,
+    lock: new PostgresKeyedLock(db),
+    clock: options.clock,
+    localizer,
+    logger,
+  });
+  const deps: TimerUseCaseDeps = {
+    store,
+    maintenance,
+    coalescer: new RenderCoalescer(maintenance),
+    messaging,
+    clock: options.clock,
+    ids: new RandomAssetIds(),
+  };
+  const features = createFeatureGate(settings);
+  return { store, maintenance, deps, features: { isEnabled: (guildId: Parameters<FeatureGate['isEnabled']>[0]) => features.isEnabled(guildId, TIMERS_FEATURE) } };
+}
+
+const ROOTS = [PICKET_ROOT, TODOLIST_ROOT, TIMERS_ROOT];
 
 /** Seul endroit qui connaît toutes les commandes : le serveur, le CLI et les tests partagent ce registre. */
 export function buildCommandRegistry(db: Db, options: CompositionOptions): CommandRegistry {
-  return new CommandRegistry(ROOTS, [...guildModule(db, options).entries], options.i18n);
+  return new CommandRegistry(ROOTS, [...guildModule(db, options, noopLogger).entries], options.i18n);
 }
 
 export function buildPipeline(db: Db, logger: Logger, options: CompositionOptions): InteractionPipeline {
-  const guild = guildModule(db, options);
+  const guild = guildModule(db, options, logger);
   return new InteractionPipeline({
     registry: new CommandRegistry(ROOTS, [...guild.entries], options.i18n),
     components: new ComponentRegistry(guild.families),
@@ -132,6 +200,29 @@ export function buildPipeline(db: Db, logger: Logger, options: CompositionOption
     language: guild.language,
     features: guild.features,
     logger,
+  });
+}
+
+const SWEEP_INTERVAL_MS = 15_000;
+
+/** Rôle `job-runner` : un seul détenteur du bail à la fois exécute les passes périodiques (timers). */
+export function buildJobRunner(
+  db: Db,
+  logger: Logger,
+  options: CompositionOptions & { readonly holder: string },
+): LeaderElector {
+  const timers = timerServices(db, options, logger, new PostgresGuildSettingsRepository(db));
+  const sweep = new TimerSweep({ store: timers.store, maintenance: timers.maintenance, features: timers.features, clock: options.clock, logger });
+  return new LeaderElector({
+    store: new PostgresLeaseStore(db),
+    name: 'job-runner:timers',
+    holder: options.holder,
+    ttlMs: 15_000,
+    renewEveryMs: 5_000,
+    retryEveryMs: 5_000,
+    clock: options.clock,
+    logger,
+    onAcquired: async () => startLeasedLoop({ tick: () => sweep.tick(), intervalMs: SWEEP_INTERVAL_MS, logger }),
   });
 }
 
