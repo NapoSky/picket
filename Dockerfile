@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM node:24-alpine AS base
+FROM node:26-alpine AS base
 WORKDIR /app
 RUN corepack enable
 
@@ -27,7 +27,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --prod --frozen-lockfile --filter "@picket/bot..."
 
 # Image finale : pas de pnpm, pas de sources, utilisateur non privilégié.
-FROM node:24-alpine AS runtime
+FROM node:26-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=production-dependencies --chown=node:node /app ./
