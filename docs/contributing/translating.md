@@ -11,8 +11,7 @@ can add a language.
   once the checks pass.
 - A language is picked up by the bot as soon as its file exists: there is nothing to register in the code.
 - A missing translation falls back to English, so a partial translation is fine.
-- The language list of `/picket settings language` shows each language in its own name and is limited by Discord to
-  25 entries, "Automatic" included: beyond 24 languages, that command will need autocompletion.
+- The language menu in `/picket settings` shows each language in its own name. It paginates beyond 24 languages, keeping Automatic on every page.
 
 ## Rules checked by the CI
 
@@ -24,8 +23,7 @@ can add a language.
 | Command descriptions, option descriptions and choices are 1 to 100 characters | Discord limit. |
 | No empty value | An empty message is never what you want. |
 
-Keep placeholders such as `{{date}}` or `{{target}}` untouched, and keep literal command names (`/picket data
-cancel-deletion`, `confirm:True`) as they are.
+Keep placeholders such as `{{date}}` or `{{target}}` untouched, and keep literal command names (`/picket settings`, `/picket status`) as they are.
 
 ## Working locally
 

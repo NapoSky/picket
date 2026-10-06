@@ -9,6 +9,7 @@ import {
   type MessageView,
   type Messaging,
   type ReplyTarget,
+  type ReplyContent,
   type StoredMessage,
 } from '@picket/discord';
 import { ChannelId, MessageId } from '@picket/kernel';
@@ -137,14 +138,14 @@ function toStored(id: MessageId, channelId: ChannelId, message: MessageView): St
 export interface RecordedReply {
   readonly action: 'editOriginal' | 'deleteOriginal' | 'followUp';
   readonly target: ReplyTarget;
-  readonly content: string | null;
+  readonly content: ReplyContent | null;
 }
 
 export class InMemoryInteractionReplies implements InteractionReplies {
   readonly replies: RecordedReply[] = [];
   failWith: DiscordApiError | null = null;
 
-  async editOriginal(target: ReplyTarget, content: string): Promise<void> {
+  async editOriginal(target: ReplyTarget, content: ReplyContent): Promise<void> {
     this.#record({ action: 'editOriginal', target, content });
   }
 
@@ -152,7 +153,7 @@ export class InMemoryInteractionReplies implements InteractionReplies {
     this.#record({ action: 'deleteOriginal', target, content: null });
   }
 
-  async followUp(target: ReplyTarget, content: string): Promise<void> {
+  async followUp(target: ReplyTarget, content: ReplyContent): Promise<void> {
     this.#record({ action: 'followUp', target, content });
   }
 
@@ -162,7 +163,7 @@ export class InMemoryInteractionReplies implements InteractionReplies {
   }
 
   /** Contenus livrés, dans l'ordre. */
-  get contents(): readonly (string | null)[] {
+  get contents(): readonly (ReplyContent | null)[] {
     return this.replies.map((reply) => reply.content);
   }
 }

@@ -11,8 +11,7 @@ peut ajouter une langue.
   fusionnées automatiquement une fois les contrôles passés.
 - Une langue est prise en compte par le bot dès que son fichier existe : il n'y a rien à déclarer dans le code.
 - Une traduction manquante retombe sur l'anglais, donc une traduction partielle convient.
-- La liste de `/picket settings language` affiche chaque langue sous son propre nom et Discord la limite à 25 entrées,
-  « Automatique » compris : au-delà de 24 langues, cette commande devra passer par l'autocomplétion.
+- Le menu de langue de `/picket settings` affiche chaque langue sous son propre nom. Au-delà de 24 langues, il est paginé et conserve « Automatique » sur chaque page.
 
 ## Règles contrôlées par la CI
 
@@ -25,7 +24,7 @@ peut ajouter une langue.
 | Aucune valeur vide | Un message vide n'est jamais voulu. |
 
 Laissez les variables comme `{{date}}` ou `{{target}}` intactes, et gardez tels quels les noms de commandes littéraux
-(`/picket data cancel-deletion`, `confirm:True`).
+(`/picket settings`, `/picket status`).
 
 ## Travailler en local
 

@@ -72,5 +72,29 @@ pnpm test:int      # tests d'intégration sur un PostgreSQL jetable (nécessite 
 pnpm test:all      # les deux
 ```
 
+Démarrez Docker Engine ou Docker Desktop avant les tests d'intégration, puis vérifiez que `docker info` fonctionne.
+Testcontainers démarre PostgreSQL 18 (`postgres:18-alpine`), crée des bases isolées, applique les migrations et se connecte
+avec le rôle applicatif soumis à la sécurité par ligne. Les tests n'utilisent ni votre base de développement ni vos
+identifiants Discord. Les bases de test et le conteneur sont supprimés à la fin de l'exécution.
+
+Les tests d'intégration du panneau serveur couvrent les interactions HTTP signées, sélections natives et modales,
+changements immédiats de langue et permissions, audits, isolation des serveurs, alias de transition, confirmation de
+suppression, récupération après expiration du panneau et échéance de rétention. Les tests Gateway vérifient aussi que
+la reconnexion du bot n'annule pas une suppression demandée depuis le panneau. Messages et réponses Discord utilisent
+des doublures : la vérification visuelle sur ordinateur et mobile nécessite encore une application Discord de développement.
+
+Validation du 2026-10-07 : les 176 tests d'intégration (12 suites) et les 702 tests unitaires (44 suites) passent.
+La vérification TypeScript et la compilation de la documentation FR/EN passent également.
+
 La chaîne d'outils est TypeScript 7 (`tsc`), Jest avec `@swc/jest`, et pas de linter : le test d'architecture et le mode
 strict du compilateur font ce travail.
+
+## Panneau serveur
+
+`/picket settings` utilise les composants V2 ; les tableaux et todolists conservent leurs embeds existants. Les modèles du panneau sont indépendants des types Discord. Une réponse `panel` actualise le message original après un accusé différé ; les erreurs peuvent être livrées en suivi privé.
+
+Chaque bouton ou menu possède un `custom_id` unique dans le message, y compris lorsque plusieurs boutons mènent au même écran. La navigation, l’actualisation et l’annulation utilisent des actions distinctes. L’adaptateur vérifie l’unicité et la longueur des identifiants avant l’envoi : un doublon est rejeté par Discord avec l’erreur `50035` (corps invalide). Les tests de parcours valident aussi la conversion des panneaux vers le format Discord.
+
+Les familles séparent navigation, réglages officier, permissions administrateur, suppression et annulation. Seules la navigation en lecture et l’annulation sont disponibles pendant une suspension. Les identifiants contiennent propriétaire, guilde et échéance ; aucun collecteur ni stockage de session n’est nécessaire. Les droits sont revérifiés avant le travail différé et les use cases modifient l’état courant en transaction.
+
+Le registre accepte des alias de transition non publiés. Déployer toutes les répliques avant `deploy-commands` : les anciens chemins ouvrent le panneau sans appliquer leurs arguments. Retirer ces alias lors d’une version ultérieure. Pour revenir en arrière, restaurer ensemble le code et les définitions de commandes ; aucun schéma de données n’a changé. Surveiller les refus d’accès, composants expirés et erreurs de livraison Discord dans les journaux existants.

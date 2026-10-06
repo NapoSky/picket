@@ -41,7 +41,7 @@ landing:
       - title: Invitez le bot
         text: Ajoutez PICKET avec les scopes bot et applications.commands. Il ne demande que l'intent Guilds, non privilégié.
       - title: Choisissez vos officiers
-        text: Lancez /picket permissions set pour décider qui gère les tableaux et les listes. Réglez le fuseau horaire et la langue.
+        text: Ouvrez /picket settings pour choisir la langue, les modules et les rôles autorisés.
       - title: Publiez votre premier tableau
         text: Utilisez /timers create ou /todolist create dans le salon de votre choix, le régiment fait le reste.
   neutral:

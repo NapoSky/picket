@@ -1,8 +1,10 @@
 export * from './application/commands';
 export * from './application/components';
 export * from './application/gateway-events';
+export * from './application/guild-roles';
 export * from './application/interaction';
 export * from './application/messaging';
+export * from './application/panel';
 export * from './application/pipeline';
 export * from './infrastructure/commands-payload';
 export * from './infrastructure/deliver-deferred';
@@ -17,4 +19,5 @@ export * from './infrastructure/postgres-adapters';
 export * from './infrastructure/reply-mapper';
 export * from './infrastructure/rest-interaction-replies';
 export * from './infrastructure/rest-messaging';
+export * from './infrastructure/rest-guild-roles';
 export * from './infrastructure/signature';

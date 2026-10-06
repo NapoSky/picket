@@ -232,6 +232,6 @@ describe('autocomplete: wire response', () => {
       title: 't',
       inputs: [{ customId: 'duration', label: 'l', style: 'short', value: '50' }],
     });
-    expect(wire).toMatchObject({ data: { components: [{ components: [{ custom_id: 'duration', value: '50' }] }] } });
+    expect(wire).toMatchObject({ data: { components: [{ component: { custom_id: 'duration', value: '50' } }] } });
   });
 });

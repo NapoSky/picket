@@ -7,8 +7,8 @@
     "expired": "This interaction is no longer available.",
     "failure": "Something went wrong. Please try again later.",
     "timeout": "The request took too long. Please try again.",
-    "featureDisabled": "This feature is disabled on this server. An officer can enable it with /picket settings feature.",
-    "suspended": "This server's PICKET data is scheduled for deletion on {{date}}. A server administrator can cancel it with /picket data cancel-deletion."
+    "featureDisabled": "This feature is disabled on this server. An officer can enable it in /picket settings.",
+    "suspended": "PICKET data is scheduled for deletion on {{date}}. A server administrator can cancel it in /picket settings → Data."
   },
   "levels": {
     "member": "member",
@@ -109,93 +109,11 @@
     },
     "picket": {
       "description": "PICKET administration and information",
-      "groups": {
-        "permissions": "Manage who can use PICKET on this server",
-        "settings": "Change the PICKET settings of this server",
-        "data": "Manage the data PICKET keeps for this server"
-      },
       "status": {
         "description": "Show the PICKET status for this server"
       },
-      "permissions": {
-        "show": {
-          "description": "Show who can use PICKET on this server"
-        },
-        "set": {
-          "description": "Add or remove a role from an access level",
-          "options": {
-            "level": {
-              "description": "Access level to change",
-              "choices": {
-                "officer": "Officer (manage the bot)",
-                "member": "Member (use the bot)"
-              }
-            },
-            "role": {
-              "description": "Role to add or remove (@everyone allowed for member)"
-            },
-            "action": {
-              "description": "Add or remove the role",
-              "choices": {
-                "add": "Add",
-                "remove": "Remove"
-              }
-            },
-            "confirm": {
-              "description": "Confirm a change that opens access to everyone"
-            }
-          }
-        }
-      },
       "settings": {
-        "language": {
-          "description": "Set the language PICKET uses on this server",
-          "options": {
-            "language": {
-              "description": "Language of the server, or automatic"
-            }
-          }
-        },
-        "timezone": {
-          "description": "Set the time zone of this server",
-          "options": {
-            "timezone": {
-              "description": "IANA time zone name, for example Europe/Paris"
-            }
-          }
-        },
-        "auditChannel": {
-          "description": "Set the channel that receives the audit log",
-          "options": {
-            "channel": {
-              "description": "Audit channel (leave empty to remove it)"
-            }
-          }
-        },
-        "feature": {
-          "description": "Enable or disable a feature on this server",
-          "options": {
-            "feature": {
-              "description": "Feature to change"
-            },
-            "enabled": {
-              "description": "Enable (True) or disable (False) the feature"
-            }
-          }
-        }
-      },
-      "data": {
-        "delete": {
-          "description": "Schedule the deletion of all PICKET data for this server",
-          "options": {
-            "confirm": {
-              "description": "Confirm the scheduled deletion"
-            }
-          }
-        },
-        "cancelDeletion": {
-          "description": "Cancel a scheduled deletion of this server data"
-        }
+        "description": "Open the private server settings panel"
       }
     }
   },
@@ -341,26 +259,9 @@
   },
   "settings": {
     "invalidOption": "Invalid value.",
-    "unchanged": "Nothing to change: already set to {{value}}.",
     "rejected": {
       "unsupportedLanguage": "This language is not available.",
       "invalidTimezone": "Unknown time zone. Use an IANA name such as Europe/Paris, America/New_York or UTC."
-    },
-    "language": {
-      "auto": "Automatic (each user's Discord language)",
-      "changed": "Server language set to: {{value}}."
-    },
-    "timezone": {
-      "changed": "Time zone set to {{value}}."
-    },
-    "auditChannel": {
-      "changed": "Audit channel set to: {{value}}."
-    },
-    "feature": {
-      "enabled": "{{feature}} enabled.",
-      "disabled": "{{feature}} disabled.",
-      "alreadyEnabled": "Nothing to change: {{feature}} is already enabled.",
-      "alreadyDisabled": "Nothing to change: {{feature}} is already disabled."
     }
   },
   "permissions": {
@@ -377,22 +278,77 @@
       "member_open_to_everyone": "Everyone on the server can use member commands."
     },
     "set": {
-      "invalidLevel": "Invalid level.",
-      "invalidAction": "Invalid action.",
-      "invalidRole": "Invalid role.",
-      "everyoneNotOfficer": "@everyone cannot be an officer role.",
-      "confirmationRequired": "This opens member commands to everyone on the server. Run the command again with confirm:True to apply it.",
-      "alreadyPresent": "Nothing to change: {{target}} already has the {{level}} level.",
-      "notPresent": "Nothing to change: {{target}} does not have the {{level}} level.",
-      "added": "{{target}} now has the {{level}} level.",
-      "removed": "{{target}} no longer has the {{level}} level."
+      "everyoneNotOfficer": "@everyone cannot be an officer role."
     }
   },
   "data": {
-    "confirmPrompt": "This schedules the permanent deletion of all PICKET data for this server (permissions, settings, audit log) on {{date}}. PICKET stops answering commands until then. You can cancel at any time before that date. Run the command again with confirm:True to proceed.",
-    "scheduled": "Deletion scheduled for {{date}}. Cancel it with /picket data cancel-deletion.",
-    "alreadyScheduled": "A deletion is already scheduled for {{date}}.",
     "cancelled": "The scheduled deletion has been cancelled. PICKET is active again.",
     "nothingScheduled": "No deletion is scheduled for this server."
+  },
+  "panel": {
+    "title": "PICKET · Server settings",
+    "home": "Overview",
+    "homeHelp": "Choose the language and modules for your server. Each change takes effect immediately.",
+    "permissions": "Permissions",
+    "advanced": "Advanced",
+    "data": "Data",
+    "refresh": "Refresh",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "page": "Page {{page}} / {{total}}",
+    "saved": "Saved.",
+    "unchanged": "Nothing to change.",
+    "expired": "This panel has expired. Open /picket settings again.",
+    "owner": "This panel belongs to another user. Open /picket settings yourself.",
+    "language": "Language",
+    "auto": "Automatic — follows each user’s Discord language",
+    "chooseLanguage": "Choose a language",
+    "languageHelp": "**Automatic** follows each person’s Discord language, then the server language, then English. Choose a **fixed language** so PICKET uses the same language for everyone.",
+    "timersHelp": "Track deadlines and receive alerts from your boards.",
+    "todolistsHelp": "Share task lists to check off in Discord.",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "enable": "Enable",
+    "disable": "Disable",
+    "disableTitle": "Disable {{feature}}?",
+    "disableHelp": "Interactions and background processing for this module will stop.\n\n**Existing data is retained.**",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "access": "Your access level: **{{level}}**",
+    "soon": "War log · Coming soon",
+    "reserved": "These values are saved for future functionality. **They have no operational effect today.**",
+    "timezone": "Time zone (IANA)",
+    "changeTimezone": "Change time zone",
+    "audit": "**Audit channel**: {{channel}}",
+    "chooseChannel": "Choose an audit channel",
+    "clearChannel": "Remove the channel",
+    "auditHelp": "No audit messages are currently published to Discord. PICKET still keeps its internal change history.",
+    "member": "Who can use PICKET?",
+    "officer": "Who can configure PICKET?",
+    "addRole": "Add a role",
+    "removeRole": "Remove a configured role",
+    "rolesEmpty": "No configured role.",
+    "roleCount_one": "{{count}} allowed role",
+    "roleCount_other": "{{count}} allowed roles",
+    "adminImplicit": "Server administrators always have access.",
+    "readOnly": "Only administrators can change these permissions.",
+    "everyone": "Open access to @everyone",
+    "restrict": "Remove @everyone access",
+    "restrictHelp": "Add a member role before removing @everyone if members should retain access.",
+    "everyoneTitle": "Allow everyone to use PICKET?",
+    "everyoneHelp": "Every member of this server will be able to use member commands. Officer access remains restricted.",
+    "deletionHelp": "Deletion **suspends PICKET immediately**. After the configured retention period, server configuration, access roles, timers, history and audit records are **permanently erased**.\n\nDiscord messages, including todolists, are **not automatically deleted**.",
+    "deletionDate": "**Deletion date**: <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
+    "schedule": "Schedule deletion",
+    "deleteTitle": "Confirm permanent data deletion?",
+    "deleteConfirm": "Confirm deletion",
+    "suspendedTitle": "PICKET is paused",
+    "suspended": "PICKET is suspended. Data deletion is scheduled for <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
+    "recovery": "Only a server administrator can cancel deletion. Other settings are unavailable during suspension.",
+    "cancelDeletion": "Cancel deletion",
+    "legacy": "Commands have moved to this panel. No old command arguments were applied.",
+    "statusReserved": "Time zone and audit channel are preconfiguration only. War log: coming soon.",
+    "roleLabel": "Role {{id}}"
   }
 }

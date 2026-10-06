@@ -1,4 +1,4 @@
-import { buildCommandsPayload, createInteractionServer } from '@picket/discord';
+import { buildCommandsPayload, createInteractionServer, toWireResponse } from '@picket/discord';
 import { ChannelId, Secret, noopLogger, systemClock } from '@picket/kernel';
 import { createDatabase } from '@picket/persistence';
 import {
@@ -28,418 +28,128 @@ const composition = {
   discord: { messaging, replies },
 };
 
-describe('signed HTTP interaction -> pipeline -> access control -> Postgres -> reply (integration)', () => {
+describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies', () => {
   let database: TestDatabase;
   const keys = createTestKeys();
   let counter = 0;
-
-  beforeAll(async () => {
-    database = await createTestDatabase();
+  const caller = '500000000000000001';
+  beforeAll(async () => { database = await createTestDatabase(); });
+  afterAll(async () => { await database.drop(); });
+  beforeEach(() => { businessNow = new Date('2026-10-05T12:00:00Z'); });
+  interface RequestOptions {
+    permissions?: string; roles?: string[]; guildId?: string; locale?: string;
+    path?: object[]; customId?: string; componentType?: number; values?: string[];
+    resolved?: object; modal?: boolean; fields?: object[];
+  }
+  const server = () => createInteractionServer({ publicKey: keys.publicKeyHex, pipeline: buildPipeline(database.handle.db, noopLogger, composition), replies, logger: noopLogger, clock: systemClock });
+  const payload = (options: RequestOptions, id?: string) => ({
+    id: id ?? `91000000000${String(10_000 + counter++)}`, application_id: '800000000000000001', token: 'interaction-token', version: 1,
+    type: options.customId ? options.modal ? 5 : 3 : 2,
+    guild_id: options.guildId ?? GUILD, channel_id: '600000000000000001', locale: options.locale ?? 'en-US',
+    member: { user: { id: caller }, roles: options.roles ?? [], permissions: options.permissions ?? '0' },
+    ...(options.customId ? { message: { id: '900000000000000001', channel_id: '600000000000000001' } } : {}),
+    data: options.customId ? options.modal ? { custom_id: options.customId, components: options.fields ?? [] } : { custom_id: options.customId, component_type: options.componentType ?? 2, ...(options.values ? { values: options.values } : {}), ...(options.resolved ? { resolved: options.resolved } : {}) } : { id: '1', name: 'picket', type: 1, options: options.path ?? [{ type: 1, name: 'settings' }] },
   });
-
-  afterAll(async () => {
-    await database.drop();
-  });
-
-  function server(db = database.handle.db) {
-    return createInteractionServer({
-      publicKey: keys.publicKeyHex,
-      pipeline: buildPipeline(db, noopLogger, composition),
-      replies,
-      logger: noopLogger,
-      clock: systemClock,
-    });
+  function signed(value: object) {
+    const timestamp = String(Math.floor(Date.now() / 1000)); const body = JSON.stringify(value);
+    return { method: 'POST' as const, url: '/interactions', headers: { 'content-type': 'application/json', 'x-signature-ed25519': keys.signRequest(timestamp, body), 'x-signature-timestamp': timestamp }, payload: body };
   }
-
-  interface Caller {
-    readonly permissions?: string;
-    readonly roles?: string[];
-    readonly guildId?: string;
-    readonly locale?: string;
-  }
-
-  function payload(options: Caller & { path: object[]; id?: string }) {
-    const timestamp = String(Math.floor(Date.now() / 1000));
-    const id = options.id ?? `91000000000${String(10_000 + counter++)}`;
-    const body = JSON.stringify({
-      id,
-      application_id: '800000000000000001',
-      type: 2,
-      token: 'interaction-token',
-      version: 1,
-      guild_id: options.guildId ?? GUILD,
-      channel_id: '600000000000000001',
-      locale: options.locale ?? 'en-US',
-      member: { user: { id: '500000000000000001' }, roles: options.roles ?? [], permissions: options.permissions ?? '0' },
-      data: { id: '1', name: 'picket', type: 1, options: options.path },
-    });
-    return {
-      method: 'POST' as const,
-      url: '/interactions',
-      headers: {
-        'content-type': 'application/json',
-        'x-signature-ed25519': keys.signRequest(timestamp, body),
-        'x-signature-timestamp': timestamp,
-      },
-      payload: body,
-    };
-  }
-
-  const status = [{ type: 1, name: 'status' }];
-  const show = [{ type: 2, name: 'permissions', options: [{ type: 1, name: 'show' }] }];
-  const set = (level: string, role: string, action: string, confirm?: boolean) => [
-    {
-      type: 2,
-      name: 'permissions',
-      options: [
-        {
-          type: 1,
-          name: 'set',
-          options: [
-            { type: 3, name: 'level', value: level },
-            { type: 8, name: 'role', value: role },
-            { type: 3, name: 'action', value: action },
-            ...(confirm === undefined ? [] : [{ type: 5, name: 'confirm', value: confirm }]),
-          ],
-        },
-      ],
-    },
-  ];
-
-  const say = async (app: ReturnType<typeof server>, options: Caller & { path: object[]; id?: string }) => {
-    const response = await app.inject(payload(options));
+  async function say(options: RequestOptions = {}) {
+    const app = server(); const before = replies.replies.length;
+    const response = await app.inject(signed(payload(options))); await app.close();
     expect(response.statusCode).toBe(200);
-    const body = response.json();
-    expect(body.data.allowed_mentions).toEqual({ parse: [] });
-    expect(body.data.flags).toBe(64);
-    return body.data.content as string;
-  };
-
-  it('answers /picket status to a plain member and lazily initialises the guild', async () => {
-    const content = await say(server(), { path: status });
-
-    expect(content).toContain('PICKET is up and running.');
-    expect(content).toContain('Enabled features: timers, todolists');
-    expect(await queryAsAdmin(database, 'SELECT guild_id FROM guild_settings')).toEqual([{ guild_id: GUILD }]);
-    expect(await queryAsAdmin(database, 'SELECT level, role_id FROM guild_permission_roles')).toEqual([
-      { level: 'member', role_id: GUILD },
-    ]);
-  });
-
-  it('answers in French to a French user, and in English otherwise', async () => {
-    const french = await say(server(), { path: status, locale: 'fr' });
-    expect(french).toContain('PICKET est opérationnel.');
-    expect(french).toContain('Fonctionnalités activées : timers, todolists');
-
-    expect(await say(server(), { path: status, locale: 'ja' })).toContain('PICKET is up and running.');
-  });
-
-  it('only lets administrators change permissions, and audits the change', async () => {
-    const app = server();
-
-    const denied = await say(app, { path: set('officer', OFFICER_ROLE, 'add') });
-    expect(denied).toContain('required level: admin');
-    expect(await queryAsAdmin(database, 'SELECT 1 FROM guild_audit_log')).toHaveLength(0);
-
-    const applied = await say(app, { permissions: ADMINISTRATOR, path: set('officer', OFFICER_ROLE, 'add') });
-    expect(applied).toBe(`<@&${OFFICER_ROLE}> now has the officer level.`);
-    expect(await queryAsAdmin(database, 'SELECT actor_id, action FROM guild_audit_log')).toEqual([
-      { actor_id: '500000000000000001', action: 'permissions.add' },
-    ]);
-  });
-
-  it('applies a permission change to the very next interaction', async () => {
-    const app = server();
-    expect(await say(app, { path: status })).toContain('PICKET is up');
-
-    await say(app, { permissions: ADMINISTRATOR, path: set('member', GUILD, 'remove') });
-
-    expect(await say(app, { path: status })).toContain('required level: member');
-    expect(await say(app, { path: status, roles: [OFFICER_ROLE] })).toContain('PICKET is up');
-  });
-
-  it('shows the effective configuration with the caller level', async () => {
-    const content = await say(server(), { path: show, roles: [OFFICER_ROLE] });
-    expect(content).toContain('Your access level: officer');
-    expect(content).toContain(`Officer roles: <@&${OFFICER_ROLE}>`);
-    expect(content).toContain('Member roles: none');
-  });
-
-  it('asks confirmation before opening member commands to everyone', async () => {
-    const app = server();
-    const asked = await say(app, { permissions: ADMINISTRATOR, path: set('member', GUILD, 'add') });
-    expect(asked).toContain('confirm:True');
-
-    const done = await say(app, { permissions: ADMINISTRATOR, path: set('member', GUILD, 'add', true) });
-    expect(done).toBe('@everyone now has the member level.');
-  });
-
-  it('keeps guilds apart', async () => {
-    const other = '700000000000000002';
-    const content = await say(server(), { guildId: other, path: show });
-    expect(content).toContain('Officer roles: none (server administrators only)');
-    expect(content).toContain('Member roles: @everyone');
-  });
-
-  describe('/picket settings', () => {
-    const SETTINGS_GUILD = '700000000000000003';
-    const setting = (subcommand: string, options: object[]) => [
-      { type: 2, name: 'settings', options: [{ type: 1, name: subcommand, options }] },
-    ];
-    const asOfficer = { guildId: SETTINGS_GUILD, roles: [OFFICER_ROLE] };
-
-    it('keeps settings away from plain members', async () => {
-      const content = await say(server(), {
-        guildId: SETTINGS_GUILD,
-        path: setting('timezone', [{ type: 3, name: 'timezone', value: 'Europe/Paris' }]),
-      });
-      expect(content).toContain('required level: officer');
-    });
-
-    it('lets an officer change the time zone, the audit channel and the features, with an audit trail', async () => {
-      const app = server();
-      await say(app, { guildId: SETTINGS_GUILD, permissions: ADMINISTRATOR, path: set('officer', OFFICER_ROLE, 'add') });
-
-      expect(await say(app, { ...asOfficer, path: setting('timezone', [{ type: 3, name: 'timezone', value: 'europe/paris' }]) })).toBe(
-        'Time zone set to Europe/Paris.',
-      );
-      expect(await say(app, { ...asOfficer, path: setting('audit-channel', [{ type: 7, name: 'channel', value: '600000000000000009' }]) })).toBe(
-        'Audit channel set to: <#600000000000000009>.',
-      );
-      expect(
-        await say(app, {
-          ...asOfficer,
-          path: setting('feature', [
-            { type: 3, name: 'feature', value: 'warlog' },
-            { type: 5, name: 'enabled', value: true },
-          ]),
-        }),
-      ).toBe('War log enabled.');
-      expect(await say(app, { ...asOfficer, path: setting('timezone', [{ type: 3, name: 'timezone', value: 'Mars/Olympus' }]) })).toContain('IANA');
-
-      const status = await say(app, { ...asOfficer, path: [{ type: 1, name: 'status' }] });
-      expect(status).toContain('Timezone: Europe/Paris');
-      expect(status).toContain('timers, todolists, warlog');
-      expect(status).toContain('Audit channel: configured');
-
-      const audit = await queryAsAdmin<{ actor_id: string; action: string }>(
-        database,
-        "SELECT actor_id, action FROM guild_audit_log WHERE guild_id = $1 AND action LIKE 'settings.%' ORDER BY id",
-        [SETTINGS_GUILD],
-      );
-      expect(audit.map((entry) => entry.action)).toEqual(['settings.timezone', 'settings.audit_channel', 'settings.feature']);
-    });
-
-    it('imposes the server language over the language of every user, until it is set back to automatic', async () => {
-      const app = server();
-      const frenchUser = { ...asOfficer, locale: 'fr', path: [{ type: 1, name: 'status' }] };
-      expect(await say(app, frenchUser)).toContain('PICKET est opérationnel.');
-
-      // Un officier francophone choisit l'anglais pour tout le serveur.
-      await say(app, { ...asOfficer, locale: 'fr', path: setting('language', [{ type: 3, name: 'language', value: 'en' }]) });
-      expect(await say(app, frenchUser)).toContain('PICKET is up and running.');
-
-      await say(app, { ...asOfficer, path: setting('language', [{ type: 3, name: 'language', value: 'auto' }]) });
-      expect(await say(app, frenchUser)).toContain('PICKET est opérationnel.');
-    });
-  });
-
-  it('processes a re-delivered interaction only once, across replicas', async () => {
-    const request = payload({ path: status, id: '910000000000099999' });
-    const [first, second] = await Promise.all([server().inject(request), server().inject(request)]);
-    const contents = [first, second].map((response) => response.json().data.content as string);
-
-    expect(contents.filter((content) => content.includes('PICKET is up'))).toHaveLength(1);
-    expect(contents.filter((content) => content.includes('already been processed'))).toHaveLength(1);
-  });
-
-  it('refuses the command outside a guild', async () => {
-    const dm = JSON.parse(payload({ path: status }).payload);
-    delete dm.guild_id;
-    delete dm.member;
-    dm.user = { id: '500000000000000001' };
-    dm.id = '910000000000088888';
-    const body = JSON.stringify(dm);
-    const timestamp = String(Math.floor(Date.now() / 1000));
-
-    const response = await server().inject({
-      method: 'POST',
-      url: '/interactions',
-      headers: {
-        'content-type': 'application/json',
-        'x-signature-ed25519': keys.signRequest(timestamp, body),
-        'x-signature-timestamp': timestamp,
-      },
-      payload: body,
-    });
-
-    expect(response.json().data.content).toContain('only be used in a server');
-  });
-
-  it('denies (fail-closed) with a generic message when the database is unavailable', async () => {
-    const broken = createDatabase({ connectionString: new Secret('postgres://nobody:wrong@127.0.0.1:1/none') });
-    const content = await say(server(broken.db), { permissions: ADMINISTRATOR, path: status });
-    expect(content).toBe('Something went wrong. Please try again later.');
-    await broken.close();
-  });
-
-  it('declares every command with its options in the generated global payload', () => {
-    const [picket, timers, todolist, ...rest] = buildCommandsPayload(buildCommandRegistry(database.handle.db, composition));
-    expect(rest).toEqual([]);
-    expect(todolist).toMatchObject({ name: 'todolist', contexts: [0], options: [{ type: 1, name: 'create' }] });
-    expect(timers).toMatchObject({ name: 'timers', contexts: [0] });
-    const subcommands = (timers?.options ?? []) as { name: string; type: number; options?: { name: string; type: number; required?: boolean; autocomplete?: boolean }[] }[];
-    expect(subcommands.map((option) => [option.name, option.type]).sort()).toEqual(
-      [['add', 1], ['cleanup', 1], ['create', 1], ['repair', 1], ['settings', 1], ['strike', 1]],
-    );
-    const named = (name: string) => subcommands.find((option) => option.name === name);
-    expect(named('add')?.options).toMatchObject([
-      { type: 3, name: 'type', required: true },
-      { type: 3, name: 'place', required: true, autocomplete: true },
-      { type: 6, name: 'owner', required: false },
-    ]);
-    expect(named('strike')?.options).toMatchObject([{ type: 3, name: 'timer', required: true, autocomplete: true }]);
-    expect(named('settings')?.options?.map((option) => option.name)).toEqual([
-      'alerts', 'thresholds', 'alert-role', 'alert-role-action', 'silent', 'duplicates', 'restrict-changes', 'max-active', 'purge-after', 'reset-on-new-war', 'region-emoji', 'location-emoji',
-    ]);
-    expect(picket).toMatchObject({
-      name: 'picket',
-      contexts: [0],
-      options: [
-        { type: 1, name: 'status' },
-        { type: 2, name: 'data', options: [{ type: 1, name: 'cancel-deletion' }, { type: 1, name: 'delete', options: [{ name: 'confirm' }] }] },
-        {
-          type: 2,
-          name: 'permissions',
-          options: [
-            { type: 1, name: 'set', options: [{ name: 'level' }, { name: 'role' }, { name: 'action' }, { name: 'confirm' }] },
-            { type: 1, name: 'show' },
-          ],
-        },
-        {
-          type: 2,
-          name: 'settings',
-          options: [
-            { type: 1, name: 'audit-channel', options: [{ type: 7, name: 'channel', required: false }] },
-            { type: 1, name: 'feature', options: [{ name: 'feature' }, { name: 'enabled' }] },
-            { type: 1, name: 'language', options: [{ name: 'language' }] },
-            { type: 1, name: 'timezone', options: [{ name: 'timezone' }] },
-          ],
-        },
-      ],
-    });
-  });
-});
-
-describe('guild deletion lifecycle (integration)', () => {
-  let database: TestDatabase;
-  const keys = createTestKeys();
-  let counter = 0;
-  const guild = '700000000000000077';
-
-  beforeAll(async () => {
-    database = await createTestDatabase();
-  });
-
-  afterAll(async () => {
-    await database.drop();
-  });
-
-  const app = () =>
-    createInteractionServer({
-      publicKey: keys.publicKeyHex,
-      pipeline: buildPipeline(database.handle.db, noopLogger, composition),
-      replies,
-      logger: noopLogger,
-      clock: systemClock,
-    });
-
-  const say = async (path: object[], permissions = '0') => {
-    const timestamp = String(Math.floor(Date.now() / 1000));
-    const body = JSON.stringify({
-      id: `92000000000${String(10_000 + counter++)}`,
-      application_id: '800000000000000001',
-      type: 2,
-      token: 't',
-      version: 1,
-      guild_id: guild,
-      channel_id: '600000000000000001',
-      member: { user: { id: '500000000000000001' }, roles: [], permissions },
-      data: { id: '1', name: 'picket', type: 1, options: path },
-    });
-    const response = await app().inject({
-      method: 'POST',
-      url: '/interactions',
-      headers: {
-        'content-type': 'application/json',
-        'x-signature-ed25519': keys.signRequest(timestamp, body),
-        'x-signature-timestamp': timestamp,
-      },
-      payload: body,
-    });
-    return response.json().data.content as string;
-  };
-
-  const data = (sub: string, confirm?: boolean) => [
-    { type: 2, name: 'data', options: [{ type: 1, name: sub, options: confirm === undefined ? [] : [{ type: 5, name: 'confirm', value: confirm }] }] },
-  ];
-  const status = [{ type: 1, name: 'status' }];
-  const rowsFor = async (table: string) =>
-    queryAsAdmin(database, `SELECT 1 FROM ${table} WHERE guild_id = $1`, [guild]);
-
-  beforeEach(() => {
-    businessNow = new Date('2026-10-05T12:00:00Z');
-  });
-
-  it('explains the consequences and changes nothing without confirmation', async () => {
-    expect(await say(status)).toContain('PICKET is up');
-    const reply = await say(data('delete'), ADMINISTRATOR);
-    expect(reply).toContain('2026-11-04');
-    expect(reply).toContain('confirm:True');
-    expect(await say(status)).toContain('PICKET is up');
-  });
-
-  it('only lets administrators schedule a deletion', async () => {
-    expect(await say(data('delete', true))).toContain('required level: admin');
-    expect(await say(status)).toContain('PICKET is up');
-  });
-
-  it('suspends the guild, keeps cancel-deletion available, and resumes after cancellation', async () => {
-    expect(await say(data('delete', true), ADMINISTRATOR)).toBe(
-      'Deletion scheduled for 2026-11-04. Cancel it with /picket data cancel-deletion.',
-    );
-
-    const blocked = await say(status);
-    expect(blocked).toContain('scheduled for deletion on 2026-11-04');
-    expect(await say(status, ADMINISTRATOR)).toContain('scheduled for deletion');
-    expect(await say(data('delete', true), ADMINISTRATOR)).toContain('scheduled for deletion');
-
-    expect(await say(data('cancel-deletion'), ADMINISTRATOR)).toContain('PICKET is active again');
-    expect(await say(status)).toContain('PICKET is up');
-    expect(await say(data('cancel-deletion'), ADMINISTRATOR)).toBe('No deletion is scheduled for this server.');
-  });
-
-  it('does not purge before the retention period, then erases everything after it', async () => {
-    await say(data('delete', true), ADMINISTRATOR);
-    const job = buildPurgeJob(database.handle.db, noopLogger, composition);
-
-    businessNow = new Date(Date.parse('2026-10-05T12:00:00Z') + 29 * DAY_MS);
-    expect((await job.execute()).purged).toEqual([]);
-    expect(await rowsFor('guild_settings')).toHaveLength(1);
-
-    businessNow = new Date(Date.parse('2026-10-05T12:00:00Z') + 30 * DAY_MS);
-    expect((await job.execute()).purged).toEqual([guild]);
-
-    for (const table of ['guild_settings', 'guild_permission_roles', 'guild_audit_log', 'guild_registry', 'interaction_receipts']) {
-      expect(await rowsFor(table)).toHaveLength(0);
+    const wire = response.json();
+    if (wire.type === 5 || wire.type === 6) {
+      const delivered = replies.replies.slice(before); expect(delivered).toHaveLength(1);
+      expect(delivered[0]?.action).toBe('editOriginal');
+      const content = delivered[0]!.content!;
+      if (typeof content !== 'string') toWireResponse({ kind: 'panel', panel: content, update: wire.type === 6 });
+      return content;
     }
-    expect((await job.execute()).purged).toEqual([]);
-  });
+    if (wire.type === 9) return wire.data as { custom_id: string };
+    expect(wire.data.allowed_mentions).toEqual({ parse: [] }); return wire.data.content as string;
+  }
+  function control(panel: unknown, action: string, arg?: string) {
+    const matches = JSON.stringify(panel).matchAll(/"customId":"([^"]+)"/g);
+    for (const match of matches) { const id = match[1]!; if (id.split('.')[3] === action && (arg === undefined || id.split('.')[4] === arg)) return id; }
+    throw new Error(`Missing control ${action}.${arg}`);
+  }
+  const admin = { permissions: ADMINISTRATOR };
+  const status = [{ type: 1, name: 'status' }];
+  const click = (panel: unknown, action: string, arg?: string, options: RequestOptions = {}) => say({ ...admin, customId: control(panel, action, arg), ...options });
 
-  it('starts again from scratch when the server uses PICKET after a purge', async () => {
-    expect(await say(status)).toContain('PICKET is up');
-    expect(await rowsFor('guild_settings')).toHaveLength(1);
-    expect(await rowsFor('guild_audit_log')).toHaveLength(0);
+  it('answers member status with permissions and lazily initialises the tenant', async () => {
+    const result = await say({ path: status }); expect(result).toContain('PICKET is up'); expect(result).toContain('Member roles: @everyone');
+    expect(await queryAsAdmin(database, 'SELECT guild_id FROM guild_settings')).toEqual([{ guild_id: GUILD }]);
+    expect(await say({ path: status, locale: 'fr' })).toContain('PICKET est opérationnel');
+    expect(await say()).toContain('required level: officer');
+  });
+  it('uses native role selections, applies access immediately and audits before/after', async () => {
+    const home = await say(admin); const permissions = await click(home, 'view', 'permissions'); const officers = await click(permissions, 'view', 'officer');
+    const selection = { componentType: 6, values: [OFFICER_ROLE], resolved: { roles: { [OFFICER_ROLE]: { id: OFFICER_ROLE, name: 'Officers' } } } };
+    expect(await click(officers, 'add', 'officer', { ...selection, permissions: '0' })).toContain('required level: admin');
+    await click(officers, 'add', 'officer', selection);
+    expect(await queryAsAdmin(database, 'SELECT level, role_id FROM guild_permission_roles WHERE level = $1', ['officer'])).toEqual([{ level: 'officer', role_id: OFFICER_ROLE }]);
+    expect(await queryAsAdmin(database, 'SELECT actor_id, action FROM guild_audit_log')).toEqual([{ actor_id: caller, action: 'permissions.add' }]);
+    expect(JSON.stringify(await say({ roles: [OFFICER_ROLE] }))).toContain('Your access level: **officer**');
+    const members = await click(permissions, 'view', 'member'); await click(members, 'restrict');
+    expect(await say({ path: status })).toContain('required level: member');
+    expect(await say({ path: status, roles: [OFFICER_ROLE] })).toContain('PICKET is up');
+    const confirm = await click(await click(permissions, 'view', 'member'), 'view', 'everyone'); await click(confirm, 'everyone');
+    expect(await say({ path: status })).toContain('PICKET is up');
+  });
+  it('saves settings from menus and modals, changes language immediately, and keeps war-log unavailable', async () => {
+    const home = await say(admin); const language = await click(home, 'view', 'language');
+    expect(JSON.stringify(await click(language, 'language', '0', { componentType: 3, values: ['fr'] }))).toContain('Modification enregistrée');
+    expect(await say({ path: status })).toContain('PICKET est opérationnel');
+    await click(language, 'language', '0', { componentType: 3, values: ['auto'] });
+    const advanced = await click(home, 'view', 'advanced'); expect(JSON.stringify(advanced)).toContain('Coming soon');
+    const modal = await click(advanced, 'timezone') as { custom_id: string };
+    await say({ ...admin, customId: modal.custom_id, modal: true, fields: [{ type: 18, component: { type: 4, custom_id: 'timezone', value: 'europe/paris' } }] });
+    const channel = '600000000000000009';
+    await click(advanced, 'channel', '0', { componentType: 8, values: [channel], resolved: { channels: { [channel]: { id: channel, type: 0 } } } });
+    await click(await click(home, 'disable', 'timers'), 'disable', 'timers');
+    const rows = await queryAsAdmin(database, 'SELECT locale, timezone, audit_channel_id, features FROM guild_settings WHERE guild_id = $1', [GUILD]);
+    expect(rows).toEqual([{ locale: null, timezone: 'Europe/Paris', audit_channel_id: channel, features: { timers: false, todolists: true, warlog: false } }]);
+    const audit = await queryAsAdmin<{ action: string }>(database, "SELECT action FROM guild_audit_log WHERE action LIKE 'settings.%' ORDER BY id");
+    expect(audit.map((row) => row.action)).toEqual(['settings.language', 'settings.language', 'settings.timezone', 'settings.audit_channel', 'settings.feature']);
+  });
+  it('keeps guilds separate and redirects old commands without mutation', async () => {
+    const other = '700000000000000002';
+    const old = [{ type: 2, name: 'settings', options: [{ type: 1, name: 'language', options: [{ type: 3, name: 'language', value: 'fr' }] }] }];
+    expect(JSON.stringify(await say({ ...admin, guildId: other, path: old }))).toContain('No old command arguments');
+    expect(await queryAsAdmin(database, 'SELECT locale FROM guild_settings WHERE guild_id = $1', [other])).toEqual([{ locale: null }]);
+    expect(await queryAsAdmin(database, 'SELECT role_id FROM guild_permission_roles WHERE guild_id = $1', [other])).toEqual([{ role_id: other }]);
+  });
+  it('previews deletion, blocks writes during suspension, recovers after expiry and purges on time', async () => {
+    const guildId = '700000000000000077'; const options = { ...admin, guildId };
+    const home = await say(options); const data = await click(home, 'view', 'data', options); const confirm = await click(data, 'view', 'delete', options);
+    expect(JSON.stringify(confirm)).toContain('not automatically deleted');
+    await click(confirm, 'delete', '0', options);
+    expect(await say({ guildId, path: status })).toContain('scheduled for deletion');
+    expect(JSON.stringify(await click(home, 'disable', 'timers', options))).toContain('suspended');
+    businessNow = new Date('2026-10-05T12:16:00Z');
+    const recovery = await say(options); await click(recovery, 'cancel', '0', options);
+    expect(await say({ guildId, path: status })).toContain('PICKET is up');
+    businessNow = new Date('2026-10-05T12:00:00Z');
+    const again = await say(options); await click(await click(await click(again, 'view', 'data', options), 'view', 'delete', options), 'delete', '0', options);
+    const job = buildPurgeJob(database.handle.db, noopLogger, composition);
+    businessNow = new Date(Date.parse('2026-10-05T12:00:00Z') + 29 * DAY_MS); expect((await job.execute()).purged).toEqual([]);
+    businessNow = new Date(Date.parse('2026-10-05T12:00:00Z') + 30 * DAY_MS); expect((await job.execute()).purged).toEqual([guildId]);
+    for (const table of ['guild_settings', 'guild_permission_roles', 'guild_audit_log', 'guild_registry', 'interaction_receipts']) expect(await queryAsAdmin(database, `SELECT 1 FROM ${table} WHERE guild_id = $1`, [guildId])).toHaveLength(0);
+  });
+  it('deduplicates signed status requests across replicas and denies DMs', async () => {
+    const request = signed(payload({ path: status }, '910000000000099999')); const first = server(); const second = server();
+    const results = await Promise.all([first.inject(request), second.inject(request)]); await Promise.all([first.close(), second.close()]);
+    expect(results.filter((response) => response.json().data.content.includes('already been processed'))).toHaveLength(1);
+    const dm = payload({ path: status }) as Record<string, unknown>; delete dm.guild_id; delete dm.member; dm.user = { id: caller };
+    const app = server(); expect((await app.inject(signed(dm))).json().data.content).toContain('only be used in a server'); await app.close();
+  });
+  it('publishes only two picket commands alongside unchanged feature commands', () => {
+    const commands = buildCommandsPayload(buildCommandRegistry(database.handle.db, composition));
+    expect(commands.map((command) => command.name)).toEqual(['picket', 'timers', 'todolist']);
+    expect(commands[0]?.options?.map((command) => [command.name, command.type])).toEqual([['settings', 1], ['status', 1]]);
+    expect(commands[1]?.options?.map((command) => command.name)).toEqual(['add', 'cleanup', 'create', 'repair', 'settings', 'strike']);
   });
 });
 

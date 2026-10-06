@@ -10,4 +10,5 @@ secrets/
 .DS_Store
 .vscode/
 docs/.vitepress/cache/
+docs/.vitepress/.temp/
 draft/

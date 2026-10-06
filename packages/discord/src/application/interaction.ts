@@ -8,6 +8,7 @@ import type {
   Secret,
   UserId,
 } from '@picket/kernel';
+import type { PanelView } from './panel';
 
 export type InteractionKind = 'command' | 'component' | 'modal' | 'autocomplete';
 
@@ -40,10 +41,14 @@ export interface IncomingInteraction {
   /** Pour un autocomplete : nom de l'option en cours de saisie (sa valeur partielle est dans `options`). */
   readonly focusedOption: string | null;
   readonly customId: string | null;
-  /** Pour un composant : le message cliqué. */
+  /** Message cliqué, ou message source d'une modale ouverte depuis un composant. */
   readonly message: MessageRef | null;
   /** Pour une modale : valeur saisie par champ (`custom_id` du champ). */
   readonly fields: Readonly<Record<string, string>>;
+  readonly componentKind: 'button' | 'stringSelect' | 'roleSelect' | 'channelSelect' | null;
+  readonly selectedValues: readonly string[];
+  readonly resolvedRoles: Readonly<Record<string, { readonly name: string }>>;
+  readonly resolvedChannels: Readonly<Record<string, { readonly kind: 'text' | 'announcement' | 'other' }>>;
 }
 
 export interface ModalInput {
@@ -61,13 +66,15 @@ export interface ModalInput {
 
 export type Reply =
   | { readonly kind: 'message'; readonly content: string; readonly ephemeral: boolean }
+  | { readonly kind: 'panel'; readonly panel: PanelView; readonly update: boolean }
   | { readonly kind: 'autocomplete'; readonly choices: readonly { readonly name: string; readonly value: string }[] }
   | { readonly kind: 'modal'; readonly customId: string; readonly title: string; readonly inputs: readonly ModalInput[] }
   | {
       /**
        * Accusé immédiat (3 s) puis travail en tâche de fond. `update` : le clic d'un composant est acquitté
-       * sans changer le message (le travail le modifie lui-même). Le résultat est livré en suivi éphémère
-       * (`update`) ou remplace la réponse d'attente ; `null` : rien à dire.
+       * sans changer le message. Un résultat `panel` avec `update` actualise ce même message ; un résultat
+       * texte est livré en suivi éphémère. Pour une commande, le résultat remplace la réponse d'attente.
+       * `null` : rien à dire.
        */
       readonly kind: 'deferred';
       readonly ephemeral: boolean;

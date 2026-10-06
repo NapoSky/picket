@@ -41,7 +41,7 @@ landing:
       - title: Invite the bot
         text: Add PICKET with the bot and applications.commands scopes. It only asks for the non-privileged Guilds intent.
       - title: Choose your officers
-        text: Run /picket permissions set to decide who can manage boards and lists. Set your time zone and language.
+        text: Open /picket settings to choose your language, modules and access roles.
       - title: Post your first board
         text: Use /timers create or /todolist create in the channel of your choice and let the regiment take it from there.
   neutral:

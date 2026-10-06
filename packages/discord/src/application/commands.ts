@@ -106,7 +106,7 @@ export class CommandRegistry {
   readonly #i18n: I18n;
   readonly #byPath = new Map<string, CommandEntry>();
 
-  constructor(roots: readonly RootDescriptor[], entries: readonly CommandEntry[], i18n: I18n) {
+  constructor(roots: readonly RootDescriptor[], entries: readonly CommandEntry[], i18n: I18n, aliases: readonly CommandEntry[] = []) {
     this.#i18n = i18n;
     if (roots.length > MAX_ROOTS) throw new RegistryError('Too many root commands');
 
@@ -152,6 +152,13 @@ export class CommandRegistry {
 
     this.#roots = roots;
     this.#entries = entries;
+    // Routage de transition uniquement : ces chemins ne font jamais partie du payload publié.
+    for (const entry of aliases) {
+      const label = entry.path.join(' ');
+      if (!rootsByName.has(entry.path[0]) || this.#byPath.has(label)) throw new RegistryError(`Invalid command alias "${label}"`);
+      for (const segment of entry.path) assertName('alias', segment);
+      this.#byPath.set(label, entry);
+    }
   }
 
   #assertOptions(label: string, options: readonly OptionDescriptor[]): void {

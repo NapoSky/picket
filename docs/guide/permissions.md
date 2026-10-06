@@ -24,7 +24,7 @@ If Discord does not provide the permissions of the person, access is refused: PI
 
 ## Good to know
 
-- With **no officer role** configured, only administrators can use officer commands. `/picket permissions show` warns you.
+- With **no officer role** configured, only administrators can use officer commands. `/picket status` warns you.
 - `@everyone` cannot be an officer.
 - If you delete a role in Discord, PICKET removes it from the levels on its own and records it in the audit log.
 - Discord's own command permissions (Server Settings → Integrations) apply first. PICKET cannot allow what Discord

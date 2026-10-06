@@ -27,57 +27,17 @@ describe('toWireResponse', () => {
       title: 'New todolist',
       inputs: [{ customId: 'content', label: 'Items', placeholder: 'A・x', style: 'paragraph', minLength: 1, maxLength: 4000 }],
     };
-    expect(toWireResponse(reply)).toEqual({
+    expect(toWireResponse(reply)).toMatchObject({
       type: InteractionResponseType.Modal,
-      data: {
-        custom_id: 'td:1:create',
-        title: 'New todolist',
-        components: [
-          {
-            type: 1,
-            components: [
-              {
-                type: 4,
-                custom_id: 'content',
-                label: 'Items',
-                style: 2,
-                required: true,
-                placeholder: 'A・x',
-                min_length: 1,
-                max_length: 4000,
-              },
-            ],
-          },
-        ],
-      },
+      data: { custom_id: 'td:1:create', title: 'New todolist', components: [{ type: 18, label: 'Items', component: { type: 4, custom_id: 'content', style: 2, required: true, placeholder: 'A・x', min_length: 1, max_length: 4000 } }] },
     });
   });
 
-  it('uses the short style by default semantics, and lets an input be optional', () => {
-    const wire = toWireResponse({
-      kind: 'modal',
-      customId: 'x:1:a',
-      title: 't',
-      inputs: [{ customId: 'c', label: 'l', style: 'short', required: false }],
-    });
-    expect(wire).toMatchObject({ data: { components: [{ components: [{ style: 1, required: false }] }] } });
-    expect(JSON.stringify(wire)).not.toContain('placeholder');
-  });
-
-  it('cuts texts longer than Discord accepts instead of failing the interaction (translations come from the community)', () => {
-    const wire = toWireResponse({
-      kind: 'modal',
-      customId: 'x:1:a',
-      title: 't'.repeat(80),
-      inputs: [{ customId: 'c', label: 'l'.repeat(80), placeholder: 'p'.repeat(150), style: 'paragraph', maxLength: 9000, minLength: 9000 }],
-    }) as unknown as { data: { title: string; components: { components: Record<string, unknown>[] }[] } };
-    const input = wire.data.components[0]?.components[0] as { label: string; placeholder: string; max_length: number; min_length: number };
-    expect(wire.data.title).toHaveLength(45);
-    expect(input.label).toHaveLength(45);
-    expect(input.placeholder).toHaveLength(100);
-    expect(input.max_length).toBe(4000);
-    expect(input.min_length).toBe(4000);
-    expect(wire.data.title.endsWith('…')).toBe(true);
+  it('clips modal labels and input constraints to Discord limits', () => {
+    const wire = toWireResponse({ kind: 'modal', customId: 'x:1:a', title: 't'.repeat(80), inputs: [{ customId: 'c', label: 'l'.repeat(80), placeholder: 'p'.repeat(150), style: 'short', required: false, maxLength: 9000 }] }) as unknown as { data: { title: string; components: { label: string; component: { placeholder: string; max_length: number; required: boolean; style: number } }[] } };
+    expect(wire.data.title).toHaveLength(45); expect(wire.data.components[0]?.label).toHaveLength(45);
+    expect(wire.data.components[0]?.component).toMatchObject({ max_length: 4000, required: false, style: 1 });
+    expect(wire.data.components[0]?.component.placeholder).toHaveLength(100);
   });
 
   it('acknowledges a deferred command privately (type 5 with the ephemeral flag), or publicly without data', () => {

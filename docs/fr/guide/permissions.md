@@ -25,7 +25,7 @@ Si Discord ne fournit pas les permissions de la personne, l'accès est refusé :
 ## Bon à savoir
 
 - **Sans rôle officier** configuré, seuls les administrateurs peuvent utiliser les commandes d'officier.
-  `/picket permissions show` vous en avertit.
+  `/picket status` vous en avertit.
 - `@everyone` ne peut pas être officier.
 - Si vous supprimez un rôle dans Discord, PICKET le retire seul des niveaux et le consigne dans le journal d'audit.
 - Les permissions de commandes propres à Discord (Paramètres du serveur → Intégrations) s'appliquent en premier. PICKET ne

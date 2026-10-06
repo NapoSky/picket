@@ -40,7 +40,7 @@ Vous gardez tous les droits sur le contenu que vous écrivez. PICKET ne l'utilis
 que vous avez choisi. Le traitement des données personnelles est décrit dans la
 [Politique de confidentialité](./privacy), qui fait partie de ces conditions.
 
-Les administrateurs de serveur peuvent effacer les données de leur serveur à tout moment avec `/picket data delete`, et
+Les administrateurs de serveur peuvent effacer les données de leur serveur à tout moment dans `/picket settings` → Données, et
 retirer le bot déclenche le même effacement à l'issue de la période de rétention.
 
 ## 5. Disponibilité et évolutions

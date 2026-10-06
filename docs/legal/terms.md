@@ -37,7 +37,7 @@ PICKET is an independent community project. It is not affiliated with, endorsed 
 You keep all rights over the content you write. PICKET only uses it to display it back to you in the channel you chose.
 How personal data is handled is described in the [Privacy Policy](./privacy), which is part of these terms.
 
-Server administrators can erase their server's data at any time with `/picket data delete`, and removing the bot starts
+Server administrators can erase their server's data at any time in `/picket settings` → Data, and removing the bot starts
 the same erasure after the retention period.
 
 ## 5. Availability and changes

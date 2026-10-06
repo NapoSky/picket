@@ -17,6 +17,5 @@ export * from './presentation/discord/data-commands';
 export * from './presentation/discord/feature-gate';
 export * from './presentation/discord/guild-event-handler';
 export * from './presentation/discord/guild-language';
-export * from './presentation/discord/permissions-commands';
-export * from './presentation/discord/settings-commands';
+export * from './presentation/discord/settings-panel';
 export * from './presentation/discord/status-command';

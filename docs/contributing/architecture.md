@@ -67,5 +67,29 @@ pnpm test:int      # integration tests on a throw-away PostgreSQL (needs Docker)
 pnpm test:all      # both
 ```
 
+Start Docker Engine or Docker Desktop before running integration tests, and check that `docker info` succeeds.
+Testcontainers starts PostgreSQL 18 (`postgres:18-alpine`), creates isolated databases, applies the migrations and connects
+through the application role subject to row-level security. The tests do not use your development database or Discord
+credentials. Test databases and the container are removed at the end of the run.
+
+The server panel integration tests cover signed HTTP interactions, native selections and modals, immediate language and
+permission changes, audit records, tenant isolation, transition aliases, deletion confirmation, recovery after panel
+expiry and the retention deadline. Gateway tests also verify that reconnecting the bot does not cancel a deletion
+requested through the panel. Discord messages and replies use test doubles: visual checks on desktop and mobile still
+require a development Discord application.
+
+Validation on 2026-10-07: all 176 integration tests (12 suites) and 702 unit tests (44 suites) passed. TypeScript and the
+EN/FR documentation build also passed.
+
 The toolchain is TypeScript 7 (`tsc`), Jest with `@swc/jest`, and no linter: the architecture test and the compiler's
 strict mode do that job.
+
+## Server panel
+
+`/picket settings` uses Components V2; boards and todolists retain their existing embeds. Panel view models do not depend on Discord wire types. A `panel` reply updates the original message after a deferred acknowledgement; errors may be delivered as private follow-ups.
+
+Every button or menu has a unique `custom_id` within the message, including buttons that lead to the same screen. Navigation, refresh and cancellation use distinct actions. The adapter checks identifier uniqueness and length before sending: Discord rejects duplicates with error `50035` (invalid form body). Flow tests also validate conversion of panels to the Discord wire format.
+
+Families separate navigation, officer settings, administrator permissions, deletion and cancellation. Only read navigation and cancellation are available during suspension. Identifiers carry the owner, guild and expiry; no collectors or session storage are needed. Access is checked again before deferred work and use cases update current state transactionally.
+
+The registry accepts unpublished transition aliases. Deploy all replicas before `deploy-commands`: old paths open the panel without applying arguments. Remove aliases in a later release. Roll back code and command definitions together; the database schema is unchanged. Monitor access denials, expired components and Discord delivery errors in existing logs.

@@ -67,7 +67,7 @@ cette catégorie.
 - Si deux personnes cliquent au même moment, **les deux clics comptent**, même traités par des instances différentes de
   PICKET. Si quelqu'un a déjà coché l'item, vous en êtes informé.
 - Les boutons suivent le niveau d'accès **membre** au moment du clic, et la fonctionnalité `todolists` du serveur (voir
-  [Commandes](./commands) et `/picket settings feature`). Désactiver la fonctionnalité arrête aussi les boutons des listes
+  [Commandes](./commands) et `/picket settings`). Désactiver la fonctionnalité arrête aussi les boutons des listes
   existantes.
 
 ## Limites connues

@@ -5,6 +5,7 @@ import {
   type APIInteractionResponse,
 } from 'discord-api-types/v10';
 import type { ModalInput, Reply } from '../application/interaction';
+import { toWirePanel } from './panel-mapper';
 
 // Limites Discord des modales : un texte traduit trop long est coupé plutôt que de faire échouer l'interaction.
 const MODAL_TITLE_MAX = 45;
@@ -18,26 +19,30 @@ const clip = (text: string, max: number): string => (text.length <= max ? text :
 
 function toTextInput(input: ModalInput) {
   return {
-    type: 1 as const,
-    components: [
-      {
+    type: 18 as const,
+    label: clip(input.label, MODAL_LABEL_MAX),
+    component: {
         type: 4 as const,
         custom_id: input.customId,
-        label: clip(input.label, MODAL_LABEL_MAX),
         style: input.style === 'paragraph' ? TextInputStyle.Paragraph : TextInputStyle.Short,
         required: input.required ?? true,
         ...(input.value !== undefined ? { value: clip(input.value, TEXT_INPUT_MAX) } : {}),
         ...(input.placeholder !== undefined ? { placeholder: clip(input.placeholder, PLACEHOLDER_MAX) } : {}),
         ...(input.minLength !== undefined ? { min_length: Math.max(0, Math.min(input.minLength, TEXT_INPUT_MAX)) } : {}),
         ...(input.maxLength !== undefined ? { max_length: Math.max(1, Math.min(input.maxLength, TEXT_INPUT_MAX)) } : {}),
-      },
-    ],
+    },
   };
 }
 
 /** Réponse HTTP immédiate à une interaction. */
 export function toWireResponse(reply: Reply): APIInteractionResponse {
   switch (reply.kind) {
+    case 'panel': {
+      const data = toWirePanel(reply.panel);
+      return reply.update
+        ? { type: InteractionResponseType.UpdateMessage, data }
+        : { type: InteractionResponseType.ChannelMessageWithSource, data: { ...data, flags: data.flags | MessageFlags.Ephemeral } };
+    }
     case 'autocomplete':
       return {
         type: InteractionResponseType.ApplicationCommandAutocompleteResult,

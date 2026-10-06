@@ -14,13 +14,10 @@ besoin de l'intent des membres.
 
 ## Premiers pas
 
-1. Lancez `/picket status` pour vérifier que le bot répond et voir comment le serveur est configuré.
-2. Lancez `/picket permissions show` pour voir qui peut utiliser PICKET. Un nouveau serveur démarre avec **tout le monde**
-   autorisé à utiliser les commandes de membre et **personne** au niveau officier.
-3. Choisissez vos officiers : `/picket permissions set level:Officier role:@VosOfficiers action:Ajouter`.
-4. Si vous le souhaitez, réservez les commandes de membre à votre régiment : ajoutez votre rôle membre, puis retirez
-   `@everyone` (voir [Permissions](./permissions)).
-5. Définissez le fuseau horaire de votre serveur : `/picket settings timezone timezone:Europe/Paris`.
+1. Lancez `/picket status` pour vérifier que le bot répond et consulter les permissions. Au départ, tout le monde a le niveau membre ; seuls les administrateurs peuvent configurer PICKET.
+2. En tant qu’administrateur, ouvrez `/picket settings`, puis **Permissions → Qui peut configurer PICKET ?**, et sélectionnez votre rôle officier.
+3. Pour réserver le bot au régiment, ajoutez votre rôle dans **Qui peut utiliser PICKET ?**, puis retirez l’accès à `@everyone`.
+4. Choisissez la langue et les modules depuis l’accueil du panneau. Le fuseau horaire est une préconfiguration avancée et n’est pas nécessaire pour utiliser le bot.
 
 ::: tip Qui peut modifier les permissions ?
 Uniquement les administrateurs du serveur : le propriétaire, et toute personne ayant un rôle avec la permission Discord
@@ -29,7 +26,7 @@ Uniquement les administrateurs du serveur : le propriétaire, et toute personne 
 
 ## Langues
 
-PICKET répond dans la langue choisie pour le serveur avec `/picket settings language`. Par défaut (`Automatique`), il
+PICKET répond dans la langue choisie pour le serveur avec `/picket settings`. Par défaut (`Automatique`), il
 répond dans la langue de la personne qui lance la commande (anglais et français fournis), puis dans celle de la
 communauté Discord, puis en anglais. Les noms de commandes sont toujours en anglais ; leurs descriptions suivent la
 langue de votre Discord. Voir [Traduire](../contributing/translating) pour ajouter la vôtre.

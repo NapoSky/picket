@@ -18,6 +18,11 @@ export async function deliverDeferred(options: {
   const target = { applicationId: interaction.applicationId, token: interaction.token };
   try {
     const result = await reply.run();
+    if (result?.kind === 'panel') {
+      if (reply.update && !result.update) await replies.followUp(target, result.panel);
+      else await replies.editOriginal(target, result.panel);
+      return;
+    }
     const content = result?.kind === 'message' ? result.content : null;
     if (reply.update) {
       if (content !== null) await replies.followUp(target, content);

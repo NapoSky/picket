@@ -12,6 +12,7 @@ import {
   type GatewayEventHandler,
   type GuildGate,
   type GuildLanguage,
+  type GuildRoles,
   type InteractionReplies,
   type Messaging,
 } from '@picket/discord';
@@ -19,6 +20,7 @@ import { PostgresGatewaySessionStore, PostgresKeyedLock, PostgresLeaseStore, Lea
 import {
   CancelGuildDeletion,
   GetGuildLocale,
+  GetGuildSettings,
   GetGuildStatus,
   GetSuspension,
   HandleGuildAvailable,
@@ -40,9 +42,7 @@ import {
   createGuildEventHandler,
   createGuildGate,
   createGuildLanguage,
-  dataCommands,
-  permissionsCommands,
-  settingsCommands,
+  createSettingsPanel,
   statusCommand,
 } from '@picket/guild';
 import type { I18n } from '@picket/i18n';
@@ -83,6 +83,7 @@ import {
 export interface DiscordPorts {
   readonly messaging: Messaging;
   readonly replies: InteractionReplies;
+  readonly guildRoles?: GuildRoles;
 }
 
 const unavailable = async (): Promise<never> => {
@@ -105,6 +106,7 @@ export interface CompositionOptions {
 interface FeatureModule {
   readonly entries: readonly CommandEntry[];
   readonly families: readonly ComponentFamily[];
+  readonly aliases: readonly CommandEntry[];
   readonly access: AccessPolicy;
   readonly gate: GuildGate;
   readonly language: GuildLanguage;
@@ -117,15 +119,19 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
   const lifecycle = new PostgresGuildLifecycleRepository(db);
   const messaging = (options.discord ?? offlineDiscordPorts).messaging;
   const timers = timerServices(db, options, logger, settings);
+  const showPermissions = new ShowPermissions(permissions);
+  const panel = createSettingsPanel({
+    settings: new GetGuildSettings(settings), update: new UpdateGuildSettings(settings, options.i18n.locales),
+    permissions: showPermissions, updatePermissions: new UpdatePermissions(permissions), access: new ResolveAccess(permissions),
+    suspension: new GetSuspension(lifecycle, options.guildRetentionDays),
+    request: new RequestGuildDeletion(lifecycle, options.clock, options.guildRetentionDays), cancel: new CancelGuildDeletion(lifecycle),
+    clock: options.clock, i18n: options.i18n,
+    guildRoles: options.discord?.guildRoles ?? { names: async () => ({}) },
+  });
+  const status = statusCommand(new GetGuildStatus(settings), showPermissions);
   return {
-    entries: [
-      statusCommand(new GetGuildStatus(settings)),
-      ...permissionsCommands({ show: new ShowPermissions(permissions), update: new UpdatePermissions(permissions) }),
-      ...settingsCommands({ update: new UpdateGuildSettings(settings, options.i18n.locales), locales: options.i18n.locales }),
-      ...dataCommands({
-        request: new RequestGuildDeletion(lifecycle, options.clock, options.guildRetentionDays),
-        cancel: new CancelGuildDeletion(lifecycle),
-      }),
+    aliases: [...panel.aliases, { ...status, path: ['picket', 'permissions', 'show'] }],
+    entries: [status, panel.command,
       ...todolistCommands(),
       ...timersCommands({
         createBoard: new CreateBoard(timers.deps),
@@ -138,6 +144,7 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
       }),
     ],
     families: [
+      ...panel.families,
       todolistFamily({ create: new CreateTodolist(messaging), tick: new TickTodolistItem(messaging, new PostgresKeyedLock(db)) }),
       timersFamily({
         add: new AddAsset(timers.deps),
@@ -186,13 +193,14 @@ const ROOTS = [PICKET_ROOT, TODOLIST_ROOT, TIMERS_ROOT];
 
 /** Seul endroit qui connaît toutes les commandes : le serveur, le CLI et les tests partagent ce registre. */
 export function buildCommandRegistry(db: Db, options: CompositionOptions): CommandRegistry {
-  return new CommandRegistry(ROOTS, [...guildModule(db, options, noopLogger).entries], options.i18n);
+  const guild = guildModule(db, options, noopLogger);
+  return new CommandRegistry(ROOTS, guild.entries, options.i18n, guild.aliases);
 }
 
 export function buildPipeline(db: Db, logger: Logger, options: CompositionOptions): InteractionPipeline {
   const guild = guildModule(db, options, logger);
   return new InteractionPipeline({
-    registry: new CommandRegistry(ROOTS, [...guild.entries], options.i18n),
+    registry: new CommandRegistry(ROOTS, guild.entries, options.i18n, guild.aliases),
     components: new ComponentRegistry(guild.families),
     receipts: new PostgresInteractionReceipts(db),
     access: guild.access,

@@ -4,12 +4,14 @@ import { DiscordAPIError, HTTPError, RateLimitError } from '@discordjs/rest';
 import {
   ApplicationId,
   ChannelId,
+  GuildId,
   MessageId,
   Secret,
 } from '@picket/kernel';
 import {
   DiscordApiError,
   DiscordRestInteractionReplies,
+  DiscordRestGuildRoles,
   DiscordRestMessaging,
   mapRestError,
   toRestMessage,
@@ -246,6 +248,24 @@ describe('Discord REST adapters against a local server', () => {
     expect(seen.every((call) => call.authorization === undefined)).toBe(true);
     expect(seen[0]?.body).toEqual({ content: 'edited', allowed_mentions: { parse: [] } });
     expect(seen[2]?.body).toEqual({ content: 'private note', flags: 64, allowed_mentions: { parse: [] } });
+  });
+
+  it('sends rich panels on interaction webhooks, without legacy fields or bot authorization', async () => {
+    const target = { applicationId: application, token: new Secret('current-component-token') };
+    const panel = { components: [{ kind: 'text' as const, text: 'Settings saved' }] };
+    await replies().editOriginal(target, panel); await replies().followUp(target, panel);
+    expect(seen[0]).toMatchObject({ method: 'PATCH', url: `/api/v10/webhooks/${application}/current-component-token/messages/%40original`, body: { flags: 32768, components: [{ type: 17 }], allowed_mentions: { parse: [] } } });
+    expect(seen[1]?.body).toMatchObject({ flags: 32832 });
+    expect(seen.every((call) => call.authorization === undefined)).toBe(true);
+    expect(seen[0]?.body).not.toHaveProperty('content'); expect(seen[0]?.body).not.toHaveProperty('embeds');
+  });
+
+  it('reads current role names for configured-role menus using the bot token', async () => {
+    const guild = GuildId.assert('700000000000000001');
+    respond = (_request, response) => json(response, 200, [{ id: '400000000000000011', name: 'Officers' }, { id: 'bad', name: 'bad' }]);
+    const reader = new DiscordRestGuildRoles(new Secret('bot-token'), { api, retries: 0 });
+    expect(await reader.names(guild)).toEqual({ '400000000000000011': 'Officers' });
+    expect(seen[0]).toMatchObject({ method: 'GET', url: `/api/v10/guilds/${guild}/roles`, authorization: 'Bot bot-token' });
   });
 
   it('does not leak the interaction token in the error of a failed follow-up', async () => {

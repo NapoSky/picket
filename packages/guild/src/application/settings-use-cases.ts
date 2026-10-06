@@ -1,6 +1,14 @@
 import type { GuildId, UserId } from '@picket/kernel';
 import { decideSettingsChange, type SettingsChange, type SettingsDecision } from '../domain/guild-settings';
-import type { GuildLocaleReader, GuildSettingsWriter } from './guild-settings-repository';
+import type { GuildLocaleReader, GuildSettingsRepository, GuildSettingsWriter } from './guild-settings-repository';
+
+export class GetGuildSettings {
+  constructor(private readonly repository: GuildSettingsRepository) {}
+
+  execute(guildId: GuildId) {
+    return this.repository.findOrCreate(guildId);
+  }
+}
 
 export interface UpdateSettingsCommand {
   readonly guildId: GuildId;

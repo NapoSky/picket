@@ -80,8 +80,8 @@ européenne.
 
 - **Le bot est retiré d'un serveur** : les données sont conservées pendant la période de rétention (30 jours), pour que le
   retour du bot restaure tout, puis elles sont effacées.
-- **Un administrateur lance `/picket data delete`** : le serveur est suspendu et ses données sont effacées à la date
-  annoncée, sauf si `/picket data cancel-deletion` est lancée avant.
+- **Un administrateur confirme la suppression dans `/picket settings` → Données** : le serveur est suspendu et ses données sont effacées à la date
+  annoncée, sauf si un administrateur l’annule dans ce panneau avant cette date.
 - L'effacement supprime tout ce qui est lié au serveur, journal d'audit compris. Il est irréversible. Les sauvegardes
   réalisées avant l'effacement disparaissent sous 30 jours.
 

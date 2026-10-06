@@ -1,4 +1,4 @@
-import { createInteractionServer } from '@picket/discord';
+import { createInteractionServer, type PanelView } from '@picket/discord';
 import { GuildId, RoleId, noopLogger, systemClock } from '@picket/kernel';
 import { InMemoryInteractionReplies, createTestDatabase, createTestKeys, queryAsAdmin, testI18n, type TestDatabase } from '@picket/testing';
 import { buildGatewayHandler, buildPipeline } from '../src/composition';
@@ -27,11 +27,12 @@ describe('Gateway events -> guild lifecycle and permissions (integration)', () =
 
   const gateway = () => buildGatewayHandler(database.handle.db, noopLogger, composition);
 
-  const say = async (guildId: string, path: object[], permissions = '0') => {
+  const interact = async (guildId: string, path: object[], permissions = '0', customId?: string) => {
+    const replies = new InMemoryInteractionReplies();
     const app = createInteractionServer({
       publicKey: keys.publicKeyHex,
       pipeline: buildPipeline(database.handle.db, noopLogger, composition),
-      replies: new InMemoryInteractionReplies(),
+      replies,
       logger: noopLogger,
       clock: systemClock,
     });
@@ -39,30 +40,68 @@ describe('Gateway events -> guild lifecycle and permissions (integration)', () =
     const body = JSON.stringify({
       id: `94000000000${String(10_000 + counter++)}`,
       application_id: '800000000000000001',
-      type: 2,
+      type: customId === undefined ? 2 : 3,
       token: 't',
       version: 1,
       guild_id: guildId,
       channel_id: '600000000000000001',
       member: { user: { id: '500000000000000001' }, roles: [], permissions },
-      data: { id: '1', name: 'picket', type: 1, options: path },
+      ...(customId === undefined ? {} : { message: { id: '900000000000000001', channel_id: '600000000000000001' } }),
+      data: customId === undefined
+        ? { id: '1', name: 'picket', type: 1, options: path }
+        : { custom_id: customId, component_type: 2 },
     });
-    const response = await app.inject({
-      method: 'POST',
-      url: '/interactions',
-      headers: {
-        'content-type': 'application/json',
-        'x-signature-ed25519': keys.signRequest(timestamp, body),
-        'x-signature-timestamp': timestamp,
-      },
-      payload: body,
-    });
-    return response.json().data.content as string;
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/interactions',
+        headers: {
+          'content-type': 'application/json',
+          'x-signature-ed25519': keys.signRequest(timestamp, body),
+          'x-signature-timestamp': timestamp,
+        },
+        payload: body,
+      });
+      // Attend aussi la livraison différée du panneau avant de vérifier l'état PostgreSQL.
+      await app.close();
+      expect(response.statusCode).toBe(200);
+      return { wire: response.json(), delivered: replies.replies };
+    } finally {
+      await app.close();
+    }
   };
+  const say = async (guildId: string, path: object[], permissions = '0') =>
+    (await interact(guildId, path, permissions)).wire.data.content as string;
   const status = [{ type: 1, name: 'status' }];
-  const requestDeletion = [
+  const legacyDeletion = [
     { type: 2, name: 'data', options: [{ type: 1, name: 'delete', options: [{ type: 5, name: 'confirm', value: true }] }] },
   ];
+
+  async function panel(guildId: string, customId?: string): Promise<PanelView> {
+    const result = await interact(guildId, [{ type: 1, name: 'settings' }], '8', customId);
+    expect(result.wire.type).toBe(customId === undefined ? 5 : 6);
+    expect(result.delivered).toHaveLength(1);
+    expect(result.delivered[0]?.action).toBe('editOriginal');
+    const content = result.delivered[0]?.content;
+    if (content === undefined || content === null || typeof content === 'string') throw new Error('Expected settings panel');
+    return content;
+  }
+
+  function button(view: PanelView, action: string, argument = '0'): string {
+    const buttons = view.components.flatMap((component) => component.kind === 'buttons'
+      ? component.buttons
+      : component.kind === 'section' ? [component.button] : []);
+    const target = buttons.find((candidate) => candidate.customId.split('.')[3] === action && candidate.customId.split('.')[4] === argument);
+    if (target === undefined) throw new Error(`Missing panel button ${action}.${argument}`);
+    return target.customId;
+  }
+
+  async function requestDeletion(guildId: string): Promise<void> {
+    const home = await panel(guildId);
+    const data = await panel(guildId, button(home, 'view', 'data'));
+    const confirmation = await panel(guildId, button(data, 'view', 'delete'));
+    await panel(guildId, button(confirmation, 'delete'));
+  }
 
   const registry = (guildId: string) =>
     queryAsAdmin<{ inactive_reason: string | null }>(database, 'SELECT inactive_reason FROM guild_registry WHERE guild_id = $1', [guildId]);
@@ -99,13 +138,25 @@ describe('Gateway events -> guild lifecycle and permissions (integration)', () =
   it('never cancels a deletion requested by an administrator, however many times the guild reappears', async () => {
     const handler = gateway();
     await handler.handle({ type: 'guild_available', guildId: GUILD });
-    await say(GUILD, requestDeletion, '8');
+    await requestDeletion(GUILD);
 
     await handler.handle({ type: 'guild_available', guildId: GUILD });
     await handler.handle({ type: 'ready', shardId: 0, shardCount: 1, guildIds: [GUILD] });
 
     expect(await registry(GUILD)).toEqual([{ inactive_reason: 'requested' }]);
     expect(await say(GUILD, status)).toContain('scheduled for deletion');
+  });
+
+  it('opens the panel without scheduling deletion when an old delete command is used', async () => {
+    await gateway().handle({ type: 'guild_available', guildId: GUILD });
+    const result = await interact(GUILD, legacyDeletion, '8');
+
+    expect(result.wire.type).toBe(5);
+    expect(result.delivered).toHaveLength(1);
+    expect(result.delivered[0]?.action).toBe('editOriginal');
+    expect(JSON.stringify(result.delivered[0]?.content)).toContain('No old command arguments were applied');
+    expect(await registry(GUILD)).toEqual([{ inactive_reason: null }]);
+    expect(await queryAsAdmin(database, 'SELECT 1 FROM guild_audit_log')).toEqual([]);
   });
 
   it('ignores the removal of a guild it never saw', async () => {

@@ -2,6 +2,8 @@ import { ephemeral } from '@picket/discord';
 import { GuildId, noopLogger } from '@picket/kernel';
 import {
   GetGuildStatus,
+  ShowPermissions,
+  defaultPermissionConfig,
   enabledFeatures,
   statusCommand,
   type GuildSettings,
@@ -49,7 +51,7 @@ describe('GetGuildStatus', () => {
 
 describe('/picket status', () => {
   it('replies ephemerally with the guild configuration', async () => {
-    const command = statusCommand(new GetGuildStatus(repositoryReturning(settings())));
+    const command = statusCommand(new GetGuildStatus(repositoryReturning(settings())), new ShowPermissions({ load: async () => defaultPermissionConfig(guildId), modify: jest.fn() }));
     expect(command.path).toEqual(['picket', 'status']);
 
     const reply = await command.handler({ interaction: makeInteraction(), guildId, logger: noopLogger, level: 'member', t: englishT });
@@ -63,7 +65,7 @@ describe('/picket status', () => {
 
   it('says so when no feature is enabled', async () => {
     const none = settings({ features: { timers: false, todolists: false, warlog: false } });
-    const command = statusCommand(new GetGuildStatus(repositoryReturning(none)));
+    const command = statusCommand(new GetGuildStatus(repositoryReturning(none)), new ShowPermissions({ load: async () => defaultPermissionConfig(guildId), modify: jest.fn() }));
     const reply = await command.handler({ interaction: makeInteraction(), guildId, logger: noopLogger, level: 'member', t: englishT });
     expect(reply.kind === 'message' && reply.content).toContain('Enabled features: none');
   });

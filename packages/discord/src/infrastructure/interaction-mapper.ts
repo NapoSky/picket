@@ -86,6 +86,10 @@ export function toIncomingInteraction(
   let customId: string | null = null;
   let message: MessageRef | null = null;
   let fields: Record<string, string> = {};
+  let componentKind: IncomingInteraction['componentKind'] = null;
+  let selectedValues: string[] = [];
+  const resolvedRoles: Record<string, { name: string }> = {};
+  const resolvedChannels: Record<string, { kind: 'text' | 'announcement' | 'other' }> = {};
 
   switch (payload.type) {
     case InteractionType.ApplicationCommand:
@@ -99,16 +103,31 @@ export function toIncomingInteraction(
     case InteractionType.MessageComponent: {
       kind = 'component';
       customId = payload.data.custom_id;
+      componentKind = ({ 2: 'button', 3: 'stringSelect', 6: 'roleSelect', 8: 'channelSelect' } as const)[payload.data.component_type as 2 | 3 | 6 | 8] ?? null;
+      if ('values' in payload.data) selectedValues = payload.data.values.filter((value): value is string => typeof value === 'string');
+      if ('resolved' in payload.data && payload.data.resolved) {
+        const resolved = payload.data.resolved;
+        for (const [id, role] of Object.entries('roles' in resolved ? resolved.roles ?? {} : {})) {
+          if (RoleId.parse(id).ok && role.id === id) resolvedRoles[id] = { name: role.name };
+        }
+        for (const [id, channel] of Object.entries('channels' in resolved ? resolved.channels ?? {} : {})) {
+          if (ChannelId.parse(id).ok && channel.id === id) resolvedChannels[id] = { kind: channel.type === 0 ? 'text' : channel.type === 5 ? 'announcement' : 'other' };
+        }
+      }
       const messageId = MessageId.parse(payload.message?.id);
       const messageChannelId = ChannelId.parse(payload.message?.channel_id);
       if (messageId.ok && messageChannelId.ok) message = { id: messageId.value, channelId: messageChannelId.value };
       break;
     }
-    case InteractionType.ModalSubmit:
+    case InteractionType.ModalSubmit: {
       kind = 'modal';
       customId = payload.data.custom_id;
       fields = parseModalFields(payload.data.components);
+      const messageId = MessageId.parse(payload.message?.id);
+      const messageChannelId = ChannelId.parse(payload.message?.channel_id);
+      if (messageId.ok && messageChannelId.ok) message = { id: messageId.value, channelId: messageChannelId.value };
       break;
+    }
     default:
       return err(new InvalidInteractionError('Unsupported interaction type'));
   }
@@ -159,5 +178,9 @@ export function toIncomingInteraction(
     customId,
     message,
     fields,
+    componentKind,
+    selectedValues,
+    resolvedRoles,
+    resolvedChannels,
   });
 }

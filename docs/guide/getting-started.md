@@ -13,13 +13,10 @@ members intent.
 
 ## First steps
 
-1. Run `/picket status` to check that the bot answers and see how the server is configured.
-2. Run `/picket permissions show` to see who may use PICKET. A new server starts with **everyone** allowed to use
-   member commands and **nobody** holding the officer level.
-3. Choose your officers: `/picket permissions set level:Officer role:@YourOfficers action:Add`.
-4. Optionally restrict member commands to your regiment: add your member role, then remove `@everyone`
-   (see [Permissions](./permissions)).
-5. Set the time zone of your server: `/picket settings timezone timezone:Europe/Paris`.
+1. Run `/picket status` to check the bot and see access permissions. Initially everyone has member access; only administrators can configure PICKET.
+2. As an administrator, open `/picket settings`, then **Permissions → Who can configure PICKET?**, and select your officer role.
+3. To restrict the bot to your regiment, add your role under **Who can use PICKET?**, then remove `@everyone` access.
+4. Choose the language and modules from the panel overview. The time zone is advanced preconfiguration and is not required to use the bot.
 
 ::: tip Who can change permissions?
 Only server administrators: the server owner, and anyone holding a role with the Discord **Administrator** permission.
@@ -27,7 +24,7 @@ Only server administrators: the server owner, and anyone holding a role with the
 
 ## Languages
 
-PICKET answers in the language chosen for the server with `/picket settings language`. By default (`Automatic`), it
+PICKET answers in the language chosen for the server with `/picket settings`. By default (`Automatic`), it
 answers in the language of the person who runs the command (English and French are provided), then in the language of
 the Discord community, then in English. Command names are always English; their descriptions follow your Discord
 language. See [Translating](../contributing/translating) to add yours.

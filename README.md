@@ -39,10 +39,8 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 | `/timers create` | officer | Creates the timer board of the channel |
 | `/timers add` / `strike` | member | Adds a timer (type, place, then a form) or strikes one |
 | `/timers cleanup` / `repair` / `settings` | officer | Removes struck timers, reposts the board, shows or changes its settings |
-| `/picket status` | member | Shows the server configuration |
-| `/picket permissions show` / `set` | member / admin | Shows or changes who can use PICKET |
-| `/picket settings language` / `timezone` / `audit-channel` / `feature` | officer | Changes the server settings |
-| `/picket data delete` / `cancel-deletion` | admin | Schedules or cancels the deletion of the server data |
+| `/picket status` | member | Shows server settings, configured access roles and your access level |
+| `/picket settings` | officer | Opens the private configuration panel; permissions and data management are admin-only |
 
 The full guide is in the [documentation](https://docs.picket-foxhole.com). By using the official instance you accept its
 [Terms of Service](https://docs.picket-foxhole.com/legal/terms) and
@@ -110,6 +108,10 @@ pnpm test:all           # both
 pnpm i18n:keys          # regenerate the typed translation keys after editing en.json
 pnpm docs:dev           # documentation site with live reload
 ```
+
+Before integration tests, start Docker Engine or Docker Desktop and check `docker info`. Testcontainers starts its own
+PostgreSQL 18 container and creates isolated, migrated test databases; it does not use the development database below.
+No Discord credentials are needed: Discord replies and messages use test doubles.
 
 Run it locally against a development Discord application (never the production one):
 

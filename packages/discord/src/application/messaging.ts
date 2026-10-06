@@ -1,4 +1,7 @@
 import { DomainError, type ApplicationId, type ChannelId, type MessageId, type RoleId, type Secret } from '@picket/kernel';
+import type { PanelView } from './panel';
+
+export type ReplyContent = string | PanelView;
 
 export interface EmbedFieldView {
   readonly name: string;
@@ -109,8 +112,8 @@ export interface ReplyTarget {
 
 /** Suites d'une interaction déjà acquittée (le jeton reste valable 15 minutes). */
 export interface InteractionReplies {
-  editOriginal(target: ReplyTarget, content: string): Promise<void>;
+  editOriginal(target: ReplyTarget, content: ReplyContent): Promise<void>;
   deleteOriginal(target: ReplyTarget): Promise<void>;
   /** Toujours éphémère. */
-  followUp(target: ReplyTarget, content: string): Promise<void>;
+  followUp(target: ReplyTarget, content: ReplyContent): Promise<void>;
 }

@@ -138,6 +138,19 @@ describe('toIncomingInteraction', () => {
     expect(modal.ok && modal.value.fields).toEqual({});
   });
 
+  it('normalises role/channel selections with their resolved entities', () => {
+    const role = '400000000000000001'; const channel = '600000000000000001';
+    const selected = toIncomingInteraction(asPayload({ ...base, type: 3, data: { custom_id: 'psperm:1:x', component_type: 6, values: [role], resolved: { roles: { [role]: { id: role, name: 'Officers' }, bad: { id: 'bad', name: 'bad' } } } } }));
+    expect(selected.ok && selected.value).toMatchObject({ componentKind: 'roleSelect', selectedValues: [role], resolvedRoles: { [role]: { name: 'Officers' } } });
+    const channels = toIncomingInteraction(asPayload({ ...base, type: 3, data: { custom_id: 'psedit:1:x', component_type: 8, values: [channel], resolved: { channels: { [channel]: { id: channel, type: 5 } } } } }));
+    expect(channels.ok && channels.value).toMatchObject({ componentKind: 'channelSelect', selectedValues: [channel], resolvedChannels: { [channel]: { kind: 'announcement' } } });
+  });
+
+  it('keeps the source message for a modal opened from a panel', () => {
+    const modal = toIncomingInteraction(asPayload({ ...base, type: 5, message: { id: '910000000000000001', channel_id: '600000000000000001' }, data: { custom_id: 'psedit:1:x', components: [] } }));
+    expect(modal.ok && modal.value.message).toEqual({ id: '910000000000000001', channelId: '600000000000000001' });
+  });
+
   it('maps autocomplete interactions', () => {
     const result = toIncomingInteraction(
       asPayload({ ...base, type: 4, data: { name: 'timers', type: 1, options: [{ type: 1, name: 'add', options: [] }] } }),

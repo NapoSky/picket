@@ -45,6 +45,10 @@ export function makeInteraction(overrides: Partial<IncomingInteraction> = {}): I
     customId: null,
     message: null,
     fields: {},
+    componentKind: null,
+    selectedValues: [],
+    resolvedRoles: {},
+    resolvedChannels: {},
     ...overrides,
   };
 }

@@ -1,12 +1,11 @@
 # Commands
 
-Commands start with `/picket`, `/todolist` or `/timers`, work only inside a server, and reply privately (only you see the answer).
+Commands start with `/picket`, `/todolist` or `/timers`, work inside a server and reply privately. Created lists and boards are public messages.
 
 | Command | Level | What it does |
 | --- | --- | --- |
-| `/picket status` | member | Shows that PICKET is running, the server language and time zone, and the enabled features. |
-| `/picket permissions show` | member | Shows who holds the officer and member levels, your own level, and warnings about the configuration. |
-| `/picket permissions set` | administrator | Adds or removes a role from a level. |
+| `/picket status` | member | Shows settings, available modules, configured access roles and your access level. |
+| `/picket settings` | officer | Opens the private settings panel with no arguments. Only administrators can edit permissions and manage data. |
 | `/todolist create` | member | Opens a form and posts a todo list in the channel. See [Todo lists](./todolists). |
 | `/timers create` | officer | Creates the timer board of the channel. See [Timers](./timers). |
 | `/timers add` | member | Adds a timer to the board: type and place (suggestions as you type), then a form. |
@@ -14,44 +13,25 @@ Commands start with `/picket`, `/todolist` or `/timers`, work only inside a serv
 | `/timers cleanup` | officer | Removes the struck timers from the board. |
 | `/timers repair` | officer | Reposts the board messages from the saved timers. |
 | `/timers settings` | officer | Shows or changes the settings of the board: alerts, limits, purge. |
-| `/picket settings language` | officer | Sets the language of the server, or back to automatic. |
-| `/picket settings timezone` | officer | Sets the time zone of the server. |
-| `/picket settings audit-channel` | officer | Sets (or clears) the audit channel. |
-| `/picket settings feature` | officer | Enables or disables a feature. |
-| `/picket data delete` | administrator | Schedules the permanent deletion of the server data. |
-| `/picket data cancel-deletion` | administrator | Cancels a scheduled deletion. |
 
-## `/picket permissions set`
+## The `/picket settings` panel
 
-| Option | Meaning |
-| --- | --- |
-| `level` | `Officer` or `Member`. |
-| `role` | The role to change. `@everyone` is accepted for `Member` only. |
-| `action` | `Add` or `Remove`. |
-| `confirm` | Required to give `@everyone` the member level, because it opens PICKET to the whole server. |
+Only the person who opens the panel can see it. Changes apply immediately and update the same message. Controls expire after fifteen minutes of inactivity; run the command again to continue.
 
-Repeating a change does nothing and is not logged. Every effective change is recorded in the audit log with the
-author, the time, and the state before and after.
+Each section has its own color and icon; the current section’s button is highlighted. Module states display **🟢 Enabled** or **⚪ Disabled**. Confirmations highlight which data is retained or deleted.
 
-## `/picket settings`
+- **Overview**: language and activation of Timers and Todo lists. Disabling a module requires confirmation: its interactions and background processing stop, while existing data is retained.
+- **Language**: a fixed language applies to everyone. Automatic follows each user’s Discord language, then the Discord server language, then English. Languages are paginated when necessary.
+- **Permissions**: officers can view roles; administrators add or remove one role at a time. Opening member access to `@everyone` requires confirmation. `@everyone` can never be an officer. Add a member role before removing `@everyone` if members should retain access.
+- **Advanced**: the IANA time zone and audit channel are preconfiguration with no operational effect today. The saved time zone does not change timer displays; Discord displays timestamps in each viewer’s time zone. No audit messages are published to Discord. War log is marked “Coming soon” and cannot be enabled.
+- **Data**: only administrators see this screen. It explains deletion, its date and consequences before confirmation.
 
-- **`language`**: pick a language, or `Automatic`. With a language chosen, **everyone** gets PICKET's answers in it,
-  whatever their own Discord language. `Automatic` follows each user's Discord language, then English.
-- **`timezone`**: an IANA name such as `Europe/Paris`, `America/New_York` or `UTC`. It only affects how times are
-  displayed and grouped; times are stored in UTC.
-- **`audit-channel`**: the channel meant to receive the audit log. Leave the option empty to remove it. PICKET does not
-  post there yet: changes are recorded in the audit log in the database in the meantime.
-- **`feature`**: `Timers`, `Todo lists` or `War log`, and `enabled` true or false. Timers and todo lists are available;
-  the `War log` switch is stored now so that your choice is already in place when it is released.
+Every effective settings or permission change is audited in the database with its author and before/after state. Repeating a change adds no audit record.
 
-Every effective change is recorded in the audit log, like permission changes. `/picket status` shows the current values.
+## Deletion and recovery
 
-## `/picket data delete`
+In **Data**, preview and confirm deletion. PICKET immediately suspends its features. After the operator-configured retention period (30 days by default), configuration, access roles, timers, history and audit records are permanently erased. Discord messages, including todolists, are not automatically deleted.
 
-Run it without `confirm` to see exactly what will happen and when. With `confirm:True`, the server is **suspended**:
-PICKET refuses every command except `/picket data cancel-deletion` until the deletion date, then erases the data. See
-[Privacy Policy](../legal/privacy).
+During suspension, `/picket settings` remains available: it displays the date and lets an administrator cancel deletion. Other settings are unavailable. Running this command again allows recovery even after a panel expires. See [Privacy](../legal/privacy).
 
-## Coming next
-
-The Foxhole war log. It will appear here as it is released.
+The old settings, permissions and data subcommands are replaced by this panel. During transition, an old command opens the corresponding screen **without applying its arguments**.

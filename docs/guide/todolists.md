@@ -66,7 +66,7 @@ that category.
 - If two people click at the same moment, **both clicks count**, even when they are handled by different PICKET
   instances. If someone else already ticked the item, you are told so.
 - Buttons follow the **member** access level at the time of the click, and the `todolists` feature of the server (see
-  [Commands](./commands) and `/picket settings feature`). Disabling the feature stops the buttons of existing lists too.
+  [Commands](./commands) and `/picket settings`). Disabling the feature stops the buttons of existing lists too.
 
 ## Known limitations
 
