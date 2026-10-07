@@ -61,7 +61,13 @@ class DiscordWsShardConnection implements ShardConnection {
 
     manager.on(WebSocketShardEvents.Dispatch, (payload, shardId) => {
       const event = normalizeDispatch(payload, shardId, this.#shardCount);
-      if (event) this.#queue.enqueue(event.type, () => this.#deps.handler.handle(event));
+      if (event) this.#queue.enqueue(event.type, async () => {
+        try { await this.#deps.handler.handle(event); }
+        catch (error) {
+          if ('guildId' in event) this.#logger.error({ err: error, guild_id: event.guildId, task: event.type }, 'guild event failed');
+          else throw error;
+        }
+      });
     });
     manager.on(WebSocketShardEvents.Closed, (code) => this.#logger.warn({ code }, 'gateway connection closed'));
     manager.on(WebSocketShardEvents.Error, (error) => this.#logger.error({ err: error }, 'gateway error'));

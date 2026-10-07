@@ -1,4 +1,14 @@
+import type { GuildId } from './ids';
+
 export type LogFields = { readonly [key: string]: unknown };
+
+export interface GuildApplicationLog {
+  readonly id: string;
+  readonly guildId: GuildId;
+  readonly at: Date;
+  /** Ligne JSON après sérialisation des erreurs et masquage des secrets. */
+  readonly record: Readonly<Record<string, unknown>>;
+}
 
 export interface Logger {
   debug(fields: LogFields, message?: string): void;

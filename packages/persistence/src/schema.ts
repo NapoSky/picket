@@ -62,6 +62,13 @@ export interface GuildAuditLogTable {
   at: Timestamp;
 }
 
+export interface GuildApplicationLogsTable {
+  id: string;
+  guild_id: string;
+  record: ColumnType<Record<string, unknown>, string, never>;
+  at: Timestamp;
+}
+
 export interface TimerBoardsTable {
   id: Generated<string>;
   guild_id: string;
@@ -142,6 +149,7 @@ export interface Schema {
   gateway_sessions: GatewaySessionsTable;
   guild_permission_roles: GuildPermissionRolesTable;
   guild_audit_log: GuildAuditLogTable;
+  guild_application_logs: GuildApplicationLogsTable;
   interaction_receipts: InteractionReceiptsTable;
   app_state: AppStateTable;
   timer_boards: TimerBoardsTable;

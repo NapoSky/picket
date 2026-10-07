@@ -1,7 +1,17 @@
 import { DomainError, type ApplicationId, type ChannelId, type MessageId, type RoleId, type Secret } from '@picket/kernel';
 import type { PanelView } from './panel';
 
-export type ReplyContent = string | PanelView;
+export interface ReplyFile {
+  readonly filename: string;
+  readonly bytes: Uint8Array;
+}
+
+export interface FileReplyContent {
+  readonly content: string;
+  readonly file: ReplyFile;
+}
+
+export type ReplyContent = string | PanelView | FileReplyContent;
 
 export interface EmbedFieldView {
   readonly name: string;

@@ -10,13 +10,14 @@ import type { GetGuildSettings, UpdateGuildSettings } from '../../application/se
 import type { ResolveAccess, ShowPermissions, UpdatePermissions } from '../../application/permissions-use-cases';
 import type { CancelGuildDeletion, GetSuspension, RequestGuildDeletion } from '../../application/guild-lifecycle-use-cases';
 import type { SettingsChange } from '../../domain/guild-settings';
+import type { ExportGuildData } from '../../application/export-guild-data';
 import { everyoneRoleId, type ConfigurableLevel } from '../../domain/permissions';
 
 const TTL_SECONDS = 15 * 60;
 const VERSION = 1;
 const PAGES = ['home', 'language', 'advanced', 'permissions', 'member', 'officer', 'data', 'delete', 'disable', 'everyone'] as const;
 type Page = typeof PAGES[number];
-type Namespace = 'psnav' | 'psedit' | 'psperm' | 'psdata' | 'psback';
+type Namespace = 'psnav' | 'psedit' | 'psperm' | 'psdata' | 'psback' | 'psexport';
 
 const PAGE_COLORS: Readonly<Record<Page, number>> = {
   home: 0x5865f2, language: 0x3498db, advanced: 0x607d8b,
@@ -30,6 +31,7 @@ const BUTTON_ICONS: Readonly<Partial<Record<MessageKey, string>>> = {
   'panel.changeTimezone': '🕒', 'panel.clearChannel': '🧹', 'panel.member': '👥', 'panel.officer': '🛡️',
   'panel.everyone': '🌍', 'panel.restrict': '🔒', 'panel.schedule': '🗓️',
   'panel.deleteConfirm': '🗑️', 'panel.cancelDeletion': '↩️',
+  'data.export': '📥',
 };
 
 export interface SettingsPanelDependencies {
@@ -41,6 +43,7 @@ export interface SettingsPanelDependencies {
   readonly suspension: GetSuspension;
   readonly request: RequestGuildDeletion;
   readonly cancel: CancelGuildDeletion;
+  readonly exportData: ExportGuildData;
   readonly clock: Clock;
   readonly i18n: I18n;
   readonly guildRoles?: GuildRoles;
@@ -76,7 +79,10 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
     if (purgeAt !== null) {
       components.push(text(`### ⏸️ ${t('panel.suspendedTitle')}\n${t('panel.suspended', { timestamp: Math.floor(purgeAt.getTime() / 1000) })}`), text(t('panel.recovery')));
       if (context.level === 'admin') {
-        components.push(text(t('panel.deletionHelp')), { kind: 'buttons', buttons: [button('panel.cancelDeletion', 'psback', 'cancel', '0', 'success')] });
+        components.push(text(t('data.exportHelp')), text(t('panel.deletionHelp')), { kind: 'buttons', buttons: [
+          button('data.export', 'psexport', 'export', '0', 'primary'),
+          button('panel.cancelDeletion', 'psback', 'cancel', '0', 'success'),
+        ] });
       }
       components.push({ kind: 'buttons', buttons: [button('panel.refresh', 'psnav', 'refresh', 'data')] });
       return { kind: 'panel', update: context.interaction.message !== null, panel: { components, accentColor: PAGE_COLORS.delete } };
@@ -160,7 +166,10 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
       }
       case 'data':
       case 'delete':
-        components.push(text(`### ${page === 'delete' ? '🗑️' : '🗃️'} ${t(page === 'delete' ? 'panel.deleteTitle' : 'panel.data')}\n${t('panel.deletionHelp')}`), text(`🗓️ ${t('panel.deletionDate', { timestamp: Math.floor(deps.request.previewPurgeAt().getTime() / 1000) })}`), {
+        if (page === 'data') components.push(text(`### 🗃️ ${t('panel.data')}`), text(t('data.exportHelp')), {
+          kind: 'buttons', buttons: [button('data.export', 'psexport', 'export', '0', 'primary')],
+        }, { kind: 'separator' });
+        components.push(text(`### 🗑️ ${t(page === 'delete' ? 'panel.deleteTitle' : 'panel.schedule')}\n${t('panel.deletionHelp')}`), text(`🗓️ ${t('panel.deletionDate', { timestamp: Math.floor(deps.request.previewPurgeAt().getTime() / 1000) })}`), {
           kind: 'buttons', buttons: page === 'delete'
             ? [button('panel.deleteConfirm', 'psdata', 'delete', '0', 'danger'), button('panel.cancel', 'psnav', 'cancel', 'data')]
             : [button('panel.schedule', 'psnav', 'view', 'delete', 'danger')],
@@ -202,6 +211,11 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
           const level = await deps.access.execute(accessRequest(context));
           if (level === null || ACCESS_RANK[level] < ACCESS_RANK[required]) return ephemeral(context.t('errors.denied', { level: context.t(`levels.${required}`) }));
           context = { ...context, level };
+          if (namespace === 'psexport' && action === 'export' && context.interaction.componentKind === 'button') {
+            const result = await deps.exportData.execute(context.guildId, context.interaction.attachmentSizeLimit);
+            if (result.kind === 'too_large') return ephemeral(context.t('data.exportTooLarge', { limitMb: Math.round(result.maxBytes / (1024 * 1024) * 10) / 10 }));
+            return { kind: 'file', ephemeral: true, content: context.t('data.exportReady'), file: { filename: result.filename, bytes: result.bytes } };
+          }
           if (namespace !== 'psnav' && namespace !== 'psback' && await deps.suspension.execute(context.guildId) !== null) return render(context, 'data');
           if (namespace === 'psnav') {
             if (context.interaction.componentKind !== 'button') return ephemeral(context.t('settings.invalidOption'));
@@ -269,6 +283,7 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
     { namespace: 'psperm', version: VERSION, level: 'admin', onComponent: handler('psperm') },
     { namespace: 'psdata', version: VERSION, level: 'admin', onComponent: handler('psdata') },
     { namespace: 'psback', version: VERSION, level: 'admin', availableWhenSuspended: true, onComponent: handler('psback') },
+    { namespace: 'psexport', version: VERSION, level: 'admin', availableWhenSuspended: true, onComponent: handler('psexport') },
   ];
   const aliases: CommandEntry[] = [
     ...['language', 'timezone', 'audit-channel', 'feature'].map((name): CommandEntry => ({ path: ['picket', 'settings', name], description: command.description, level: 'officer', availableWhenSuspended: true, handler: open(name === 'language' ? 'language' : name === 'feature' ? 'home' : 'advanced', true) })),

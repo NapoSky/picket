@@ -18,6 +18,12 @@ export async function deliverDeferred(options: {
   const target = { applicationId: interaction.applicationId, token: interaction.token };
   try {
     const result = await reply.run();
+    if (result?.kind === 'file') {
+      const content = { content: result.content, file: result.file };
+      if (reply.update) await replies.followUp(target, content);
+      else await replies.editOriginal(target, content);
+      return;
+    }
     if (result?.kind === 'panel') {
       if (reply.update && !result.update) await replies.followUp(target, result.panel);
       else await replies.editOriginal(target, result.panel);
@@ -32,6 +38,6 @@ export async function deliverDeferred(options: {
       await replies.deleteOriginal(target);
     }
   } catch (error) {
-    logger.error({ err: error }, 'deferred reply delivery failed');
+    logger.error({ err: error, guild_id: interaction.guildId, interaction_id: interaction.id }, 'deferred reply delivery failed');
   }
 }

@@ -5,8 +5,8 @@ import { loadConfig, type Role } from '@picket/config';
 import { DiscordRestGuildRoles, DiscordRestInteractionReplies, DiscordRestMessaging, createInteractionServer } from '@picket/discord';
 import { createI18n } from '@picket/i18n';
 import { systemClock } from '@picket/kernel';
-import { createHealthServer, createLogger } from '@picket/observability';
-import { createDatabase } from '@picket/persistence';
+import { createGuildLogDestination, createHealthServer, createLogger } from '@picket/observability';
+import { createDatabase, PostgresGuildApplicationLogs } from '@picket/persistence';
 import { buildJobRunner, buildPipeline, buildShardRunner } from './composition';
 
 const FORCE_EXIT_AFTER_MS = 30_000;
@@ -14,7 +14,7 @@ const IMPLEMENTED_ROLES: ReadonlySet<Role> = new Set(['http-ingress', 'shard-run
 
 async function run(): Promise<void> {
   const config = loadConfig(process.env);
-  const logger = createLogger({ level: config.logLevel, service: 'picket' });
+  let logger = createLogger({ level: config.logLevel, service: 'picket' });
 
   process.on('unhandledRejection', (reason) => {
     logger.fatal({ err: reason }, 'unhandled rejection');
@@ -34,6 +34,9 @@ async function run(): Promise<void> {
     applicationName: 'picket',
     onPoolError: (error) => logger.error({ err: error }, 'database pool error'),
   });
+  const guildLogs = new PostgresGuildApplicationLogs(database.db);
+  const logDestination = createGuildLogDestination({ append: (entries) => guildLogs.append(entries) });
+  logger = createLogger({ level: config.logLevel, service: 'picket', destination: logDestination.destination });
   const discord = {
     messaging: new DiscordRestMessaging(config.discord.botToken),
     replies: new DiscordRestInteractionReplies(),
@@ -44,12 +47,13 @@ async function run(): Promise<void> {
     guildRetentionDays: config.guildRetentionDays,
     i18n: createI18n(),
     discord,
+    flushGuildLogs: () => logDestination.flush(),
   };
 
   let draining = false;
   const health = createHealthServer({
     isReady: async () => {
-      if (draining) return false;
+      if (draining || !logDestination.healthy) return false;
       await database.ping();
       return true;
     },
@@ -104,6 +108,7 @@ async function run(): Promise<void> {
     await sleep(config.shutdownDrainMs);
     await interactions?.close();
     await new Promise<void>((resolve) => health.close(() => resolve()));
+    await logDestination.close();
     await database.close();
     logger.info({}, 'stopped');
     process.exit(0);

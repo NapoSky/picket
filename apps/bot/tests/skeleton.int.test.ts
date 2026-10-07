@@ -61,9 +61,9 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
     const wire = response.json();
     if (wire.type === 5 || wire.type === 6) {
       const delivered = replies.replies.slice(before); expect(delivered).toHaveLength(1);
-      expect(delivered[0]?.action).toBe('editOriginal');
       const content = delivered[0]!.content!;
-      if (typeof content !== 'string') toWireResponse({ kind: 'panel', panel: content, update: wire.type === 6 });
+      expect(delivered[0]?.action).toBe(typeof content !== 'string' && 'file' in content ? 'followUp' : 'editOriginal');
+      if (typeof content !== 'string' && 'components' in content) toWireResponse({ kind: 'panel', panel: content, update: wire.type === 6 });
       return content;
     }
     if (wire.type === 9) return wire.data as { custom_id: string };
@@ -150,6 +150,24 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
     expect(commands.map((command) => command.name)).toEqual(['picket', 'timers', 'todolist']);
     expect(commands[0]?.options?.map((command) => [command.name, command.type])).toEqual([['settings', 1], ['status', 1]]);
     expect(commands[1]?.options?.map((command) => command.name)).toEqual(['add', 'cleanup', 'create', 'repair', 'settings', 'strike']);
+  });
+  it('downloads a complete tenant export privately during suspension and denies non-administrators', async () => {
+    const guildId = '700000000000000088';
+    const options = { ...admin, guildId };
+    const home = await say(options);
+    const data = await click(home, 'view', 'data', options);
+    expect(JSON.stringify(await click(data, 'export', '0', { ...options, permissions: '0' }))).toContain('required level: admin');
+    const confirmation = await click(data, 'view', 'delete', options);
+    const recovery = await click(confirmation, 'delete', '0', options);
+    const exported = await click(recovery, 'export', '0', options);
+    if (typeof exported !== 'object' || !('file' in exported)) throw new Error('Expected a private download');
+    const contents = JSON.parse(new TextDecoder().decode(exported.file.bytes));
+    expect(contents.guildId).toBe(guildId);
+    expect(contents.data.guild_registry).toEqual([expect.objectContaining({ guild_id: guildId, inactive_reason: 'requested' })]);
+    expect(contents.data.guild_audit_log).toEqual([expect.objectContaining({ actor_id: caller, action: 'guild.deletion_requested' })]);
+    for (const records of Object.values(contents.data) as { guild_id: string }[][]) expect(records.every((row) => row.guild_id === guildId)).toBe(true);
+    expect(await say({ guildId, path: status })).toContain('scheduled for deletion');
+    await click(recovery, 'cancel', '0', options);
   });
 });
 

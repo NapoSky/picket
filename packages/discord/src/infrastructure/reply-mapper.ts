@@ -37,6 +37,8 @@ function toTextInput(input: ModalInput) {
 /** Réponse HTTP immédiate à une interaction. */
 export function toWireResponse(reply: Reply): APIInteractionResponse {
   switch (reply.kind) {
+    case 'file':
+      throw new Error('File replies must be delivered after a deferred acknowledgement');
     case 'panel': {
       const data = toWirePanel(reply.panel);
       return reply.update

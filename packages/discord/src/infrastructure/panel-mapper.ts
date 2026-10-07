@@ -72,5 +72,10 @@ export function toWirePanel(panel: PanelView) {
 }
 
 export function toWireReplyContent(content: ReplyContent) {
-  return typeof content === 'string' ? { content, allowed_mentions: { parse: [] as never[] } } : toWirePanel(content);
+  if (typeof content === 'string') return { content, allowed_mentions: { parse: [] as never[] } };
+  if ('file' in content) return {
+    content: content.content, allowed_mentions: { parse: [] as never[] },
+    attachments: [{ id: 0, filename: content.file.filename }],
+  };
+  return toWirePanel(content);
 }

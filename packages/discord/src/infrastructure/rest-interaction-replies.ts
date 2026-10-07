@@ -18,6 +18,7 @@ export class DiscordRestInteractionReplies implements InteractionReplies {
       await this.#rest.patch(Routes.webhookMessage(target.applicationId, target.token.reveal(), '@original'), {
         auth: false,
         body: toWireReplyContent(content),
+        ...this.#files(content),
       });
     } catch (error) {
       throw mapRestError(error);
@@ -36,10 +37,17 @@ export class DiscordRestInteractionReplies implements InteractionReplies {
     try {
       await this.#rest.post(Routes.webhook(target.applicationId, target.token.reveal()), {
         auth: false,
-        body: { ...toWireReplyContent(content), flags: MessageFlags.Ephemeral | (typeof content === 'string' ? 0 : MessageFlags.IsComponentsV2) },
+        body: { ...toWireReplyContent(content), flags: MessageFlags.Ephemeral | (typeof content !== 'string' && 'components' in content ? MessageFlags.IsComponentsV2 : 0) },
+        ...this.#files(content),
       });
     } catch (error) {
       throw mapRestError(error);
     }
+  }
+
+  #files(content: ReplyContent) {
+    return typeof content !== 'string' && 'file' in content
+      ? { files: [{ name: content.file.filename, data: content.file.bytes, contentType: 'application/json' }] }
+      : {};
   }
 }

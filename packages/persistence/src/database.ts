@@ -46,8 +46,10 @@ export function createDatabase(options: CreateDatabaseOptions): DatabaseHandle {
  * Toute lecture ou écriture de données de tenant passe par ici : la RLS Postgres
  * filtre sur `app.guild_id`, positionné pour la seule durée de la transaction.
  */
-export function withTenant<T>(db: Db, guildId: GuildId, work: (trx: Tx) => Promise<T>): Promise<T> {
-  return db.transaction().execute(async (trx) => {
+export function withTenant<T>(db: Db, guildId: GuildId, work: (trx: Tx) => Promise<T>, options: { readonly readOnlySnapshot?: boolean } = {}): Promise<T> {
+  const transaction = options.readOnlySnapshot ? db.transaction().setIsolationLevel('repeatable read') : db.transaction();
+  return transaction.execute(async (trx) => {
+    if (options.readOnlySnapshot) await sql`SET TRANSACTION READ ONLY`.execute(trx);
     await sql`SELECT set_config('app.guild_id', ${guildId}, true)`.execute(trx);
     return work(trx);
   });

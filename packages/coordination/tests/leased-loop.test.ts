@@ -74,4 +74,14 @@ describe('startLeasedLoop', () => {
     await stopped;
     expect(events).toEqual(['pass done', 'stopped']);
   });
+
+  it('does not begin a long sleep when stopped during the pass', async () => {
+    let finish!: () => void;
+    const sleep = jest.fn(async () => undefined);
+    const stop = startLeasedLoop({ tick: () => new Promise<void>((resolve) => { finish = resolve; }), intervalMs: 60_000, logger: noopLogger, sleep });
+    const stopped = stop();
+    finish();
+    await stopped;
+    expect(sleep).not.toHaveBeenCalled();
+  });
 });

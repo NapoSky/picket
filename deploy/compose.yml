@@ -159,7 +159,7 @@ services:
       - edge
 
   # Suppression définitive des données des guildes dont la rétention est échue.
-  # À planifier (cron de l'hôte) : `docker compose run --rm purge` ; code de sortie 1 si une guilde a échoué.
+  # Également exécutée chaque nuit vers 3 h (Europe/Paris) par le job-runner ; code de sortie 1 si une guilde a échoué.
   purge:
     image: ${PICKET_IMAGE:?set PICKET_IMAGE}
     profiles: [tools]

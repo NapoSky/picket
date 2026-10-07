@@ -282,6 +282,10 @@
     }
   },
   "data": {
+    "export": "Export data",
+    "exportHelp": "Download a JSON file of the data stored for this server: settings, allowed roles, audit records, boards and timers, history, alerts, technical identifiers and application logs. Audit records, history and application logs are retained for 30 days. Todolists stay in Discord. Legacy external logs and operator backups are not included.",
+    "exportReady": "📥 Here is your server’s data. This file is visible only to you. It includes Discord identifiers: keep it private. No settings were changed.",
+    "exportTooLarge": "The complete export exceeds the {{limitMb}} MB upload limit. No partial file was sent. Contact the PICKET operator to obtain your data.",
     "cancelled": "The scheduled deletion has been cancelled. PICKET is active again.",
     "nothingScheduled": "No deletion is scheduled for this server."
   },

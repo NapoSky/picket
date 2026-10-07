@@ -106,7 +106,7 @@ export class BoardMaintenance {
     const wake = current ? nextWake({ assets, settings: board.settings, now, needsSync: false, lastActivityAt: board.lastActivityAt }) : now;
     const retryAt = alertRetry ? new Date(now.getTime() + ALERT_RETRY_MS) : null;
     await store.schedule(guildId, boardId, wake === null ? retryAt : retryAt !== null && retryAt < wake ? retryAt : wake);
-    logger.debug({ board_id: boardId, assets: assets.length }, 'board maintained');
+    logger.debug({ guild_id: guildId, board_id: boardId, assets: assets.length }, 'board maintained');
     return { kind: 'ok' };
   }
 
@@ -166,7 +166,7 @@ export class BoardMaintenance {
       const retryAt = new Date(now.getTime() + delay);
       await store.markSyncFailed(board.guildId, board.id, error.reason);
       await store.schedule(board.guildId, board.id, retryAt);
-      logger.warn({ board_id: board.id, reason: error.reason }, 'board sync failed, will retry');
+      logger.warn({ guild_id: board.guildId, board_id: board.id, reason: error.reason }, 'board sync failed, will retry');
       return { kind: 'retry', reason: error.reason, retryAt };
     }
     if (isRangeError(error)) {
@@ -174,7 +174,7 @@ export class BoardMaintenance {
       const retryAt = new Date(now.getTime() + RENDER_RETRY_MS);
       await store.markSyncFailed(board.guildId, board.id, 'render');
       await store.schedule(board.guildId, board.id, retryAt);
-      logger.error({ err: error, board_id: board.id }, 'board page cannot be rendered');
+      logger.error({ err: error, guild_id: board.guildId, board_id: board.id }, 'board page cannot be rendered');
       return { kind: 'retry', reason: 'render', retryAt };
     }
     throw error;
@@ -199,7 +199,7 @@ export class BoardMaintenance {
           // Réclamation rendue : un autre passage réessaiera, sans jamais avoir envoyé deux fois.
           await store.releaseAlert(guildId, { ...claim, messageId: null, ackedAt: null });
           retry = true;
-          logger.warn({ err: error, board_id: board.id, asset_id: claim.assetId }, 'alert could not be sent');
+          logger.warn({ err: error, guild_id: guildId, board_id: board.id, asset_id: claim.assetId }, 'alert could not be sent');
         }
       }
       rows = await store.alerts(guildId, board.id);
@@ -211,7 +211,7 @@ export class BoardMaintenance {
       } catch (error) {
         if (!isReason(error, 'unknown_message', 'unknown_channel')) {
           retry = true;
-          logger.warn({ err: error, board_id: board.id, asset_id: row.assetId }, 'stale alert could not be removed');
+          logger.warn({ err: error, guild_id: guildId, board_id: board.id, asset_id: row.assetId }, 'stale alert could not be removed');
           continue;
         }
       }

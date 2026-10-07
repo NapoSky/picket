@@ -23,7 +23,7 @@ describe('PostgresGuildLifecycleRepository (integration)', () => {
   });
 
   beforeEach(async () => {
-    await queryAsAdmin(database, 'TRUNCATE guild_registry, guild_settings, guild_permission_roles, guild_audit_log');
+    await queryAsAdmin(database, 'TRUNCATE guild_application_logs, guild_registry, guild_settings, guild_permission_roles, guild_audit_log');
   });
 
   const audit = (guildId: GuildId) =>

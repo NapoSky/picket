@@ -87,7 +87,8 @@ export class PurgeInactiveGuilds {
       try {
         await this.#repository.purge(guildId);
         purged.push(guildId);
-        this.#logger.info({ guild_id: guildId }, 'guild data purged');
+        // Ne pas réécrire un journal de serveur immédiatement après avoir effacé ses données.
+        this.#logger.info({}, 'guild data purged');
       } catch (error) {
         failed.push(guildId);
         this.#logger.error({ guild_id: guildId, err: error }, 'guild purge failed');

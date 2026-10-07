@@ -1,16 +1,14 @@
 import { loadConfig, loadMigrationConfig } from '@picket/config';
 import {
   DiscordRestCommandsApi,
-  INTERACTION_RECEIPT_RETENTION_DAYS,
   PostgresDeployedHashStore,
-  PostgresInteractionReceipts,
   deployCommands,
 } from '@picket/discord';
 import { createI18n } from '@picket/i18n';
 import { systemClock } from '@picket/kernel';
 import { createLogger } from '@picket/observability';
 import { createDatabase, migrate } from '@picket/persistence';
-import { buildCommandRegistry, buildPurgeJob } from './composition';
+import { buildCommandRegistry, buildRetentionJob } from './composition';
 
 const USAGE = 'Usage: cli <migrate | deploy-commands [--force] | purge>';
 
@@ -42,20 +40,18 @@ async function runDeployCommands(force: boolean): Promise<void> {
   }
 }
 
-/** À planifier (cron) tant que le job-runner n'existe pas ; code de sortie 1 si une guilde a échoué. */
+/** Nettoyage ponctuel ; également exécuté automatiquement par le job-runner. */
 async function runPurge(): Promise<number> {
   const config = loadConfig(process.env);
   const logger = createLogger({ level: config.logLevel, service: 'picket-cli' });
   const database = createDatabase({ connectionString: config.database.url, maxConnections: 2, applicationName: 'picket-cli' });
   try {
-    const report = await buildPurgeJob(database.db, logger, {
+    const report = await buildRetentionJob(database.db, logger, {
       clock: systemClock,
       guildRetentionDays: config.guildRetentionDays,
       i18n: createI18n(),
     }).execute();
-    const cutoff = new Date(systemClock.now().getTime() - INTERACTION_RECEIPT_RETENTION_DAYS * 24 * 60 * 60 * 1000);
-    const receiptsDeleted = await new PostgresInteractionReceipts(database.db).deleteOlderThan(cutoff);
-    logger.info({ purged: report.purged.length, failed: report.failed.length, receiptsDeleted }, 'purge done');
+    logger.info({ ...report, purged: report.purged.length, failed: report.failed.length }, 'purge done');
     return report.failed.length > 0 ? 1 : 0;
   } finally {
     await database.close();

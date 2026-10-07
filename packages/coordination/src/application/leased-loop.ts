@@ -11,6 +11,7 @@ export interface LeasedLoopOptions {
 }
 
 function defaultSleep(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.resolve();
   return new Promise((resolve) => {
     const timer = setTimeout(resolve, ms);
     signal.addEventListener(
@@ -38,7 +39,7 @@ export function startLeasedLoop(options: LeasedLoopOptions): StopWork {
       } catch (error) {
         options.logger.error({ err: error }, 'periodic task failed');
       }
-      await sleep(options.intervalMs, abort.signal);
+      if (!abort.signal.aborted) await sleep(options.intervalMs, abort.signal);
     }
   })();
   return async () => {

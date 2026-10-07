@@ -17,6 +17,15 @@ const base = {
 const asPayload = (value: Record<string, unknown>) => value as unknown as APIInteraction;
 
 describe('toIncomingInteraction', () => {
+  it('normalizes the Discord attachment limit and uses a safe fallback for old payloads', () => {
+    const payload = { ...base, type: 2, data: { name: 'picket', type: 1 } };
+    const current = toIncomingInteraction(asPayload({ ...payload, attachment_size_limit: 5242880 }));
+    expect(current.ok && current.value.attachmentSizeLimit).toBe(5242880);
+    for (const invalid of [undefined, 0, -1, 1.5, '1000']) {
+      const result = toIncomingInteraction(asPayload({ ...payload, attachment_size_limit: invalid }));
+      expect(result.ok && result.value.attachmentSizeLimit).toBe(10485760);
+    }
+  });
   it('extracts the full command path through groups and subcommands', () => {
     const result = toIncomingInteraction(
       asPayload({

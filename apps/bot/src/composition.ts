@@ -3,6 +3,7 @@ import {
   ComponentRegistry,
   InteractionPipeline,
   PostgresInteractionReceipts,
+  INTERACTION_RECEIPT_RETENTION_DAYS,
   ShardRunner,
   createWsShardConnector,
   type AccessPolicy,
@@ -19,6 +20,7 @@ import {
 import { PostgresGatewaySessionStore, PostgresKeyedLock, PostgresLeaseStore, LeaderElector, startLeasedLoop } from '@picket/coordination';
 import {
   CancelGuildDeletion,
+  ExportGuildData,
   GetGuildLocale,
   GetGuildSettings,
   GetGuildStatus,
@@ -28,6 +30,7 @@ import {
   HandleRoleDeleted,
   PICKET_ROOT,
   PostgresGuildLifecycleRepository,
+  PostgresGuildDataExportRepository,
   PostgresGuildSettingsRepository,
   PostgresPermissionRepository,
   PurgeInactiveGuilds,
@@ -47,7 +50,7 @@ import {
 } from '@picket/guild';
 import type { I18n } from '@picket/i18n';
 import { noopLogger, type Clock, type Logger, type Secret } from '@picket/kernel';
-import type { Db } from '@picket/persistence';
+import { createAppState, purgeExpiredJournals, type Db } from '@picket/persistence';
 import {
   CreateTodolist,
   TODOLIST_ROOT,
@@ -78,6 +81,7 @@ import {
   type Localizer,
   type TimerUseCaseDeps,
 } from '@picket/timers';
+import { latestRetentionSchedule } from './retention-schedule';
 
 /** Accès à l'API REST de Discord : seul le serveur d'interactions en a besoin. */
 export interface DiscordPorts {
@@ -101,6 +105,7 @@ export interface CompositionOptions {
   readonly guildRetentionDays: number;
   readonly i18n: I18n;
   readonly discord?: DiscordPorts;
+  readonly flushGuildLogs?: () => Promise<void>;
 }
 
 interface FeatureModule {
@@ -125,6 +130,7 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
     permissions: showPermissions, updatePermissions: new UpdatePermissions(permissions), access: new ResolveAccess(permissions),
     suspension: new GetSuspension(lifecycle, options.guildRetentionDays),
     request: new RequestGuildDeletion(lifecycle, options.clock, options.guildRetentionDays), cancel: new CancelGuildDeletion(lifecycle),
+    exportData: new ExportGuildData(new PostgresGuildDataExportRepository(db, options.flushGuildLogs), options.clock),
     clock: options.clock, i18n: options.i18n,
     guildRoles: options.discord?.guildRoles ?? { names: async () => ({}) },
   });
@@ -212,8 +218,10 @@ export function buildPipeline(db: Db, logger: Logger, options: CompositionOption
 }
 
 const SWEEP_INTERVAL_MS = 15_000;
+const RETENTION_CHECK_INTERVAL_MS = 60_000;
+const RETENTION_SCHEDULE_KEY = 'retention:last_successful_schedule';
 
-/** Rôle `job-runner` : un seul détenteur du bail à la fois exécute les passes périodiques (timers). */
+/** Rôle `job-runner` : un seul détenteur du bail exécute les passes de timers et de rétention. */
 export function buildJobRunner(
   db: Db,
   logger: Logger,
@@ -221,6 +229,7 @@ export function buildJobRunner(
 ): LeaderElector {
   const timers = timerServices(db, options, logger, new PostgresGuildSettingsRepository(db));
   const sweep = new TimerSweep({ store: timers.store, maintenance: timers.maintenance, features: timers.features, clock: options.clock, logger });
+  const retention = buildNightlyRetentionJob(db, logger, options);
   return new LeaderElector({
     store: new PostgresLeaseStore(db),
     name: 'job-runner:timers',
@@ -230,8 +239,46 @@ export function buildJobRunner(
     retryEveryMs: 5_000,
     clock: options.clock,
     logger,
-    onAcquired: async () => startLeasedLoop({ tick: () => sweep.tick(), intervalMs: SWEEP_INTERVAL_MS, logger }),
+    onAcquired: async () => {
+      const stopTimers = startLeasedLoop({ tick: () => sweep.tick(), intervalMs: SWEEP_INTERVAL_MS, logger });
+      const stopRetention = startLeasedLoop({ tick: () => retention.execute(), intervalMs: RETENTION_CHECK_INTERVAL_MS, logger });
+      return async () => { await Promise.all([stopTimers(), stopRetention()]); };
+    },
   });
+}
+
+/** Même nettoyage pour le CLI, le rattrapage et la passe nocturne. */
+export function buildRetentionJob(db: Db, logger: Logger, options: CompositionOptions) {
+  const purge = buildPurgeJob(db, logger, options);
+  const receipts = new PostgresInteractionReceipts(db);
+  return {
+    async execute() {
+      // Une indisponibilité du stockage des logs ne doit pas empêcher l'effacement des anciennes données.
+      await options.flushGuildLogs?.().catch(() => logger.error({}, 'guild log flush failed'));
+      const journals = await purgeExpiredJournals(db);
+      const cutoff = new Date(options.clock.now().getTime() - INTERACTION_RECEIPT_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+      const receiptsDeleted = await receipts.deleteOlderThan(cutoff);
+      const report = await purge.execute();
+      return { ...report, ...journals, receiptsDeleted };
+    },
+  };
+}
+
+/** Une passe à 3 h à Paris ; une échéance manquée est rattrapée après un redémarrage ou une reprise de bail. */
+export function buildNightlyRetentionJob(db: Db, logger: Logger, options: CompositionOptions) {
+  const state = createAppState(db);
+  const retention = buildRetentionJob(db, logger, options);
+  return {
+    async execute() {
+      const scheduledAt = latestRetentionSchedule(options.clock.now());
+      const last = await state.get(RETENTION_SCHEDULE_KEY);
+      if (last !== null && new Date(last) >= scheduledAt) return null;
+      const report = await retention.execute();
+      // Un échec sera retenté lors de la prochaine vérification, sans attendre la nuit suivante.
+      if (report.failed.length === 0) await state.set(RETENTION_SCHEDULE_KEY, scheduledAt.toISOString());
+      return report;
+    },
+  };
 }
 
 export function buildPurgeJob(db: Db, logger: Logger, options: CompositionOptions): PurgeInactiveGuilds {

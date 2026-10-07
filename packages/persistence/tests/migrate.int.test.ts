@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MIGRATIONS_DIR, MigrationError, migrate } from '@picket/persistence';
@@ -31,10 +31,11 @@ describe('migrate (integration)', () => {
       '005_guild_locale_auto',
       '006_timers',
       '007_timers_activity',
+      '008_journal_retention',
     ]);
 
     const second = await run();
-    expect(second).toEqual({ applied: [], alreadyApplied: 7 });
+    expect(second).toEqual({ applied: [], alreadyApplied: 8 });
   });
 
   it('serialises concurrent runs with the advisory lock', async () => {
@@ -48,7 +49,23 @@ describe('migrate (integration)', () => {
       '005_guild_locale_auto',
       '006_timers',
       '007_timers_activity',
+      '008_journal_retention',
     ]);
+  });
+
+  it('applies the retention migration to existing history, including old rows with no registry entry', async () => {
+    const previous = (await readdir(MIGRATIONS_DIR)).filter((file) => /^00[1-7]_.*\.sql$/.test(file));
+    for (const file of previous) await writeFile(join(directory, file), await readFile(join(MIGRATIONS_DIR, file)));
+    await run(directory);
+    const guild = '700000000000000001';
+    await queryAsAdmin(database, `INSERT INTO guild_audit_log (guild_id, actor_id, action, at)
+      VALUES ($1, 'system', 'expired', now() - interval '31 days'), ($1, 'system', 'recent', now())`, [guild]);
+    await queryAsAdmin(database, `INSERT INTO timer_events (guild_id, board_id, actor_id, action, at)
+      VALUES ($1, '00000000-0000-4000-8000-000000000001', 'system', 'expired', now() - interval '31 days'),
+             ($1, '00000000-0000-4000-8000-000000000001', 'system', 'recent', now())`, [guild]);
+    expect((await run()).applied).toEqual(['008_journal_retention']);
+    expect(await queryAsAdmin(database, 'SELECT action FROM guild_audit_log')).toEqual([{ action: 'recent' }]);
+    expect(await queryAsAdmin(database, 'SELECT action FROM timer_events')).toEqual([{ action: 'recent' }]);
   });
 
   it('refuses a migration modified after being applied', async () => {

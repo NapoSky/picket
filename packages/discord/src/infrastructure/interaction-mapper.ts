@@ -172,6 +172,8 @@ export function toIncomingInteraction(
     memberRoleIds: roleIds,
     memberPermissions: parseBigInt(payload.member?.permissions),
     appPermissions: parseBigInt(payload.app_permissions),
+    attachmentSizeLimit: Number.isSafeInteger(payload.attachment_size_limit) && payload.attachment_size_limit > 0
+      ? payload.attachment_size_limit : 10 * 1024 * 1024,
     commandPath: path,
     options: values,
     focusedOption,

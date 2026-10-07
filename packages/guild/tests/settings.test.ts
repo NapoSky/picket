@@ -2,7 +2,7 @@ import { CommandRegistry, ComponentRegistry, InteractionPipeline, buildCommandsP
 import { createI18n, loadCatalogs } from '@picket/i18n';
 import { ChannelId, GuildId, MessageId, RoleId, UserId, noopLogger } from '@picket/kernel';
 import {
-  CancelGuildDeletion, GetGuildSettings, GetGuildStatus, GetSuspension, PICKET_ROOT, RequestGuildDeletion, ResolveAccess,
+  CancelGuildDeletion, ExportGuildData, GetGuildSettings, GetGuildStatus, GetSuspension, PICKET_ROOT, RequestGuildDeletion, ResolveAccess,
   ShowPermissions, UpdateGuildSettings, UpdatePermissions, createGuildAccessPolicy, createGuildGate, createSettingsPanel,
   defaultPermissionConfig, statusCommand, type GuildLifecycleRepository, type GuildSettings, type GuildSettingsWriter,
   type PermissionConfig, type PermissionRepository,
@@ -41,7 +41,8 @@ function setup(i18n = testI18n) {
   const show = new ShowPermissions(permissions);
   const panel = createSettingsPanel({ settings: new GetGuildSettings(reader), update: new UpdateGuildSettings(store, i18n.locales), permissions: show,
     updatePermissions: new UpdatePermissions(permissions), access: new ResolveAccess(permissions), suspension,
-    request: new RequestGuildDeletion(lifecycle, clock, 30), cancel: new CancelGuildDeletion(lifecycle), clock, i18n });
+    request: new RequestGuildDeletion(lifecycle, clock, 30), cancel: new CancelGuildDeletion(lifecycle), clock, i18n,
+    exportData: new ExportGuildData({ read: async () => ({ guild_settings: [settings], guild_permission_roles: [config] }) }, clock) });
   const status = statusCommand(new GetGuildStatus(reader), show);
   const registry = new CommandRegistry([PICKET_ROOT], [status, panel.command], i18n, [...panel.aliases, { ...status, path: ['picket', 'permissions', 'show'] }]);
   const pipeline = new InteractionPipeline({ registry, components: new ComponentRegistry(panel.families), receipts: { claim: async () => true }, access: createGuildAccessPolicy(new ResolveAccess(permissions)), gate: createGuildGate(suspension), language: { localeOf: async () => settings.locale }, features: allFeaturesEnabled, logger: noopLogger });
@@ -83,6 +84,39 @@ describe('private server settings panel', () => {
   });
   it('keeps members out of settings', async () => {
     expect(text(await setup().open({ memberPermissions: 0n }))).toContain('required level: officer');
+  });
+  it('exports privately for administrators, retains the panel and rejects lost access', async () => {
+    const env = setup();
+    const data = await env.click(control(await env.open(), 'view', 'data'));
+    const customId = control(data, 'export');
+    const exported = await env.click(customId);
+    expect(exported).toMatchObject({ kind: 'file', ephemeral: true, file: { filename: expect.stringContaining(guildId) } });
+    expect(env.audit).toEqual([]);
+    const denied = await env.click(customId, { memberPermissions: 0n });
+    expect(text(denied)).toContain('required level: admin');
+    const interaction = makeInteraction({ kind: 'component', customId, componentKind: 'button', memberPermissions: 8n, message: { id: MessageId.assert('910000000000000001'), channelId } });
+    const pending = await env.pipeline.handle(interaction);
+    if (pending.kind !== 'deferred') throw new Error('Expected deferred export');
+    const replies = new InMemoryInteractionReplies();
+    await deliverDeferred({ reply: pending, interaction, replies, logger: noopLogger });
+    expect(replies.replies).toMatchObject([{ action: 'followUp', target: { token: interaction.token }, content: { file: { filename: expect.stringContaining(guildId) } } }]);
+  });
+
+  it('makes a full export available during suspension without cancelling deletion', async () => {
+    const env = setup();
+    const data = await env.click(control(await env.open(), 'view', 'data'));
+    const confirmation = await env.click(control(data, 'view', 'delete'));
+    const suspended = await env.click(control(confirmation, 'delete'));
+    const before = env.read().inactive;
+    expect((await env.click(control(suspended, 'export')))?.kind).toBe('file');
+    expect(env.read().inactive).toBe(before);
+    expect(env.audit).toEqual([]);
+  });
+
+  it('explains an oversized export instead of sending a partial file', async () => {
+    const env = setup();
+    const data = await env.click(control(await env.open(), 'view', 'data'));
+    expect(text(await env.click(control(data, 'export'), { attachmentSizeLimit: 1 }))).toContain('No partial file');
   });
   it.each(['home', 'language', 'advanced', 'permissions', 'data'])('refreshes %s with unique controls and no writes', async (page) => {
     const env = setup();

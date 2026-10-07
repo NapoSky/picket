@@ -9,6 +9,7 @@ import type {
   UserId,
 } from '@picket/kernel';
 import type { PanelView } from './panel';
+import type { ReplyFile } from './messaging';
 
 export type InteractionKind = 'command' | 'component' | 'modal' | 'autocomplete';
 
@@ -34,6 +35,8 @@ export interface IncomingInteraction {
   readonly memberRoleIds: readonly RoleId[];
   readonly memberPermissions: bigint | null;
   readonly appPermissions: bigint | null;
+  /** Limite Discord pour un fichier joint à la réponse. */
+  readonly attachmentSizeLimit: number;
   /** `[racine, groupe?, sous-commande?]` pour une commande ou un autocomplete, sinon vide. */
   readonly commandPath: readonly string[];
   /** Valeurs des options de la commande (hors sous-commandes et groupes). */
@@ -67,6 +70,7 @@ export interface ModalInput {
 export type Reply =
   | { readonly kind: 'message'; readonly content: string; readonly ephemeral: boolean }
   | { readonly kind: 'panel'; readonly panel: PanelView; readonly update: boolean }
+  | { readonly kind: 'file'; readonly content: string; readonly file: ReplyFile; readonly ephemeral: true }
   | { readonly kind: 'autocomplete'; readonly choices: readonly { readonly name: string; readonly value: string }[] }
   | { readonly kind: 'modal'; readonly customId: string; readonly title: string; readonly inputs: readonly ModalInput[] }
   | {

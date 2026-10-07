@@ -39,6 +39,7 @@ export function makeInteraction(overrides: Partial<IncomingInteraction> = {}): I
     memberRoleIds: [],
     memberPermissions: 0n,
     appPermissions: 0n,
+    attachmentSizeLimit: 10 * 1024 * 1024,
     commandPath: ['picket', 'status'],
     options: {},
     focusedOption: null,

@@ -127,6 +127,8 @@ describe('Discord REST adapters against a local server', () => {
     readonly url: string;
     readonly authorization: string | undefined;
     readonly body: unknown;
+    readonly rawBody: string;
+    readonly contentType: string | undefined;
   }
 
   let server: Server;
@@ -145,11 +147,15 @@ describe('Discord REST adapters against a local server', () => {
       request.on('data', (chunk: Buffer) => chunks.push(chunk));
       request.on('end', () => {
         const raw = Buffer.concat(chunks).toString('utf8');
+        const contentType = request.headers['content-type'];
+        const payload = contentType?.startsWith('multipart/form-data')
+          ? raw.match(/name="payload_json"[^\r\n]*\r\n(?:[^\r\n]+\r\n)*\r\n([\s\S]*?)\r\n--/)?.[1] ?? '{}'
+          : raw;
         seen.push({
           method: request.method ?? '',
           url: request.url ?? '',
           authorization: request.headers.authorization,
-          body: raw === '' ? null : JSON.parse(raw),
+          body: payload === '' ? null : JSON.parse(payload), rawBody: raw, contentType,
         });
         respond(request, response);
       });
@@ -266,6 +272,27 @@ describe('Discord REST adapters against a local server', () => {
     const reader = new DiscordRestGuildRoles(new Secret('bot-token'), { api, retries: 0 });
     expect(await reader.names(guild)).toEqual({ '400000000000000011': 'Officers' });
     expect(seen[0]).toMatchObject({ method: 'GET', url: `/api/v10/guilds/${guild}/roles`, authorization: 'Bot bot-token' });
+  });
+  it('uploads JSON as multipart in a private follow-up without V2 flags, mentions or bot authorization', async () => {
+    const target = { applicationId: application, token: new Secret('export-component-token') };
+    const bytes = new TextEncoder().encode('{"name":"Béton 🏗️","guildId":"700000000000000001"}\n');
+    await replies().followUp(target, { content: 'Private download', file: { filename: 'picket-data.json', bytes } });
+    expect(seen[0]).toMatchObject({ method: 'POST', authorization: undefined,
+      body: { content: 'Private download', flags: 64, allowed_mentions: { parse: [] }, attachments: [{ id: 0, filename: 'picket-data.json' }] },
+    });
+    expect(seen[0]?.contentType).toContain('multipart/form-data; boundary=');
+    expect(seen[0]?.rawBody).toContain('name="files[0]"; filename="picket-data.json"');
+    expect(seen[0]?.rawBody).toContain('Content-Type: application/json');
+    expect(seen[0]?.rawBody).toContain(new TextDecoder().decode(bytes));
+    expect(seen[0]?.body).not.toHaveProperty('components');
+    expect(seen[0]?.body).not.toHaveProperty('embeds');
+  });
+
+  it('can also attach a file to an original deferred response', async () => {
+    const target = { applicationId: application, token: new Secret('export-token') };
+    await replies().editOriginal(target, { content: 'Download', file: { filename: 'data.json', bytes: new TextEncoder().encode('{}') } });
+    expect(seen[0]).toMatchObject({ method: 'PATCH', authorization: undefined, body: { attachments: [{ id: 0, filename: 'data.json' }] } });
+    expect(seen[0]?.contentType).toContain('multipart/form-data');
   });
 
   it('does not leak the interaction token in the error of a failed follow-up', async () => {

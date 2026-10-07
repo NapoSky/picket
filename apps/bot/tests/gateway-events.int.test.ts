@@ -22,7 +22,7 @@ describe('Gateway events -> guild lifecycle and permissions (integration)', () =
   });
 
   beforeEach(async () => {
-    await queryAsAdmin(database, 'TRUNCATE guild_registry, guild_settings, guild_permission_roles, guild_audit_log, interaction_receipts');
+    await queryAsAdmin(database, 'TRUNCATE guild_application_logs, guild_registry, guild_settings, guild_permission_roles, guild_audit_log, interaction_receipts');
   });
 
   const gateway = () => buildGatewayHandler(database.handle.db, noopLogger, composition);
@@ -83,7 +83,7 @@ describe('Gateway events -> guild lifecycle and permissions (integration)', () =
     expect(result.delivered).toHaveLength(1);
     expect(result.delivered[0]?.action).toBe('editOriginal');
     const content = result.delivered[0]?.content;
-    if (content === undefined || content === null || typeof content === 'string') throw new Error('Expected settings panel');
+    if (content === undefined || content === null || typeof content === 'string' || !('components' in content)) throw new Error('Expected settings panel');
     return content;
   }
 
