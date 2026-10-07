@@ -11,6 +11,7 @@ import type { ResolveAccess, ShowPermissions, UpdatePermissions } from '../../ap
 import type { CancelGuildDeletion, GetSuspension, RequestGuildDeletion } from '../../application/guild-lifecycle-use-cases';
 import type { SettingsChange } from '../../domain/guild-settings';
 import type { ExportGuildData } from '../../application/export-guild-data';
+import type { AuditControl } from '../../application/publish-guild-audit';
 import { everyoneRoleId, type ConfigurableLevel } from '../../domain/permissions';
 
 const TTL_SECONDS = 15 * 60;
@@ -47,6 +48,7 @@ export interface SettingsPanelDependencies {
   readonly clock: Clock;
   readonly i18n: I18n;
   readonly guildRoles?: GuildRoles;
+  readonly audit?: AuditControl;
 }
 
 function nativeName(locale: string): string {
@@ -122,7 +124,8 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
           { kind: 'section', text: `🕒 **${t('panel.timezone')}**\n${settings.timezone}`, button: button('panel.changeTimezone', 'psedit', 'timezone') },
           text(`📨 ${t('panel.audit', { channel: settings.auditChannelId === null ? t('status.auditMissing') : `<#${settings.auditChannelId}>` })}`), text(t('panel.auditHelp')),
           { kind: 'channelSelect', customId: id('psedit', 'channel'), placeholder: t('panel.chooseChannel') },
-          { kind: 'buttons', buttons: [button('panel.clearChannel', 'psedit', 'clearChannel')] }, text(`🚧 **${t('panel.soon')}**`),
+          ...(settings.auditFailure ? [text(t('audit.paused'))] : []),
+          { kind: 'buttons', buttons: [button('panel.clearChannel', 'psedit', 'clearChannel'), ...(deps.audit && settings.auditChannelId ? [button('audit.testButton', 'psedit', 'auditTest', '0', 'primary')] : [])] }, text(`🚧 **${t('panel.soon')}**`),
         );
         break;
       case 'permissions':
@@ -224,6 +227,11 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
             if (['language', 'member', 'officer'].includes(action) && /^\d{1,6}$/.test(argument)) return render(context, action as Page, argument);
           }
           if (namespace === 'psedit') {
+            if (action === 'auditTest' && context.interaction.componentKind === 'button' && deps.audit) {
+              const result = await deps.audit.test(context.guildId, context.interaction.userId);
+              const notice = { queued: 'audit.queued', no_channel: 'audit.noChannel', blocked: 'audit.blocked', unavailable: 'audit.unavailable' } as const;
+              return render(context, 'advanced', '0', notice[result]);
+            }
             let change: SettingsChange | null = null;
             let page: Page = 'advanced';
             const selected = context.interaction.selectedValues;
@@ -242,6 +250,11 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
               change = { kind: 'feature', feature: argument, enabled: action === 'enable' }; page = 'home';
             }
             if (change === null) return render(context, page, '0', 'settings.invalidOption');
+            if (change.kind === 'audit_channel' && change.channelId !== null && deps.audit) {
+              try {
+                if ((await deps.audit.inspect(context.guildId, change.channelId)).kind === 'blocked') return render(context, page, '0', 'audit.blocked');
+              } catch { return render(context, page, '0', 'audit.unavailable'); }
+            }
             const result = await deps.update.execute({ guildId: context.guildId, actorId: context.interaction.userId, change });
             const notice: MessageKey = result.kind === 'rejected' ? result.reason === 'invalid_timezone' ? 'settings.rejected.invalidTimezone' : 'settings.rejected.unsupportedLanguage' : result.kind === 'unchanged' ? 'panel.unchanged' : 'panel.saved';
             return render(context, page, page === 'language' ? argument : '0', notice);

@@ -17,7 +17,7 @@ describe('tenant isolation (RLS, integration)', () => {
   });
 
   beforeEach(async () => {
-    await queryAsAdmin(database, 'TRUNCATE guild_settings');
+    await queryAsAdmin(database, 'TRUNCATE guild_audit_delivery, guild_audit_schedule, guild_settings');
   });
 
   const insert = (guildId: GuildId, locale = 'en') =>
@@ -101,7 +101,7 @@ describe('schema conventions (integration)', () => {
   let database: TestDatabase;
 
   // Tables portant `guild_id` sans contenu de tenant : enumérées par des tâches système.
-  const NOT_TENANT_CONTENT = ['guild_registry', 'interaction_receipts', 'timer_schedule'];
+  const NOT_TENANT_CONTENT = ['guild_registry', 'interaction_receipts', 'timer_schedule', 'guild_audit_schedule'];
 
   beforeAll(async () => {
     database = await createTestDatabase();

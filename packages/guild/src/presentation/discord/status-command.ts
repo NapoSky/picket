@@ -26,6 +26,7 @@ export function statusCommand(useCase: GetGuildStatus, permissions: ShowPermissi
           audit: t(status.auditChannelConfigured ? 'status.auditConfigured' : 'status.auditMissing'),
         }),
         t('panel.statusReserved'),
+        ...(status.auditFailure ? [t('audit.paused')] : []),
         t('permissions.show.level', { level: t(`levels.${overview.yourLevel ?? 'none'}`) }),
         t('permissions.show.officers', { roles: overview.config.officer.length === 0 ? t('permissions.show.noOfficers') : roles(overview.config.officer) }),
         t('permissions.show.members', { roles: roles(overview.config.member) }),

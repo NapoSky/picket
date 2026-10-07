@@ -9,6 +9,8 @@ export const GUILD_EXPORT_TABLES = {
   guild_permission_roles: ['guild_id', 'level', 'role_id'],
   guild_audit_log: ['id'],
   guild_application_logs: ['id'],
+  guild_audit_delivery: ['id'],
+  guild_audit_schedule: ['guild_id'],
   interaction_receipts: ['interaction_id'],
   timer_boards: ['id'],
   timer_board_messages: ['board_id', 'page'],

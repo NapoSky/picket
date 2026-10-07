@@ -6,6 +6,7 @@ import {
   ShowPermissions, UpdateGuildSettings, UpdatePermissions, createGuildAccessPolicy, createGuildGate, createSettingsPanel,
   defaultPermissionConfig, statusCommand, type GuildLifecycleRepository, type GuildSettings, type GuildSettingsWriter,
   type PermissionConfig, type PermissionRepository,
+  type AuditControl,
 } from '@picket/guild';
 import { InMemoryInteractionReplies, allFeaturesEnabled, makeInteraction, testI18n } from '@picket/testing';
 
@@ -13,7 +14,7 @@ const guildId = GuildId.assert('700000000000000001');
 const roleId = RoleId.assert('400000000000000011');
 const channelId = ChannelId.assert('600000000000000001');
 
-function setup(i18n = testI18n) {
+function setup(i18n = testI18n, auditControl?: AuditControl) {
   let time = new Date('2026-10-05T12:00:00Z');
   const clock = { now: () => time };
   let settings: GuildSettings = { guildId, locale: null, timezone: 'UTC', auditChannelId: null, features: { timers: true, todolists: true, warlog: true }, installedAt: time };
@@ -42,7 +43,7 @@ function setup(i18n = testI18n) {
   const panel = createSettingsPanel({ settings: new GetGuildSettings(reader), update: new UpdateGuildSettings(store, i18n.locales), permissions: show,
     updatePermissions: new UpdatePermissions(permissions), access: new ResolveAccess(permissions), suspension,
     request: new RequestGuildDeletion(lifecycle, clock, 30), cancel: new CancelGuildDeletion(lifecycle), clock, i18n,
-    exportData: new ExportGuildData({ read: async () => ({ guild_settings: [settings], guild_permission_roles: [config] }) }, clock) });
+    exportData: new ExportGuildData({ read: async () => ({ guild_settings: [settings], guild_permission_roles: [config] }) }, clock), ...(auditControl ? { audit: auditControl } : {}) });
   const status = statusCommand(new GetGuildStatus(reader), show);
   const registry = new CommandRegistry([PICKET_ROOT], [status, panel.command], i18n, [...panel.aliases, { ...status, path: ['picket', 'permissions', 'show'] }]);
   const pipeline = new InteractionPipeline({ registry, components: new ComponentRegistry(panel.families), receipts: { claim: async () => true }, access: createGuildAccessPolicy(new ResolveAccess(permissions)), gate: createGuildGate(suspension), language: { localeOf: async () => settings.locale }, features: allFeaturesEnabled, logger: noopLogger });
@@ -199,6 +200,27 @@ describe('private server settings panel', () => {
     await env.click(id, { componentKind: 'roleSelect', selectedValues: [roleId] }); expect(env.audit).toEqual([]);
     await env.click(id, { componentKind: 'roleSelect', selectedValues: [roleId], resolvedRoles: { [roleId]: { name: 'Officers' } } }); expect(env.read().config.officer).toEqual([roleId]);
     const rejected = await env.click(id, { componentKind: 'roleSelect', selectedValues: [guildId], resolvedRoles: { [guildId]: { name: '@everyone' } } }); expect(text(rejected)).toContain('cannot be an officer'); expect(env.audit).toHaveLength(1);
+  });
+  it('validates audit channel access before saving and permits officers to test and resume it', async () => {
+    let blocked = true;
+    const audit: AuditControl = {
+      inspect: jest.fn(async () => blocked ? { kind: 'blocked' as const, reason: 'missing_permissions' as const } : { kind: 'ready' as const, locale: 'en' }),
+      test: jest.fn(async () => 'queued'),
+    };
+    const env = setup(testI18n, audit);
+    let advanced = await env.click(control(await env.open(), 'view', 'advanced'));
+    const select = { componentKind: 'channelSelect' as const, selectedValues: [channelId], resolvedChannels: { [channelId]: { kind: 'text' as const } } };
+    expect(text(await env.click(control(advanced, 'channel'), select))).toContain('cannot use this channel');
+    expect(env.read().settings.auditChannelId).toBeNull(); expect(env.audit).toEqual([]);
+    blocked = false;
+    advanced = await env.click(control(advanced, 'channel'), select);
+    const test = control(advanced, 'auditTest');
+    env.setConfig({ officer: [roleId], member: [guildId as unknown as RoleId] });
+    expect(text(await env.click(test, { memberPermissions: 0n, memberRoleIds: [roleId] }))).toContain('test message is queued');
+    expect(audit.test).toHaveBeenCalledTimes(1);
+    env.setConfig({ officer: [], member: [roleId] });
+    expect(text(await env.click(test, { memberPermissions: 0n, memberRoleIds: [roleId] }))).toContain('required level: officer');
+    expect(audit.test).toHaveBeenCalledTimes(1);
   });
   it('confirms reopening to everyone and never replaces another configured role', async () => {
     const env = setup(); env.setConfig({ officer: [], member: [roleId] });

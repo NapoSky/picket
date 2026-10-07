@@ -374,6 +374,10 @@ export class PostgresTimerStore implements TimerStore {
         .returningAll()
         .execute();
       const latest = rows.map(toAlert).sort((a, b) => b.dueAt.getTime() - a.dueAt.getTime())[0];
+      if (latest !== undefined) {
+        const asset = await trx.selectFrom('timer_assets').select(['name', 'type', 'code']).where('guild_id', '=', guildId).where('id', '=', assetId).executeTakeFirst();
+        await recordEvents(trx, guildId, latest.boardId, [{ assetId, actor, action: 'acknowledge', detail: { ...asset, thresholdMin, dueAt: latest.dueAt.toISOString(), messageId: latest.messageId } }]);
+      }
       return latest ?? null;
     });
   }

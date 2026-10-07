@@ -1,4 +1,6 @@
 export * from './application/get-guild-status';
+export * from './application/publish-guild-audit';
+export * from './application/audit-message';
 export * from './application/export-guild-data';
 export * from './application/guild-events-use-cases';
 export * from './application/guild-lifecycle-repository';
@@ -13,6 +15,7 @@ export * from './domain/permissions';
 export * from './infrastructure/postgres-guild-lifecycle-repository';
 export * from './infrastructure/postgres-guild-data-export-repository';
 export * from './infrastructure/postgres-guild-settings-repository';
+export * from './infrastructure/postgres-guild-audit-repository';
 export * from './infrastructure/postgres-permission-repository';
 export * from './presentation/discord/access-policy';
 export * from './presentation/discord/data-commands';

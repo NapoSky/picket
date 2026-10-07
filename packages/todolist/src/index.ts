@@ -1,4 +1,5 @@
 export * from './application/create-todolist';
+export * from './application/todolist-creation-observer';
 export * from './application/custom-ids';
 export * from './application/tick-todolist-item';
 export * from './domain/bot-permissions';

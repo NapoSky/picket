@@ -32,10 +32,11 @@ describe('migrate (integration)', () => {
       '006_timers',
       '007_timers_activity',
       '008_journal_retention',
+      '009_audit_delivery',
     ]);
 
     const second = await run();
-    expect(second).toEqual({ applied: [], alreadyApplied: 8 });
+    expect(second).toEqual({ applied: [], alreadyApplied: 9 });
   });
 
   it('serialises concurrent runs with the advisory lock', async () => {
@@ -50,6 +51,7 @@ describe('migrate (integration)', () => {
       '006_timers',
       '007_timers_activity',
       '008_journal_retention',
+      '009_audit_delivery',
     ]);
   });
 
@@ -63,7 +65,7 @@ describe('migrate (integration)', () => {
     await queryAsAdmin(database, `INSERT INTO timer_events (guild_id, board_id, actor_id, action, at)
       VALUES ($1, '00000000-0000-4000-8000-000000000001', 'system', 'expired', now() - interval '31 days'),
              ($1, '00000000-0000-4000-8000-000000000001', 'system', 'recent', now())`, [guild]);
-    expect((await run()).applied).toEqual(['008_journal_retention']);
+    expect((await run()).applied).toEqual(['008_journal_retention', '009_audit_delivery']);
     expect(await queryAsAdmin(database, 'SELECT action FROM guild_audit_log')).toEqual([{ action: 'recent' }]);
     expect(await queryAsAdmin(database, 'SELECT action FROM timer_events')).toEqual([{ action: 'recent' }]);
   });

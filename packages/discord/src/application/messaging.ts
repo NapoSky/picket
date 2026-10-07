@@ -37,6 +37,8 @@ export interface ButtonView {
 
 /** Contenu d'un message du bot : les boutons sont répartis par lignes de 5 par l'adaptateur. */
 export interface MessageView {
+  /** Clé de déduplication à la création (Discord conserve les nonces quelques minutes). */
+  readonly nonce?: string;
   readonly embeds: readonly EmbedView[];
   readonly buttons: readonly ButtonView[];
   /** Texte hors embed (par exemple une alerte qui mentionne des rôles). */
@@ -45,6 +47,8 @@ export interface MessageView {
   readonly mentionRoleIds?: readonly RoleId[];
   /** Sans notification push, même pour les rôles mentionnés. */
   readonly silent?: boolean;
+  /** Désactive les aperçus de liens pour les messages d'une seule ligne. */
+  readonly suppressEmbeds?: boolean;
 }
 
 export const MAX_BUTTONS_PER_MESSAGE = 25;

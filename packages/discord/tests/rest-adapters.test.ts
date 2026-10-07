@@ -12,6 +12,7 @@ import {
   DiscordApiError,
   DiscordRestInteractionReplies,
   DiscordRestGuildRoles,
+  DiscordRestGuildChannels,
   DiscordRestMessaging,
   mapRestError,
   toRestMessage,
@@ -175,6 +176,40 @@ describe('Discord REST adapters against a local server', () => {
 
   const messaging = () => new DiscordRestMessaging(new Secret('bot-token'), { api, retries: 0 });
   const replies = () => new DiscordRestInteractionReplies({ api, retries: 0 });
+
+  it('uses nonce deduplication on creation and never sends it when editing', async () => {
+    respond = (_request, response) => json(response, 200, { id: message });
+    const client = messaging();
+    await client.send(channel, { ...view, nonce: 'pa123' });
+    await client.edit(channel, message, { ...view, nonce: 'pa123' });
+    expect(seen[0]?.body).toMatchObject({ nonce: 'pa123', enforce_nonce: true });
+    expect(seen[1]?.body).not.toHaveProperty('nonce');
+    expect(seen[1]?.body).not.toHaveProperty('enforce_nonce');
+  });
+
+  it('validates the audit channel guild, type, and effective bot permissions', async () => {
+    const guild = GuildId.assert('700000000000000001');
+    const bot = '800000000000000001';
+    let destinationGuild: string = guild, destinationType = 0, deny = '0';
+    respond = (request, response) => {
+      const url = decodeURIComponent(request.url ?? '');
+      if (url.includes(`/channels/${channel}`)) json(response, 200, { id: channel, guild_id: destinationGuild, type: destinationType, permission_overwrites: [{ id: bot, type: 1, allow: '0', deny }] });
+      else if (url.endsWith('/users/@me')) json(response, 200, { id: bot });
+      else if (url.endsWith('/roles')) json(response, 200, [{ id: guild, permissions: String(1024n | 2048n | 16384n) }]);
+      else if (url.includes('/members/')) json(response, 200, { roles: [] });
+      else json(response, 200, { preferred_locale: 'fr' });
+    };
+    const channels = new DiscordRestGuildChannels(new Secret('bot-token'), { api, retries: 0 });
+    expect(await channels.inspect(guild, channel)).toEqual({ kind: 'ready', locale: 'fr' });
+    deny = '16384';
+    expect(seen.map((call) => call.url)).toContain(`/api/v10/guilds/${guild}/members/${bot}`);
+    expect(await channels.inspect(guild, channel)).toEqual({ kind: 'blocked', reason: 'missing_permissions' });
+    expect(seen.filter((call) => decodeURIComponent(call.url).endsWith('/users/@me'))).toHaveLength(1);
+    destinationGuild = '700000000000000002';
+    expect(await channels.inspect(guild, channel)).toEqual({ kind: 'blocked', reason: 'wrong_guild' });
+    destinationGuild = guild; destinationType = 2;
+    expect(await channels.inspect(guild, channel)).toEqual({ kind: 'blocked', reason: 'unsupported_channel' });
+  });
 
   it('posts a message with the bot token and returns the new identifier', async () => {
     respond = (_request, response) => json(response, 200, { id: message });

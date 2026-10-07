@@ -45,6 +45,7 @@ export type TimerAction =
   | 'reactivate'
   | 'refresh'
   | 'strike'
+  | 'acknowledge'
   | 'cleanup'
   | 'auto_purge'
   | 'reset_war'

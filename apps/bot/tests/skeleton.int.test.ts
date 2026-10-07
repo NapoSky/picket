@@ -10,7 +10,7 @@ import {
   testI18n,
   type TestDatabase,
 } from '@picket/testing';
-import { buildCommandRegistry, buildPipeline, buildPurgeJob } from '../src/composition';
+import { buildAuditPublisher, buildCommandRegistry, buildPipeline, buildPurgeJob } from '../src/composition';
 
 const GUILD = '700000000000000001';
 const OFFICER_ROLE = '400000000000000011';
@@ -25,7 +25,7 @@ const composition = {
   clock: { now: () => businessNow },
   guildRetentionDays: 30,
   i18n: testI18n,
-  discord: { messaging, replies },
+  discord: { messaging, replies, guildChannels: { inspect: async () => ({ kind: 'ready' as const, locale: 'en' }) } },
 };
 
 describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies', () => {
@@ -268,13 +268,29 @@ describe('todolists end to end: signed HTTP -> pipeline -> Postgres lock -> Disc
     expect(replies.replies).toMatchObject([{ action: 'editOriginal', content: 'Todolist posted.' }]);
   });
 
-  it('stores nothing about the list in the database: Discord is the only state', async () => {
+  it('stores creation metadata only: list contents and ticking state stay in Discord', async () => {
     const tables = await queryAsAdmin<{ table_name: string }>(
       database,
       "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
     );
     expect(tables.map((row) => row.table_name).filter((name) => name.includes('todo'))).toEqual([]);
-    expect(await queryAsAdmin(database, 'SELECT 1 FROM guild_audit_log WHERE action LIKE $1', ['todolist%'])).toEqual([]);
+    const records = await queryAsAdmin<{ after: Record<string, unknown> }>(database, "SELECT after FROM guild_audit_log WHERE action = 'todolist.created'");
+    expect(records.length).toBeGreaterThan(0);
+    for (const record of records) expect(Object.keys(record.after).sort()).toEqual(['channel_id', 'message_ids', 'messages']);
+    expect(JSON.stringify(records)).not.toContain('Crates');
+  });
+
+  it('publishes todolist creation audit even with a noop logger, without duplicating log entries', async () => {
+    const auditChannel = ChannelId.assert('600000000000000099');
+    await queryAsAdmin(database, 'UPDATE guild_settings SET audit_channel_id = $1 WHERE guild_id = $2', [auditChannel, GUILD_ID]);
+    const app = replica();
+    await submit(app, 'A・Secret list text'); await drain(app);
+    const audit = buildAuditPublisher(database.handle.db, noopLogger, { ...composition, clock: { now: () => new Date(Date.now() + 1000) } });
+    await audit.tick(); await audit.tick();
+    expect(messaging.list(auditChannel)).toHaveLength(1);
+    expect(messaging.list(auditChannel)[0]?.view.content).toContain('📋 **Todolist created**');
+    expect(JSON.stringify(messaging.list(auditChannel))).not.toContain('Secret list text');
+    await queryAsAdmin(database, 'UPDATE guild_settings SET audit_channel_id = NULL WHERE guild_id = $1', [GUILD_ID]);
   });
 
   it('plays a whole list: quantities need several clicks, the last click removes the message and says so once', async () => {

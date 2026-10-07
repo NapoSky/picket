@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { hostname } from 'node:os';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { loadConfig, type Role } from '@picket/config';
-import { DiscordRestGuildRoles, DiscordRestInteractionReplies, DiscordRestMessaging, createInteractionServer } from '@picket/discord';
+import { DiscordRestGuildChannels, DiscordRestGuildRoles, DiscordRestInteractionReplies, DiscordRestMessaging, createInteractionServer } from '@picket/discord';
 import { createI18n } from '@picket/i18n';
 import { systemClock } from '@picket/kernel';
 import { createGuildLogDestination, createHealthServer, createLogger } from '@picket/observability';
@@ -41,6 +41,7 @@ async function run(): Promise<void> {
     messaging: new DiscordRestMessaging(config.discord.botToken),
     replies: new DiscordRestInteractionReplies(),
     guildRoles: new DiscordRestGuildRoles(config.discord.botToken),
+    guildChannels: new DiscordRestGuildChannels(config.discord.botToken),
   };
   const composition = {
     clock: systemClock,

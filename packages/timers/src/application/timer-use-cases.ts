@@ -206,7 +206,7 @@ async function changeAsset(
       return {
         result: { kind: 'done', asset: next },
         changes: [{ kind: 'update', asset: next }],
-        events: [{ assetId, actor: user.userId, action }],
+        events: [{ assetId, actor: user.userId, action, ...(action === 'strike' ? { detail: { name: asset.name, type: asset.type, code: asset.code, region: asset.regionKey, location: asset.locationKey } } : {}) }],
       };
     },
     now,

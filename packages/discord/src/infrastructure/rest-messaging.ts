@@ -105,7 +105,9 @@ export function toRestMessage(view: MessageView): RESTPostAPIChannelMessageJSONB
     })),
     components,
     allowed_mentions: { parse: [], ...(view.mentionRoleIds !== undefined && view.mentionRoleIds.length > 0 ? { roles: [...view.mentionRoleIds] } : {}) },
-    ...(view.silent === true ? { flags: MessageFlags.SuppressNotifications } : {}),
+    ...(view.silent === true || view.suppressEmbeds === true ? {
+      flags: (view.silent === true ? MessageFlags.SuppressNotifications : 0) | (view.suppressEmbeds === true ? MessageFlags.SuppressEmbeds : 0),
+    } : {}),
   };
 }
 
@@ -134,7 +136,9 @@ export class DiscordRestMessaging implements Messaging {
 
   async send(channelId: ChannelId, message: MessageView): Promise<MessageId> {
     try {
-      const created = (await this.#rest.post(Routes.channelMessages(channelId), { body: toRestMessage(message) })) as APIMessage;
+      if (message.nonce !== undefined && (message.nonce.length === 0 || message.nonce.length > 25)) throw new RangeError('Invalid message nonce');
+      const body = { ...toRestMessage(message), ...(message.nonce !== undefined ? { nonce: message.nonce, enforce_nonce: true } : {}) };
+      const created = (await this.#rest.post(Routes.channelMessages(channelId), { body })) as APIMessage;
       const id = MessageId.parse(created.id);
       if (!id.ok) throw new DiscordApiError('unknown', 'Malformed message identifier');
       return id.value;

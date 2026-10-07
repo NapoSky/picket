@@ -22,7 +22,7 @@ describe('Gateway events -> guild lifecycle and permissions (integration)', () =
   });
 
   beforeEach(async () => {
-    await queryAsAdmin(database, 'TRUNCATE guild_application_logs, guild_registry, guild_settings, guild_permission_roles, guild_audit_log, interaction_receipts');
+    await queryAsAdmin(database, 'TRUNCATE guild_audit_delivery, guild_audit_schedule, guild_application_logs, guild_registry, guild_settings, guild_permission_roles, guild_audit_log, interaction_receipts');
   });
 
   const gateway = () => buildGatewayHandler(database.handle.db, noopLogger, composition);

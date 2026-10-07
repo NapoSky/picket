@@ -14,6 +14,7 @@ import {
   type GuildGate,
   type GuildLanguage,
   type GuildRoles,
+  type GuildChannels,
   type InteractionReplies,
   type Messaging,
 } from '@picket/discord';
@@ -32,6 +33,8 @@ import {
   PostgresGuildLifecycleRepository,
   PostgresGuildDataExportRepository,
   PostgresGuildSettingsRepository,
+  PostgresGuildAuditRepository,
+  PublishGuildAudit,
   PostgresPermissionRepository,
   PurgeInactiveGuilds,
   ReconcileGuilds,
@@ -88,6 +91,7 @@ export interface DiscordPorts {
   readonly messaging: Messaging;
   readonly replies: InteractionReplies;
   readonly guildRoles?: GuildRoles;
+  readonly guildChannels?: GuildChannels;
 }
 
 const unavailable = async (): Promise<never> => {
@@ -133,6 +137,7 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
     exportData: new ExportGuildData(new PostgresGuildDataExportRepository(db, options.flushGuildLogs), options.clock),
     clock: options.clock, i18n: options.i18n,
     guildRoles: options.discord?.guildRoles ?? { names: async () => ({}) },
+    audit: buildAuditPublisher(db, logger, options),
   });
   const status = statusCommand(new GetGuildStatus(settings), showPermissions);
   return {
@@ -151,7 +156,9 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
     ],
     families: [
       ...panel.families,
-      todolistFamily({ create: new CreateTodolist(messaging), tick: new TickTodolistItem(messaging, new PostgresKeyedLock(db)) }),
+      todolistFamily({ create: new CreateTodolist(messaging), tick: new TickTodolistItem(messaging, new PostgresKeyedLock(db)),
+        created: { record: (input) => new PostgresGuildAuditRepository(db).recordTodolist(input) },
+      }),
       timersFamily({
         add: new AddAsset(timers.deps),
         refresh: new RefreshAsset(timers.deps),
@@ -218,6 +225,7 @@ export function buildPipeline(db: Db, logger: Logger, options: CompositionOption
 }
 
 const SWEEP_INTERVAL_MS = 15_000;
+const AUDIT_INTERVAL_MS = 5_000;
 const RETENTION_CHECK_INTERVAL_MS = 60_000;
 const RETENTION_SCHEDULE_KEY = 'retention:last_successful_schedule';
 
@@ -230,6 +238,7 @@ export function buildJobRunner(
   const timers = timerServices(db, options, logger, new PostgresGuildSettingsRepository(db));
   const sweep = new TimerSweep({ store: timers.store, maintenance: timers.maintenance, features: timers.features, clock: options.clock, logger });
   const retention = buildNightlyRetentionJob(db, logger, options);
+  const audit = buildAuditPublisher(db, logger, options);
   return new LeaderElector({
     store: new PostgresLeaseStore(db),
     name: 'job-runner:timers',
@@ -242,9 +251,15 @@ export function buildJobRunner(
     onAcquired: async () => {
       const stopTimers = startLeasedLoop({ tick: () => sweep.tick(), intervalMs: SWEEP_INTERVAL_MS, logger });
       const stopRetention = startLeasedLoop({ tick: () => retention.execute(), intervalMs: RETENTION_CHECK_INTERVAL_MS, logger });
-      return async () => { await Promise.all([stopTimers(), stopRetention()]); };
+      const stopAudit = startLeasedLoop({ tick: () => audit.tick(), intervalMs: AUDIT_INTERVAL_MS, logger });
+      return async () => { await Promise.all([stopTimers(), stopRetention(), stopAudit()]); };
     },
   });
+}
+
+export function buildAuditPublisher(db: Db, logger: Logger, options: CompositionOptions): PublishGuildAudit {
+  return new PublishGuildAudit(new PostgresGuildAuditRepository(db), options.discord?.guildChannels ?? { inspect: unavailable },
+    (options.discord ?? offlineDiscordPorts).messaging, options.i18n, options.clock, logger);
 }
 
 /** Même nettoyage pour le CLI, le rattrapage et la passe nocturne. */

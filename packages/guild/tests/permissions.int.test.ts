@@ -34,7 +34,7 @@ describe('PostgresPermissionRepository (integration)', () => {
   });
 
   beforeEach(async () => {
-    await queryAsAdmin(database, 'TRUNCATE guild_permission_roles, guild_audit_log, guild_settings');
+    await queryAsAdmin(database, 'TRUNCATE guild_audit_delivery, guild_audit_schedule, guild_permission_roles, guild_audit_log, guild_settings');
   });
 
   const change = (guildId: GuildId, request: Partial<PermissionChangeRequest> & Pick<PermissionChangeRequest, 'roleId'>) =>

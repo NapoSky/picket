@@ -473,6 +473,9 @@ describe('alerts (TIM-RQ-09)', () => {
     await h.maintenance.run(h.ids.guild, boardId);
     expect(h.alertMessages()).toHaveLength(0);
     expect(await h.acknowledge.execute({ guildId: h.ids.guild, channelId: h.ids.channel, assetId: asset.id, thresholdMin: 120, actor: h.ids.other })).toEqual({ kind: 'unknown' });
+    expect(await queryAsAdmin(database, "SELECT actor_id, asset_id, detail FROM timer_events WHERE action = 'acknowledge'")).toEqual([
+      { actor_id: h.ids.other, asset_id: asset.id, detail: expect.objectContaining({ name: asset.name, thresholdMin: 120 }) },
+    ]);
   });
 
   it('TIM-EC-11: a refresh withdraws the alert and re-arms it for the new deadline', async () => {

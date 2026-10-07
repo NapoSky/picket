@@ -7,6 +7,7 @@ export interface GuildStatus {
   readonly timezone: string;
   readonly enabledFeatures: readonly Feature[];
   readonly auditChannelConfigured: boolean;
+  readonly auditFailure?: string;
 }
 
 export class GetGuildStatus {
@@ -23,6 +24,7 @@ export class GetGuildStatus {
       timezone: settings.timezone,
       enabledFeatures: enabledFeatures(settings),
       auditChannelConfigured: settings.auditChannelId !== null,
+      ...(settings.auditFailure ? { auditFailure: settings.auditFailure } : {}),
     };
   }
 }

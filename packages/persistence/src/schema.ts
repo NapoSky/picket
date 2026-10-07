@@ -143,6 +143,8 @@ export interface TimerScheduleTable {
 }
 
 export interface Schema {
+  guild_audit_delivery: GuildAuditDeliveryTable;
+  guild_audit_schedule: GuildAuditScheduleTable;
   guild_settings: GuildSettingsTable;
   guild_registry: GuildRegistryTable;
   leases: LeasesTable;
@@ -158,4 +160,25 @@ export interface Schema {
   timer_events: TimerEventsTable;
   timer_alerts: TimerAlertsTable;
   timer_schedule: TimerScheduleTable;
+}
+
+export interface GuildAuditDeliveryTable {
+  id: Generated<string>;
+  guild_id: string;
+  channel_id: string;
+  audit_id: Nullable<string>;
+  timer_event_id: Nullable<string>;
+  queued_at: Timestamp;
+  next_attempt_at: Timestamp;
+  attempts: Generated<number>;
+  completed_at: Nullable<Date>;
+  message_id: Nullable<string>;
+  last_error: Nullable<string>;
+}
+
+export interface GuildAuditScheduleTable {
+  guild_id: string;
+  wake_at: Nullable<Date>;
+  failure_reason: Nullable<string>;
+  failed_at: Nullable<Date>;
 }

@@ -56,7 +56,8 @@ export class PostgresGuildSettingsRepository
         .selectAll()
         .where('guild_id', '=', guildId)
         .executeTakeFirstOrThrow();
-      return toSettings(guildId, row);
+      const audit = await trx.selectFrom('guild_audit_schedule').select('failure_reason').where('guild_id', '=', guildId).executeTakeFirst();
+      return { ...toSettings(guildId, row), ...(audit?.failure_reason ? { auditFailure: audit.failure_reason } : {}) };
     });
   }
 

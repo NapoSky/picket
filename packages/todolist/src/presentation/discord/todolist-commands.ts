@@ -8,6 +8,7 @@ import {
 } from '@picket/discord';
 import type { MessageKey, Translator } from '@picket/i18n';
 import type { CreateTodolist, PageTexts, PrepareError } from '../../application/create-todolist';
+import type { TodolistCreationObserver } from '../../application/todolist-creation-observer';
 import {
   CONTENT_FIELD_ID,
   CREATE_MODAL_PAYLOAD,
@@ -126,8 +127,8 @@ export function todolistCommands(): CommandEntry[] {
   return [create];
 }
 
-export function todolistFamily(deps: { create: CreateTodolist; tick: TickTodolistItem }): ComponentFamily {
-  const onModal: ComponentHandler = async ({ interaction, logger, payload, t }) => {
+export function todolistFamily(deps: { create: CreateTodolist; tick: TickTodolistItem; created?: TodolistCreationObserver }): ComponentFamily {
+  const onModal: ComponentHandler = async ({ guildId, interaction, logger, payload, t }) => {
     if (payload !== CREATE_MODAL_PAYLOAD) return ephemeral(t('errors.expired'));
     const channelId = interaction.channelId;
     if (channelId === null) return ephemeral(t('todolist.errors.noChannel'));
@@ -151,7 +152,9 @@ export function todolistFamily(deps: { create: CreateTodolist; tick: TickTodolis
           const blocked = ['missing_permissions', 'missing_access', 'unknown_channel'].includes(published.error.reason);
           return ephemeral(blocked ? t('todolist.errors.cannotPost') : t('errors.failure'));
         }
-        logger.info({ user_id: interaction.userId, channel_id: channelId, messages: published.value.length }, 'todolist created');
+        try { await deps.created?.record({ guildId, actor: interaction.userId, channelId, messageIds: published.value }); }
+        catch (error) { logger.error({ err: error, user_id: interaction.userId, channel_id: channelId }, 'todolist audit persistence failed'); }
+        logger.info({ user_id: interaction.userId, channel_id: channelId, messages: published.value.length, message_ids: [...published.value] }, 'todolist created');
         return ephemeral(
           published.value.length === 1 ? t('todolist.created.one') : t('todolist.created.many', { count: published.value.length }),
         );

@@ -10,6 +10,7 @@ export interface GuildSettings {
   readonly locale: string | null;
   readonly timezone: string;
   readonly auditChannelId: ChannelId | null;
+  readonly auditFailure?: string;
   readonly features: GuildFeatures;
   readonly installedAt: Date;
 }
