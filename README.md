@@ -76,6 +76,8 @@ threads. It requests no privileged intent and reads its own messages to update y
 
 Want to run your own instance or work on the code? See **[Self-hosting and local development](SELF_HOSTING.md)**.
 
+Need help or want to share feedback? Join the **[PICKET support Discord](https://discord.gg/EUnVfq5EYs)**.
+
 ## How it works
 
 A modular monolith in a pnpm workspace, organised in clean layers (`domain`, `application`, `infrastructure`,

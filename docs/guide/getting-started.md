@@ -24,3 +24,5 @@ person's Discord language, or choose a language for everyone in `/picket setting
 
 Command names are always English; their descriptions follow your Discord language.
 See [Translating](../contributing/translating) to add a language or improve an existing translation.
+
+Need help or want to share feedback? Join the [PICKET support Discord](https://discord.gg/EUnVfq5EYs).

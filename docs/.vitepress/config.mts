@@ -2,6 +2,7 @@ import { defineConfig, type DefaultTheme } from 'vitepress';
 
 // Sur GitHub Pages le site vit sous /<dépôt>/ ; le workflow fournit la valeur exacte.
 const base = process.env['DOCS_BASE'] ?? '/picket/';
+const supportDiscord = 'https://discord.gg/EUnVfq5EYs';
 
 type Lang = 'en' | 'fr';
 
@@ -89,7 +90,10 @@ export default defineConfig({
   themeConfig: {
     logo: '/logo.png',
     search: { provider: 'local' },
-    socialLinks: [{ icon: 'github', link: 'https://github.com/NapoSky/picket' }],
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/NapoSky/picket' },
+      { icon: 'discord', link: supportDiscord, ariaLabel: 'PICKET support Discord' },
+    ],
   },
   locales: {
     root: {
@@ -106,6 +110,7 @@ export default defineConfig({
           { text: t.en.guide, link: '/guide/getting-started' },
           { text: t.en.selfHosting, link: '/self-hosting/install' },
           { text: t.en.contributing, link: '/contributing/translating' },
+          { text: 'Support', link: supportDiscord },
         ],
       },
     },
@@ -124,6 +129,7 @@ export default defineConfig({
           { text: t.fr.guide, link: '/fr/guide/getting-started' },
           { text: t.fr.selfHosting, link: '/fr/self-hosting/install' },
           { text: t.fr.contributing, link: '/fr/contributing/translating' },
+          { text: 'Support', link: supportDiscord },
         ],
       },
     },

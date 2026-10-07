@@ -11,6 +11,9 @@ hero:
     - theme: alt
       text: L'héberger soi-même
       link: /fr/self-hosting/install
+    - theme: alt
+      text: Discord de support
+      link: https://discord.gg/EUnVfq5EYs
 features:
   - title: Neutre entre les factions
     details: Pensé pour les Wardens comme pour les Colonials, avec une identité visuelle qui ne favorise aucun camp.

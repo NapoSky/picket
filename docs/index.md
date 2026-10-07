@@ -11,6 +11,9 @@ hero:
     - theme: alt
       text: Self-host it
       link: /self-hosting/install
+    - theme: alt
+      text: Support Discord
+      link: https://discord.gg/EUnVfq5EYs
 features:
   - title: Faction-neutral
     details: Built for Wardens and Colonials alike, with a visual identity that favours neither side.
