@@ -44,7 +44,12 @@ function toApiOption(registry: CommandRegistry, option: OptionDescriptor): APIAp
           ? {
               choices: option.choices.map((choice) => {
                 if ('label' in choice) return { name: choice.label, value: choice.value };
-                const text = registry.i18n.text(choice.name);
+                const translated = registry.i18n.text(choice.name);
+                const prefix = choice.prefix ?? '';
+                const text: LocalizedText = {
+                  default: `${prefix}${translated.default}`,
+                  localizations: Object.fromEntries(Object.entries(translated.localizations).map(([locale, name]) => [locale, `${prefix}${name}`])),
+                };
                 const localizations = localizationMap(text);
                 return {
                   name: text.default,

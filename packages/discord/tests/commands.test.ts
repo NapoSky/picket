@@ -109,6 +109,7 @@ describe('CommandRegistry', () => {
       ['an empty choices list', [{ type: 'string', name: 'a', description: key('d'), choices: [] }]],
       ['more than 25 choices', [{ type: 'string', name: 'a', description: key('d'), choices: Array.from({ length: 26 }, (_v, i) => ({ name: key('choice'), value: `v${i}` })) }]],
       ['a choice value over 100 characters', [{ type: 'string', name: 'a', description: key('d'), choices: [{ name: key('choice'), value: 'v'.repeat(101) }] }]],
+      ['a prefixed choice name over 100 characters', [{ type: 'string', name: 'a', description: key('d'), choices: [{ name: key('choice'), prefix: 'x'.repeat(95), value: 'x' }] }]],
       ['more than 25 options', Array.from({ length: 26 }, (_v, i) => option(`o${i}`))],
     ] as [string, CommandEntry['options']][])('rejects %s', (_label, options) => {
       expect(withOptions(options)).toThrow(RegistryError);
@@ -144,11 +145,14 @@ describe('buildCommandsPayload', () => {
     });
   });
 
-  it('exposes options with their types, requirement, choices and localized choice names', () => {
+  it('exposes options with their types, requirement, choices and prefixed localized choice names', () => {
     const withOptions = registryOf(roots, [
       entry(['picket', 'permissions', 'set'], {
         options: [
-          { type: 'string', name: 'level', description: key('d'), required: true, choices: [{ name: key('choice'), value: 'officer' }] },
+          { type: 'string', name: 'level', description: key('d'), required: true, choices: [
+            { name: key('choice'), prefix: '📦 ', value: 'officer' },
+            { name: key('choice'), value: 'member' },
+          ] },
           { type: 'role', name: 'role', description: key('d'), required: true },
           { type: 'boolean', name: 'confirm', description: key('d') },
         ],
@@ -162,7 +166,10 @@ describe('buildCommandsPayload', () => {
           type: 1,
           name: 'set',
           options: [
-            { type: 3, name: 'level', required: true, choices: [{ name: 'Choice', name_localizations: { fr: 'Choix' }, value: 'officer' }] },
+            { type: 3, name: 'level', required: true, choices: [
+              { name: '📦 Choice', name_localizations: { fr: '📦 Choix' }, value: 'officer' },
+              { name: 'Choice', name_localizations: { fr: 'Choix' }, value: 'member' },
+            ] },
             { type: 8, name: 'role', required: true },
             { type: 5, name: 'confirm', required: false },
           ],

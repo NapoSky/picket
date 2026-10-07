@@ -28,7 +28,6 @@ export class ExportGuildData {
       scope: 'All records in the current PICKET database belonging to this Discord server.',
       notIncluded: [
         'Content stored only in Discord, including todolists.',
-        'Legacy logs outside PICKET and database backups managed by the operator.',
         'Global application state, process coordination and secrets.',
       ],
       data,

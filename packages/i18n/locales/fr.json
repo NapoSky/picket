@@ -265,7 +265,7 @@
   },
   "data": {
     "export": "Exporter les données",
-    "exportHelp": "Télécharge un fichier JSON des données enregistrées pour ce serveur : réglages, rôles autorisés, journal d’audit, tableaux et timers, historiques, alertes, identifiants techniques et logs applicatifs. Les journaux d’audit, historiques et logs applicatifs sont conservés 30 jours. Les todolists restent dans Discord. Les anciens logs externes et les sauvegardes de l’opérateur ne sont pas inclus.",
+    "exportHelp": "Télécharge un fichier JSON des données enregistrées pour ce serveur : réglages, rôles autorisés, journal d’audit, tableaux et timers, historiques, alertes, identifiants techniques et logs applicatifs. Les journaux d’audit, historiques et logs applicatifs sont conservés 30 jours. Les todolists restent dans Discord.",
     "exportReady": "📥 Voici les données de ton serveur. Ce fichier est visible uniquement par toi. Il contient notamment des identifiants Discord : garde-le privé. Aucun réglage n’a été modifié.",
     "exportTooLarge": "L’export complet dépasse la limite d’envoi de {{limitMb}} Mo. Aucun fichier partiel n’a été envoyé. Contacte l’opérateur de PICKET pour obtenir tes données.",
     "cancelled": "La suppression programmée est annulée. PICKET est de nouveau actif.",

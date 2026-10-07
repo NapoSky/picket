@@ -265,7 +265,7 @@
   },
   "data": {
     "export": "Daten exportieren",
-    "exportHelp": "Lade eine JSON-Datei mit den für diesen Server gespeicherten Daten herunter: Einstellungen, zugelassene Rollen, Audit-Einträge, Übersichten und Timer, Verlauf, Warnungen, technische Kennungen und Anwendungsprotokolle. Audit-Einträge, Verlauf und Anwendungsprotokolle werden 30 Tage aufbewahrt. Aufgabenlisten bleiben in Discord. Frühere externe Protokolle und Sicherungen des Betreibers sind nicht enthalten.",
+    "exportHelp": "Lade eine JSON-Datei mit den für diesen Server gespeicherten Daten herunter: Einstellungen, zugelassene Rollen, Audit-Einträge, Übersichten und Timer, Verlauf, Warnungen, technische Kennungen und Anwendungsprotokolle. Audit-Einträge, Verlauf und Anwendungsprotokolle werden 30 Tage aufbewahrt. Aufgabenlisten bleiben in Discord.",
     "exportReady": "📥 Hier sind die Daten deines Servers. Diese Datei ist nur für dich sichtbar. Sie enthält Discord-Kennungen: Bewahre sie vertraulich auf. Es wurden keine Einstellungen geändert.",
     "exportTooLarge": "Der vollständige Export überschreitet das Upload-Limit von {{limitMb}} MB. Es wurde keine unvollständige Datei gesendet. Wende dich an den PICKET-Betreiber, um deine Daten zu erhalten.",
     "cancelled": "Die geplante Löschung wurde abgebrochen. PICKET ist wieder aktiv.",

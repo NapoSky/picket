@@ -265,7 +265,7 @@
   },
   "data": {
     "export": "Exportar dados",
-    "exportHelp": "Baixe um arquivo JSON com os dados armazenados deste servidor: configurações, cargos permitidos, registros de auditoria, painéis e temporizadores, histórico, alertas, identificadores técnicos e registros da aplicação. Os registros de auditoria, o histórico e os registros da aplicação são mantidos por 30 dias. As listas de tarefas ficam no Discord. Os antigos registros externos e os backups do operador não estão incluídos.",
+    "exportHelp": "Baixe um arquivo JSON com os dados armazenados deste servidor: configurações, cargos permitidos, registros de auditoria, painéis e temporizadores, histórico, alertas, identificadores técnicos e registros da aplicação. Os registros de auditoria, o histórico e os registros da aplicação são mantidos por 30 dias. As listas de tarefas ficam no Discord.",
     "exportReady": "📥 Aqui estão os dados do seu servidor. Este arquivo só é visível para você. Ele inclui identificadores do Discord: mantenha-o privado. Nenhuma configuração foi alterada.",
     "exportTooLarge": "A exportação completa ultrapassa o limite de upload de {{limitMb}} MB. Nenhum arquivo parcial foi enviado. Entre em contato com o operador do PICKET para obter seus dados.",
     "cancelled": "A exclusão agendada foi cancelada. O PICKET está ativo novamente.",

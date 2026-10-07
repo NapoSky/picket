@@ -125,7 +125,7 @@ export interface TimersCommandDeps {
   readonly listActive: ListActiveAssets;
 }
 
-const typeChoices = ASSET_TYPE_IDS.map((id) => ({ name: `timers.types.${id}` as const, value: id }));
+const typeChoices = ASSET_TYPE_IDS.map((id) => ({ name: `timers.types.${id}` as const, prefix: `${ASSET_TYPES[id].icon} `, value: id }));
 
 export function timersCommands(deps: TimersCommandDeps): CommandEntry[] {
   const create: CommandEntry = {

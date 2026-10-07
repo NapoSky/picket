@@ -39,7 +39,7 @@ export type ChannelKind = 'text' | 'announcement';
 
 /** Libellé traduit (clé de catalogue) ou littéral (par exemple le nom d'une langue dans sa propre langue). */
 export type ChoiceDescriptor =
-  | { readonly name: MessageKey; readonly value: string }
+  | { readonly name: MessageKey; readonly prefix?: string; readonly value: string }
   | { readonly label: string; readonly value: string };
 
 export interface OptionDescriptor {
@@ -93,9 +93,10 @@ function assertName(kind: string, value: string): void {
 }
 
 /** Discord impose 1 à 100 caractères, dans chaque langue. */
-function assertText(label: string, text: LocalizedText): void {
+function assertText(label: string, text: LocalizedText, prefix = ''): void {
   for (const [locale, value] of [['default', text.default], ...Object.entries(text.localizations)] as [string, string][]) {
-    if (value.length < 1 || value.length > TEXT_MAX) throw new RegistryError(`Invalid text for ${label} (${locale})`);
+    const length = prefix.length + value.length;
+    if (length < 1 || length > TEXT_MAX) throw new RegistryError(`Invalid text for ${label} (${locale})`);
   }
 }
 
@@ -186,7 +187,7 @@ export class CommandRegistry {
               throw new RegistryError(`Invalid choice label in ${label} option ${option.name}`);
             }
           } else {
-            assertText(`${label} option ${option.name} choice`, this.#i18n.text(choice.name));
+            assertText(`${label} option ${option.name} choice`, this.#i18n.text(choice.name), choice.prefix);
           }
           if (choice.value.length < 1 || choice.value.length > TEXT_MAX) {
             throw new RegistryError(`Invalid choice value in ${label} option ${option.name}`);
