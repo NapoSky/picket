@@ -1,7 +1,7 @@
-import { InteractionPipeline, CommandRegistry, ComponentRegistry, deliverDeferred, type AccessLevel, type InteractionReceipts, type Reply } from '@picket/discord';
+import { InteractionPipeline, CommandRegistry, ComponentRegistry, deliverDeferred, toWireResponse, type AccessLevel, type InteractionReceipts, type PanelView, type Reply } from '@picket/discord';
 import { InteractionId, MessageId, UserId, noopLogger } from '@picket/kernel';
 import { InMemoryInteractionReplies, makeInteraction, testI18n, type TestDatabase } from '@picket/testing';
-import { TIMERS_ROOT, ackCustomId, refreshCustomId, timersCommands, timersFamily } from '@picket/timers';
+import { TIMERS_ROOT, ackCustomId, refreshCustomId, createTimerSettingsPanel, timersCommands, timersFamily } from '@picket/timers';
 import { HOUR_MS, NOW, unix } from './fixtures';
 import { openDatabase, resetTimerTables, timerHarness, type TimerHarness } from './harness';
 
@@ -34,27 +34,30 @@ type Overrides = Parameters<typeof makeInteraction>[0];
 
 function app(h: TimerHarness) {
   const replies = new InMemoryInteractionReplies();
-  const state: { level: AccessLevel | null; enabled: boolean } = { level: 'officer', enabled: true };
+  const state: { level: AccessLevel | null; enabled: boolean; suspended: boolean } = { level: 'officer', enabled: true, suspended: false };
+  const access = { levelOf: async () => state.level };
+  const gate = { suspensionOf: async () => state.suspended ? { purgeAt: NOW } : null };
+  const features = { isEnabled: async () => state.enabled };
+  const settings = createTimerSettingsPanel({ getSettings: h.getSettings, updateSettings: h.updateSettings, access, gate, features, clock: h.clock, guildRoles: { names: async () => ({ [h.ids.guild]: '@everyone', '400000000000000011': 'Logistics' }) } });
   const pipeline = new InteractionPipeline({
     registry: new CommandRegistry(
       [TIMERS_ROOT],
-      timersCommands({
+      [settings.command, ...timersCommands({
         createBoard: h.createBoard,
         strike: h.strike,
         cleanup: h.cleanup,
         repair: h.repair,
-        updateSettings: h.updateSettings,
         getSettings: h.getSettings,
         listActive: h.listActive,
-      }),
+      })],
       testI18n,
     ),
-    components: new ComponentRegistry([timersFamily({ add: h.addAsset, refresh: h.refresh, acknowledge: h.acknowledge })]),
+    components: new ComponentRegistry([settings.family, timersFamily({ add: h.addAsset, refresh: h.refresh, acknowledge: h.acknowledge })]),
     receipts: new MemoryReceipts(),
-    access: { levelOf: async () => state.level },
-    gate: { suspensionOf: async () => null },
+    access,
+    gate,
     language: { localeOf: async () => null },
-    features: { isEnabled: async () => state.enabled },
+    features,
     logger: noopLogger,
   });
 
@@ -80,9 +83,9 @@ function app(h: TimerHarness) {
     handle({ kind: 'command', commandPath: ['timers', ...path], options, ...extra });
   const autocomplete = (path: string[], focusedOption: string, options: Record<string, string>, extra: Overrides = {}) =>
     handle({ kind: 'autocomplete', commandPath: ['timers', ...path], focusedOption, options, ...extra });
-  const modal = (customId: string, fields: Record<string, string>, extra: Overrides = {}) => handle({ kind: 'modal', customId, fields, ...extra });
+  const modal = (customId: string, fields: Record<string, string>, extra: Overrides = {}) => handle({ kind: 'modal', customId, fields, message: { id: MessageId.assert('900000000000000099'), channelId: h.ids.channel }, ...extra });
   const click = (customId: string, extra: Overrides = {}) =>
-    handle({ kind: 'component', customId, message: { id: MessageId.assert('900000000000000099'), channelId: h.ids.channel }, ...extra });
+    handle({ kind: 'component', componentKind: 'button', customId, message: { id: MessageId.assert('900000000000000099'), channelId: h.ids.channel }, ...extra });
   const text = (reply: Reply) => (reply.kind === 'message' ? reply.content : '');
   /** Texte livré à l'utilisateur après le travail différé, ou le message immédiat. */
   const said = async (action: Promise<Reply>) => {
@@ -90,7 +93,20 @@ function app(h: TimerHarness) {
     const reply = await action;
     return reply.kind === 'deferred' ? (replies.contents.slice(before).at(-1) ?? null) : text(reply);
   };
-  return { replies, state, command, autocomplete, modal, click, text, said, handle };
+  const panel = (): PanelView => {
+    const content = replies.contents.at(-1);
+    if (content === null || content === undefined || typeof content === 'string' || 'file' in content) throw new Error('no panel delivered');
+    toWireResponse({ kind: 'panel', update: true, panel: content });
+    return content;
+  };
+  const control = (action: string, arg = '0', view = panel()) => {
+    const ids = view.components.flatMap((item) => item.kind === 'buttons' ? item.buttons.map((button) => button.customId) : item.kind === 'section' ? [item.button.customId] : 'customId' in item ? [item.customId] : []);
+    const id = ids.find((candidate) => candidate.endsWith(`.${action}.${arg}`));
+    if (!id) throw new Error(`no ${action}.${arg} control`);
+    return id;
+  };
+  const panelText = () => panel().components.flatMap((item) => 'text' in item ? [item.text] : []).join('\n');
+  return { replies, state, command, autocomplete, modal, click, text, said, handle, panel, control, panelText };
 }
 
 const stockpileModal = (h: TimerHarness) => `tm:1:a:st:allodsbight:mercyswail:${h.ids.user}`;
@@ -196,9 +212,8 @@ describe('/timers add', () => {
     expect(text(await command(['add'], { ...options, place: 'atlantis' }))).toBe('Unknown place. Start typing the name of the town and pick one of the suggestions.');
     expect(text(await command(['add'], { ...options, type: 'castle' }))).toBe('Unknown timer type.');
 
-    await h.updateSettings.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, patch: { maxActive: 1 } });
-    await h.add();
-    expect(text(await command(['add'], options))).toContain('already holds 1 active timers');
+    await Promise.all(Array.from({ length: 50 }, (_, n) => h.add({ name: `Depot ${n}` })));
+    expect(text(await command(['add'], options))).toContain('already holds 50 active timers');
   });
 
   it('is open to a plain member', async () => {
@@ -354,52 +369,190 @@ describe('/timers strike, cleanup and repair', () => {
   });
 });
 
-describe('/timers settings', () => {
-  it('shows the settings, then applies the options given and shows the result', async () => {
+describe('/timers settings panel', () => {
+  it('opens a private panel with no published arguments and updates it on navigation', async () => {
     const h = timerHarness(database);
     await h.boardWithMessage();
     await h.add();
-    const { command, said } = app(h);
-
-    const shown = await said(command(['settings']));
-    expect(shown).toContain('Alerts: on');
-    expect(shown).toContain('Alert thresholds: 2h');
-    expect(shown).toContain('Active timers: 1/50');
-    expect(shown).toContain('Auto-purge: after 24 h');
-    expect(shown).toContain('Board messages: up to date');
-
-    const changed = await said(
-      command(['settings'], { thresholds: '6h, 2h, 30m', 'alert-role': '400000000000000011', silent: false, duplicates: 'refuse', 'restrict-changes': true, 'max-active': 20, 'purge-after': 48 }),
-    );
-    expect(changed).toContain('Board settings updated.');
-    expect(changed).toContain('Alert thresholds: 6h, 2h, 30m');
-    expect(changed).toContain('Notified roles: <@&400000000000000011>');
-    expect(changed).toContain('Alert mode: with push notification');
-    expect(changed).toContain('Identical timers: refused');
-    expect(changed).toContain('Strike and refresh: owner and officers only');
-    expect(changed).toContain('Active timers: 1/20');
-    expect(changed).toContain('Auto-purge: after 48 h');
-
-    expect(await said(command(['settings'], { silent: false }))).toContain('Nothing to change.');
-    expect(await said(command(['settings'], { 'alert-role-action': 'clear' }))).toContain('Notified roles: none');
+    const ui = app(h);
+    expect(await ui.command(['settings'])).toMatchObject({ kind: 'deferred', ephemeral: true, update: false });
+    expect(ui.panelText()).toContain('1/50');
+    expect(ui.panelText()).toContain('This private panel');
+    expect(await ui.click(ui.control('view', 'alerts'))).toMatchObject({ kind: 'deferred', update: true });
+    expect(ui.panelText()).toContain('2h');
+    expect(ui.panelText()).toContain('Roles to notify');
+    expect(ui.replies.replies.every((reply) => reply.action === 'editOriginal')).toBe(true);
+    await ui.click(ui.control('view', 'manage'));
+    expect(ui.panelText()).toContain('Coming soon');
+    expect(ui.panelText()).not.toContain('max-active');
   });
 
-  it('explains each refusal', async () => {
+  it('ignores stale command arguments instead of applying hidden changes', async () => {
     const h = timerHarness(database);
     await h.boardWithMessage();
-    await h.add();
-    await h.add({ name: 'Two', code: '654321' });
-    const { command, said } = app(h);
-    expect(await said(command(['settings'], { thresholds: 'soon' }))).toBe('Invalid thresholds. Example: 6h, 2h, 30m (at most 4, each between 5 minutes and 7 days).');
-    expect(await said(command(['settings'], { 'alert-role-action': 'add' }))).toBe('Give a role to add or remove.');
-    expect(await said(command(['settings'], { 'max-active': 1 }))).toBe('The board already holds more active timers than that limit.');
-    expect(await said(command(['settings'], { thresholds: '1m' }))).toContain('Invalid thresholds');
+    const ui = app(h);
+    await ui.command(['settings'], { alerts: false, 'max-active': 100, 'region-emoji': '🌍' });
+    expect(ui.panelText()).toContain('No settings were changed');
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.alertsEnabled).toBe(true);
+  });
+
+  it('prefills threshold modals, validates them and applies the result to the same panel', async () => {
+    const h = timerHarness(database);
+    await h.boardWithMessage();
+    const ui = app(h);
+    await ui.command(['settings']);
+    await ui.click(ui.control('view', 'alerts'));
+    const form = await ui.click(ui.control('form', 'thres'));
+    if (form.kind !== 'modal') throw new Error('no modal');
+    expect(form.inputs[0]?.value).toBe('2h');
+    await ui.modal(form.customId, { value: '6h, 2h, 30m' });
+    expect(ui.panelText()).toContain('Board settings updated');
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.alertThresholdsMin).toEqual([360, 120, 30]);
+    await ui.modal(form.customId, { value: '1m' });
+    expect(ui.panelText()).toContain('Invalid thresholds');
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.alertThresholdsMin).toEqual([360, 120, 30]);
+  });
+
+  it('uses desired states for double clicks and confirms disabling alerts', async () => {
+    const h = timerHarness(database);
+    await h.boardWithMessage();
+    const ui = app(h);
+    await ui.command(['settings']);
+    await ui.click(ui.control('view', 'alerts'));
+    await ui.click(ui.control('view', 'off'));
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.alertsEnabled).toBe(true);
+    const disable = ui.control('alrt', '0');
+    await ui.click(disable);
+    await ui.click(disable);
+    expect(ui.panelText()).toContain('Nothing to change');
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.alertsEnabled).toBe(false);
+    const notify = ui.control('quiet', '0');
+    await ui.click(notify);
+    await ui.click(notify);
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.alertSilent).toBe(false);
+  });
+
+  it('adds and removes roles one at a time, and refuses a missing resolved or deleted role', async () => {
+    const h = timerHarness(database);
+    await h.boardWithMessage();
+    const ui = app(h);
+    await ui.command(['settings']);
+    await ui.click(ui.control('view', 'alerts'));
+    const role = '400000000000000011';
+    await ui.click(ui.control('add'), { componentKind: 'roleSelect', selectedValues: [role] });
+    expect(ui.panelText()).toContain('Invalid value');
+    await ui.click(ui.control('add'), { componentKind: 'roleSelect', selectedValues: [role], resolvedRoles: { [role]: { name: 'Logistics' } } });
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.alertRoleIds).toEqual([role]);
+    const gone = '400000000000000012';
+    await ui.click(ui.control('add'), { componentKind: 'roleSelect', selectedValues: [gone], resolvedRoles: { [gone]: { name: 'Deleted' } } });
+    expect(ui.panelText()).toContain('Invalid role');
+    await ui.click(ui.control('del'), { componentKind: 'stringSelect', selectedValues: [role] });
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.alertRoleIds).toEqual([]);
+  });
+
+  it('confirms adding everyone and allows clearing the configured roles', async () => {
+    const h = timerHarness(database);
+    await h.boardWithMessage();
+    const ui = app(h);
+    await ui.command(['settings']);
+    await ui.click(ui.control('view', 'alerts'));
+    await ui.click(ui.control('add'), { componentKind: 'roleSelect', selectedValues: [h.ids.guild], resolvedRoles: { [h.ids.guild]: { name: '@everyone' } } });
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.alertRoleIds).toEqual([]);
+    await ui.click(ui.control('every'));
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.alertRoleIds).toEqual([h.ids.guild]);
+    await ui.click(ui.control('clear'));
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.alertRoleIds).toEqual([]);
+  });
+
+  it('sets duplicate handling and ownership restrictions through the management screen', async () => {
+    const h = timerHarness(database);
+    await h.boardWithMessage();
+    const ui = app(h);
+    await ui.command(['settings']);
+    await ui.click(ui.control('view', 'manage'));
+    await ui.click(ui.control('dups'), { componentKind: 'stringSelect', selectedValues: ['refuse'] });
+    await ui.click(ui.control('guard', '1'));
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings).toMatchObject({ duplicates: 'refuse', restrictChanges: true });
+  });
+
+  it('confirms an automatic cleanup delay before deleting already due timers, and accepts zero', async () => {
+    const h = timerHarness(database);
+    await h.boardWithMessage();
+    await h.updateSettings.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, patch: { purgeAfterHours: 0 } });
+    const asset = await h.add();
+    await h.strike.execute({ guildId: h.ids.guild, channelId: h.ids.channel, userId: h.ids.user, level: 'officer', assetId: asset.id });
+    h.clock.advance(2 * HOUR_MS);
+    const ui = app(h);
+    await ui.command(['settings']);
+    await ui.click(ui.control('view', 'manage'));
+    const form = await ui.click(ui.control('form', 'purge'));
+    if (form.kind !== 'modal') throw new Error('no modal');
+    expect(form.inputs[0]?.value).toBe('0');
+    await ui.modal(form.customId, { value: '1' });
+    expect(ui.panelText()).toContain('This deletion is permanent');
+    expect((await h.store.state(h.ids.guild, asset.boardId))?.assets).toHaveLength(1);
+    await ui.click(ui.control('purge', '1'));
+    expect((await h.store.state(h.ids.guild, asset.boardId))?.assets).toHaveLength(0);
+    await ui.modal(form.customId, { value: '0' });
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.purgeAfterHours).toBeNull();
+    await ui.modal(form.customId, { value: '721' });
+    expect(ui.panelText()).toContain('between 0 (never) and 720 hours');
+  });
+
+  it('rejects a different owner, expired panels and a panel whose board was replaced', async () => {
+    const h = timerHarness(database);
+    const boardId = await h.boardWithMessage();
+    const ui = app(h);
+    await ui.command(['settings']);
+    const alerts = ui.control('view', 'alerts');
+    expect(await ui.said(ui.click(alerts, { userId: h.ids.other }))).toContain('another user');
+    h.clock.advance(16 * 60_000);
+    expect(await ui.said(ui.click(alerts))).toContain('Run /timers settings again');
+    await ui.command(['settings']);
+    const old = ui.control('view', 'alerts');
+    await h.store.archive(h.ids.guild, boardId, 'unknown_channel', h.clock.now());
+    await h.boardWithMessage();
+    expect(await ui.said(ui.click(old))).toContain('its board has changed');
+  });
+
+  it('rechecks officer access, feature activation and suspension on every interaction', async () => {
+    const h = timerHarness(database);
+    await h.boardWithMessage();
+    const ui = app(h);
+    await ui.command(['settings']);
+    const button = ui.control('view', 'alerts');
+    ui.state.level = 'member';
+    expect(await ui.said(ui.click(button))).toContain('required level: officer');
+    ui.state.level = 'admin';
+    ui.state.enabled = false;
+    expect(await ui.said(ui.click(button))).toContain('disabled on this server');
+    ui.state.enabled = true;
+    ui.state.suspended = true;
+    expect(await ui.said(ui.click(button))).toContain('scheduled for deletion');
+    ui.state.suspended = false;
+    await ui.click(button);
+    expect(ui.panelText()).toContain('Roles to notify');
+  });
+
+  it('keeps working through another process and preserves concurrent targeted changes', async () => {
+    const h = timerHarness(database);
+    await h.boardWithMessage();
+    const first = app(h);
+    await first.command(['settings']);
+    await first.click(first.control('view', 'alerts'));
+    const notify = first.control('quiet', '0');
+    const second = app(h);
+    await second.command(['settings']);
+    await second.click(second.control('view', 'manage'));
+    const guard = second.control('guard', '1');
+    // New pipeline instance handles a control created by the first one; no collector or session is needed.
+    await Promise.all([second.click(notify), first.click(guard)]);
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings).toMatchObject({ alertSilent: false, restrictChanges: true });
   });
 
   it('says the channel has no board', async () => {
     const h = timerHarness(database);
-    const { command, said } = app(h);
-    expect(await said(command(['settings']))).toContain('has no timer board');
-    expect(await said(command(['settings'], { silent: true }))).toContain('has no timer board');
+    const ui = app(h);
+    expect(await ui.said(ui.command(['settings']))).toContain('has no timer board');
   });
 });

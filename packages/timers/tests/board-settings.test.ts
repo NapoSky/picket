@@ -1,10 +1,10 @@
 import { RoleId } from '@picket/kernel';
-import { DEFAULT_BOARD_SETTINGS, applySettingsPatch, isValidEmoji, parseBoardSettings, settingsEqual, type SettingsPatch } from '@picket/timers';
+import { DEFAULT_BOARD_SETTINGS, applySettingsPatch, parseBoardSettings, settingsEqual, type SettingsPatch } from '@picket/timers';
 
 const role = (n: number) => RoleId.assert(`4000000000000000${String(10 + n)}`);
-const apply = (patch: SettingsPatch, current = DEFAULT_BOARD_SETTINGS, active = 0) => applySettingsPatch(current, patch, active);
-const settings = (patch: SettingsPatch, current = DEFAULT_BOARD_SETTINGS, active = 0) => {
-  const result = apply(patch, current, active);
+const apply = (patch: SettingsPatch, current = DEFAULT_BOARD_SETTINGS) => applySettingsPatch(current, patch);
+const settings = (patch: SettingsPatch, current = DEFAULT_BOARD_SETTINGS) => {
+  const result = apply(patch, current);
   if (!result.ok) throw new Error(`expected settings, got ${result.error}`);
   return result.value;
 };
@@ -27,11 +27,8 @@ describe('parseBoardSettings', () => {
       alertSilent: false,
       duplicates: 'refuse',
       restrictChanges: true,
-      maxActive: 75,
       purgeAfterHours: 48,
       resetOnNewWar: true,
-      regionEmoji: '<:forge_region:1426712511796871211>',
-      locationEmoji: '📍',
     });
     expect(parsed).toEqual({
       alertsEnabled: false,
@@ -40,13 +37,10 @@ describe('parseBoardSettings', () => {
       alertSilent: false,
       duplicates: 'refuse',
       restrictChanges: true,
-      maxActive: 75,
       purgeAfterHours: 48,
       resetOnNewWar: true,
-      regionEmoji: '<:forge_region:1426712511796871211>',
-      locationEmoji: '📍',
     });
-    expect(parseBoardSettings({ regionEmoji: 'not an emoji', locationEmoji: 42 })).toMatchObject({ regionEmoji: null, locationEmoji: null });
+    expect(parseBoardSettings({ maxActive: 100, regionEmoji: '🌍', locationEmoji: '📍' })).toEqual(DEFAULT_BOARD_SETTINGS);
   });
 });
 
@@ -77,14 +71,6 @@ describe('applySettingsPatch', () => {
     expect(apply({ alertRole: { action: 'add' } })).toEqual({ ok: false, error: 'invalid_role' });
   });
 
-  it('bounds the active limit, and never below what the board already holds (TIM-RQ-13)', () => {
-    expect(settings({ maxActive: 100 }).maxActive).toBe(100);
-    expect(apply({ maxActive: 0 })).toEqual({ ok: false, error: 'invalid_max_active' });
-    expect(apply({ maxActive: 101 })).toEqual({ ok: false, error: 'invalid_max_active' });
-    expect(apply({ maxActive: 10 }, DEFAULT_BOARD_SETTINGS, 11)).toEqual({ ok: false, error: 'max_active_below_current' });
-    expect(settings({ maxActive: 10 }, DEFAULT_BOARD_SETTINGS, 10).maxActive).toBe(10);
-  });
-
   it('turns auto-purge off with 0 and bounds it to 30 days', () => {
     expect(settings({ purgeAfterHours: 48 }).purgeAfterHours).toBe(48);
     expect(settings({ purgeAfterHours: 0 }, { ...DEFAULT_BOARD_SETTINGS, purgeAfterHours: 48 }).purgeAfterHours).toBeNull();
@@ -92,19 +78,4 @@ describe('applySettingsPatch', () => {
     expect(apply({ purgeAfterHours: -1 })).toEqual({ ok: false, error: 'invalid_purge' });
   });
 
-  it('sets, changes and restores the header icons: an emoji, a custom emoji, or null for the default', () => {
-    expect(settings({ regionEmoji: '🌍', locationEmoji: '<:Storage:1173161948569944064>' })).toMatchObject({
-      regionEmoji: '🌍',
-      locationEmoji: '<:Storage:1173161948569944064>',
-    });
-    const custom = { ...DEFAULT_BOARD_SETTINGS, regionEmoji: '🌍' };
-    expect(settings({ regionEmoji: null }, custom).regionEmoji).toBeNull();
-    expect(settings({ locationEmoji: '👨‍👩‍👧' }).locationEmoji).toBe('👨‍👩‍👧');
-    expect(settings({ regionEmoji: '🇫🇷' }).regionEmoji).toBe('🇫🇷');
-  });
-
-  it.each(['', 'a', 'text 🌍', '🌍🌍', '<:x:12>', '<:ok:123456789012345678', '<script>', 'x'.repeat(80)])('refuses %j as an icon', (value) => {
-    expect(isValidEmoji(value)).toBe(false);
-    expect(apply({ regionEmoji: value })).toEqual({ ok: false, error: 'invalid_emoji' });
-  });
 });

@@ -12,7 +12,6 @@ import type { MessageKey, Translator } from '@picket/i18n';
 import { UserId } from '@picket/kernel';
 import { ASSET_TYPES, ASSET_TYPE_IDS, isAssetTypeId, type AssetTypeId } from '../../domain/asset-types';
 import { displayedMoment, type TimerAsset } from '../../domain/asset';
-import { parseSettingsOptions } from './settings-input';
 import { escapeMarkdown } from '../../application/board-view';
 import {
   CODE_FIELD_ID,
@@ -23,7 +22,6 @@ import {
   addModalCustomId,
   parseTimersPayload,
 } from '../../application/custom-ids';
-import type { BoardRecord } from '../../application/ports';
 import type {
   AcknowledgeAlert,
   AddAsset,
@@ -36,12 +34,10 @@ import type {
   RepairBoard,
   StrikeAsset,
   SyncStatus,
-  UpdateBoardSettings,
 } from '../../application/timer-use-cases';
 import { missingBotPermissions, type BotPermission } from '../../domain/bot-permissions';
-import { MAX_NAME_LENGTH, MAX_ALERT_THRESHOLDS, MAX_ALERT_ROLES, MAX_PURGE_HOURS, MIN_THRESHOLD_MIN, HARD_MAX_ACTIVE, DEFAULT_LOCATION_EMOJI, DEFAULT_REGION_EMOJI } from '../../domain/constants';
+import { MAX_NAME_LENGTH, MAX_ACTIVE_PER_BOARD } from '../../domain/constants';
 import { formatDuration } from '../../domain/duration';
-import type { SettingsError } from '../../domain/board-settings';
 import type { ValidationError } from '../../domain/validation';
 
 export const TIMERS_ROOT: RootDescriptor = {
@@ -120,50 +116,11 @@ function changeReply(result: ChangeAssetResult, t: T, onDone: (asset: TimerAsset
   }
 }
 
-function settingsErrorText(error: SettingsError, t: T): string {
-  switch (error) {
-    case 'invalid_thresholds':
-      return t('timers.settings.invalidThresholds', { max: MAX_ALERT_THRESHOLDS, min: MIN_THRESHOLD_MIN });
-    case 'too_many_roles':
-      return t('timers.settings.tooManyRoles', { max: MAX_ALERT_ROLES });
-    case 'invalid_role':
-      return t('timers.settings.invalidRole');
-    case 'invalid_max_active':
-      return t('timers.settings.invalidMaxActive', { max: HARD_MAX_ACTIVE });
-    case 'max_active_below_current':
-      return t('timers.settings.maxBelowCurrent');
-    case 'invalid_purge':
-      return t('timers.settings.invalidPurge', { max: MAX_PURGE_HOURS });
-    case 'invalid_emoji':
-      return t('timers.settings.invalidEmoji');
-  }
-}
-
-function describeSettings(board: BoardRecord, activeCount: number, t: T): string {
-  const settings = board.settings;
-  const thresholds = settings.alertThresholdsMin.map((minutes) => formatDuration(minutes * 60)).join(', ');
-  return t('timers.settings.show', {
-    alerts: t(settings.alertsEnabled ? 'timers.settings.on' : 'timers.settings.off'),
-    thresholds: thresholds === '' ? t('timers.settings.none') : thresholds,
-    roles: settings.alertRoleIds.length === 0 ? t('timers.settings.none') : settings.alertRoleIds.map((id) => `<@&${id}>`).join(' '),
-    mode: t(settings.alertSilent ? 'timers.settings.silent' : 'timers.settings.notifying'),
-    duplicates: t(settings.duplicates === 'refuse' ? 'timers.settings.duplicatesRefuse' : 'timers.settings.duplicatesWarn'),
-    changes: t(settings.restrictChanges ? 'timers.settings.changesRestricted' : 'timers.settings.changesEveryone'),
-    active: activeCount,
-    max: settings.maxActive,
-    purge: settings.purgeAfterHours === null ? t('timers.settings.never') : t('timers.settings.purgeAfter', { hours: settings.purgeAfterHours }),
-    reset: t(settings.resetOnNewWar ? 'timers.settings.on' : 'timers.settings.off'),
-    icons: `${settings.regionEmoji ?? DEFAULT_REGION_EMOJI} ${settings.locationEmoji ?? DEFAULT_LOCATION_EMOJI}`,
-    sync: board.needsSync || board.syncError !== null ? t('timers.settings.syncFailed', { reason: board.syncError ?? 'pending' }) : t('timers.settings.syncOk'),
-  });
-}
-
 export interface TimersCommandDeps {
   readonly createBoard: CreateBoard;
   readonly strike: StrikeAsset;
   readonly cleanup: CleanupBoard;
   readonly repair: RepairBoard;
-  readonly updateSettings: UpdateBoardSettings;
   readonly getSettings: GetBoardSettings;
   readonly listActive: ListActiveAssets;
 }
@@ -223,8 +180,8 @@ export function timersCommands(deps: TimersCommandDeps): CommandEntry[] {
       // Refus avant d'ouvrir la modale : inutile de faire saisir un timer qui ne pourra pas être ajouté.
       const current = await deps.getSettings.execute(guildId, channelId);
       if (current === null) return ephemeral(t('timers.errors.noBoard'));
-      if (current.activeCount >= current.board.settings.maxActive) {
-        return ephemeral(t('timers.errors.quota', { max: current.board.settings.maxActive }));
+      if (current.activeCount >= MAX_ACTIVE_PER_BOARD) {
+        return ephemeral(t('timers.errors.quota', { max: MAX_ACTIVE_PER_BOARD }));
       }
 
       const spec = ASSET_TYPES[type];
@@ -338,74 +295,7 @@ export function timersCommands(deps: TimersCommandDeps): CommandEntry[] {
     },
   };
 
-  const settings: CommandEntry = {
-    path: ['timers', 'settings'],
-    description: 'commands.timers.settings.description',
-    level: 'officer',
-    feature: TIMERS_FEATURE,
-    options: [
-      { type: 'boolean', name: 'alerts', description: 'commands.timers.settings.options.alerts.description' },
-      { type: 'string', name: 'thresholds', description: 'commands.timers.settings.options.thresholds.description' },
-      { type: 'role', name: 'alert-role', description: 'commands.timers.settings.options.alertRole.description' },
-      {
-        type: 'string',
-        name: 'alert-role-action',
-        description: 'commands.timers.settings.options.alertRoleAction.description',
-        choices: [
-          { name: 'commands.timers.settings.options.alertRoleAction.choices.add', value: 'add' },
-          { name: 'commands.timers.settings.options.alertRoleAction.choices.remove', value: 'remove' },
-          { name: 'commands.timers.settings.options.alertRoleAction.choices.clear', value: 'clear' },
-        ],
-      },
-      { type: 'boolean', name: 'silent', description: 'commands.timers.settings.options.silent.description' },
-      {
-        type: 'string',
-        name: 'duplicates',
-        description: 'commands.timers.settings.options.duplicates.description',
-        choices: [
-          { name: 'commands.timers.settings.options.duplicates.choices.warn', value: 'warn' },
-          { name: 'commands.timers.settings.options.duplicates.choices.refuse', value: 'refuse' },
-        ],
-      },
-      { type: 'boolean', name: 'restrict-changes', description: 'commands.timers.settings.options.restrictChanges.description' },
-      { type: 'integer', name: 'max-active', description: 'commands.timers.settings.options.maxActive.description', minValue: 1, maxValue: HARD_MAX_ACTIVE },
-      { type: 'integer', name: 'purge-after', description: 'commands.timers.settings.options.purgeAfter.description', minValue: 0, maxValue: MAX_PURGE_HOURS },
-      { type: 'boolean', name: 'reset-on-new-war', description: 'commands.timers.settings.options.resetOnNewWar.description' },
-      { type: 'string', name: 'region-emoji', description: 'commands.timers.settings.options.regionEmoji.description' },
-      { type: 'string', name: 'location-emoji', description: 'commands.timers.settings.options.locationEmoji.description' },
-    ],
-    handler: async ({ interaction, guildId, t }) => {
-      const channelId = interaction.channelId;
-      if (channelId === null) return ephemeral(t('timers.errors.noBoard'));
-      const parsed = parseSettingsOptions(interaction.options);
-      if (!parsed.ok) {
-        if (parsed.error === 'role_needed') return ephemeral(t('timers.settings.roleNeeded'));
-        if (parsed.error === 'invalid_role') return ephemeral(t('timers.settings.invalidRole'));
-        return ephemeral(t('timers.settings.invalidThresholds', { max: MAX_ALERT_THRESHOLDS, min: MIN_THRESHOLD_MIN }));
-      }
-      return deferred(async () => {
-        const show = async (prefix: string): Promise<Reply> => {
-          const current = await deps.getSettings.execute(guildId, channelId);
-          if (current === null) return ephemeral(t('timers.errors.noBoard'));
-          return ephemeral(`${prefix}${describeSettings(current.board, current.activeCount, t)}`);
-        };
-        if (Object.keys(parsed.value).length === 0) return show('');
-        const result = await deps.updateSettings.execute({ guildId, channelId, actor: interaction.userId, patch: parsed.value });
-        switch (result.kind) {
-          case 'no_board':
-            return ephemeral(t('timers.errors.noBoard'));
-          case 'invalid':
-            return ephemeral(settingsErrorText(result.error, t));
-          case 'unchanged':
-            return show(`${t('timers.settings.unchanged')}\n\n`);
-          case 'updated':
-            return show(`${t('timers.settings.updated')}${syncNote(result.sync, t)}\n\n`);
-        }
-      });
-    },
-  };
-
-  return [create, add, strike, cleanup, repair, settings];
+  return [create, add, strike, cleanup, repair];
 }
 
 export interface TimersFamilyDeps {

@@ -57,54 +57,7 @@
         "description": "Repost the board messages from the saved timers"
       },
       "settings": {
-        "description": "Show or change the settings of this channel's board",
-        "options": {
-          "alerts": {
-            "description": "Send expiry alerts"
-          },
-          "thresholds": {
-            "description": "When to alert before expiry, for example 6h, 2h, 30m"
-          },
-          "alertRole": {
-            "description": "Role to notify in alerts"
-          },
-          "alertRoleAction": {
-            "description": "Add or remove that role, or clear all roles",
-            "choices": {
-              "add": "Add",
-              "remove": "Remove",
-              "clear": "Clear all roles"
-            }
-          },
-          "silent": {
-            "description": "Alerts without push notification"
-          },
-          "duplicates": {
-            "description": "What to do when an identical active timer exists",
-            "choices": {
-              "warn": "Add it and warn",
-              "refuse": "Refuse it"
-            }
-          },
-          "restrictChanges": {
-            "description": "Only the owner and officers can strike or refresh a timer"
-          },
-          "maxActive": {
-            "description": "Maximum number of active timers on the board"
-          },
-          "purgeAfter": {
-            "description": "Delete struck or expired timers after this many hours (0 = never)"
-          },
-          "resetOnNewWar": {
-            "description": "Empty the board when a new war starts"
-          },
-          "regionEmoji": {
-            "description": "Icon before the region in the board (an emoji, or default)"
-          },
-          "locationEmoji": {
-            "description": "Icon before the town in the board (an emoji, or default)"
-          }
-        }
+        "description": "Open the private settings panel for this channel’s board"
       }
     },
     "picket": {
@@ -220,7 +173,6 @@
       "durationTooLong": "The duration is too long (maximum {{max}})."
     },
     "settings": {
-      "show": "Alerts: {{alerts}}\nAlert thresholds: {{thresholds}}\nNotified roles: {{roles}}\nAlert mode: {{mode}}\nIdentical timers: {{duplicates}}\nStrike and refresh: {{changes}}\nActive timers: {{active}}/{{max}}\nAuto-purge: {{purge}}\nEmpty on a new war: {{reset}}\nHeader icons: {{icons}}\nBoard messages: {{sync}}",
       "on": "on",
       "off": "off",
       "none": "none",
@@ -239,11 +191,48 @@
       "invalidThresholds": "Invalid thresholds. Example: 6h, 2h, 30m (at most {{max}}, each between {{min}} minutes and 7 days).",
       "tooManyRoles": "At most {{max}} roles can be notified.",
       "invalidRole": "Invalid role.",
-      "roleNeeded": "Give a role to add or remove.",
-      "invalidMaxActive": "The limit must be between 1 and {{max}}.",
-      "maxBelowCurrent": "The board already holds more active timers than that limit.",
-      "invalidPurge": "Auto-purge must be between 0 (never) and {{max}} hours.",
-      "invalidEmoji": "Give a single emoji, or the word default to restore the default icon. A custom emoji looks like <:name:123456789012345678>."
+      "invalidPurge": "Auto-purge must be between 0 (never) and {{max}} hours."
+    },
+    "panel": {
+      "title": "Board settings",
+      "active": "active timers",
+      "help": "This private panel configures only this channel’s board. Each change takes effect immediately. The limit is 50 active timers.",
+      "alerts": "Alerts",
+      "manage": "Board management",
+      "configure": "Configure",
+      "edit": "Edit",
+      "alertsHelp": "Choose when to alert the group and which roles to notify. These preferences are kept when you disable alerts.",
+      "thresholds": "When to alert?",
+      "thresholdInput": "Time before the deadline",
+      "notifications": "Notifications",
+      "notificationsHelp": "Silent mode suppresses push notifications, including for mentioned roles.",
+      "notify": "Enable notifications",
+      "makeSilent": "Make silent",
+      "roles": "Roles to notify",
+      "rolesHelp": "Add or remove roles one at a time (up to {{max}}). A role must be mentionable, or PICKET must have permission to mention all roles.",
+      "clearRoles": "Remove all roles",
+      "rolesUnavailable": "Unable to verify roles right now. Try again.",
+      "changes": "Who can strike and refresh?",
+      "changesHelp": "Officers and administrators always keep these permissions.",
+      "allowEveryone": "Allow all members",
+      "ownersOnly": "Restrict to owners",
+      "duplicates": "Identical timers",
+      "duplicatesHelp": "A duplicate has the same type, name, location and code as an active timer.",
+      "warnDuplicates": "Allow and warn",
+      "refuseDuplicates": "Refuse duplicates",
+      "purge": "Automatic cleanup",
+      "purgeSummary": "Automatic cleanup: {{purge}}",
+      "purgeHelp": "Permanently removes struck or expired timers after the chosen delay. 0 disables this cleanup.",
+      "purgeInput": "Delay in hours (0 = never)",
+      "purgeConfirm": "Delete struck or expired timers after {{hours}} h? Those already past this delay will be deleted as soon as the setting is applied. This deletion is permanent.",
+      "war": "New war — Coming soon",
+      "warHelp": "Automatic resets depend on the war-log, which is not available yet. No reset triggered by a new war currently takes place.",
+      "disableTitle": "Disable alerts?",
+      "disableHelp": "PICKET will stop sending new alerts for this board. Timers remain tracked, and existing alert messages can still be acknowledged.",
+      "everyoneHelp": "Add the @everyone role to the roles to notify? It represents every server member.",
+      "syncPending": "Display update pending. Your data is saved; PICKET retries automatically.",
+      "expired": "This panel has expired or its board has changed. Run /timers settings again in the board’s channel.",
+      "legacy": "Command arguments have been replaced by this panel. No settings were changed: choose an action below."
     }
   },
   "status": {

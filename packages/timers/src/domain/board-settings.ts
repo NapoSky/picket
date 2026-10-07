@@ -1,7 +1,5 @@
 import { err, ok, type Result, type RoleId } from '@picket/kernel';
 import {
-  DEFAULT_MAX_ACTIVE,
-  HARD_MAX_ACTIVE,
   MAX_ALERT_ROLES,
   MAX_ALERT_THRESHOLDS,
   MAX_PURGE_HOURS,
@@ -21,20 +19,10 @@ export interface BoardSettings {
   readonly duplicates: 'warn' | 'refuse';
   /** Barrer et rafraîchir réservés au propriétaire de l'asset et aux officiers. */
   readonly restrictChanges: boolean;
-  readonly maxActive: number;
   /** Heures après lesquelles un asset barré ou expiré est supprimé ; `null` : jamais. */
   readonly purgeAfterHours: number | null;
   readonly resetOnNewWar: boolean;
-  /** Icône devant la région dans l'en-tête de chaque lieu : emoji Unicode ou emoji personnalisé ; `null` : celle par défaut. */
-  readonly regionEmoji: string | null;
-  readonly locationEmoji: string | null;
 }
-
-const CUSTOM_EMOJI = /^<a?:[A-Za-z0-9_]{2,32}:\d{15,25}>$/u;
-const UNICODE_EMOJI = /^(?:\p{Regional_Indicator}{2}|\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?)*)$/u;
-
-/** Un seul emoji, Unicode ou personnalisé (`<:nom:123…>`) : rien d'autre ne doit pouvoir entrer dans un titre de champ. */
-export const isValidEmoji = (value: string): boolean => value.length <= 64 && (CUSTOM_EMOJI.test(value) || UNICODE_EMOJI.test(value));
 
 export const DEFAULT_BOARD_SETTINGS: BoardSettings = {
   alertsEnabled: true,
@@ -43,11 +31,8 @@ export const DEFAULT_BOARD_SETTINGS: BoardSettings = {
   alertSilent: true,
   duplicates: 'warn',
   restrictChanges: false,
-  maxActive: DEFAULT_MAX_ACTIVE,
   purgeAfterHours: 24,
   resetOnNewWar: false,
-  regionEmoji: null,
-  locationEmoji: null,
 };
 
 const SNOWFLAKE = /^\d{15,25}$/u;
@@ -68,7 +53,6 @@ export function parseBoardSettings(raw: unknown): BoardSettings {
   const roles = Array.isArray(source['alertRoleIds'])
     ? (source['alertRoleIds'] as unknown[]).filter((id): id is RoleId => typeof id === 'string' && SNOWFLAKE.test(id)).slice(0, MAX_ALERT_ROLES)
     : defaults.alertRoleIds;
-  const maxActive = source['maxActive'];
   const purge = source['purgeAfterHours'];
   return {
     alertsEnabled: typeof source['alertsEnabled'] === 'boolean' ? source['alertsEnabled'] : defaults.alertsEnabled,
@@ -77,10 +61,6 @@ export function parseBoardSettings(raw: unknown): BoardSettings {
     alertSilent: typeof source['alertSilent'] === 'boolean' ? source['alertSilent'] : defaults.alertSilent,
     duplicates: source['duplicates'] === 'refuse' ? 'refuse' : 'warn',
     restrictChanges: typeof source['restrictChanges'] === 'boolean' ? source['restrictChanges'] : defaults.restrictChanges,
-    maxActive:
-      typeof maxActive === 'number' && Number.isInteger(maxActive) && maxActive >= 1 && maxActive <= HARD_MAX_ACTIVE
-        ? maxActive
-        : defaults.maxActive,
     purgeAfterHours:
       typeof purge === 'number' && Number.isInteger(purge) && purge >= 1 && purge <= MAX_PURGE_HOURS
         ? purge
@@ -88,8 +68,6 @@ export function parseBoardSettings(raw: unknown): BoardSettings {
           ? null
           : defaults.purgeAfterHours,
     resetOnNewWar: typeof source['resetOnNewWar'] === 'boolean' ? source['resetOnNewWar'] : defaults.resetOnNewWar,
-    regionEmoji: typeof source['regionEmoji'] === 'string' && isValidEmoji(source['regionEmoji']) ? source['regionEmoji'] : null,
-    locationEmoji: typeof source['locationEmoji'] === 'string' && isValidEmoji(source['locationEmoji']) ? source['locationEmoji'] : null,
   };
 }
 
@@ -102,26 +80,18 @@ export interface SettingsPatch {
   readonly alertSilent?: boolean;
   readonly duplicates?: 'warn' | 'refuse';
   readonly restrictChanges?: boolean;
-  readonly maxActive?: number;
   /** 0 : jamais. */
   readonly purgeAfterHours?: number;
   readonly resetOnNewWar?: boolean;
-  /** `null` : revenir à l'icône par défaut. */
-  readonly regionEmoji?: string | null;
-  readonly locationEmoji?: string | null;
 }
 
 export type SettingsError =
   | 'invalid_thresholds'
   | 'too_many_roles'
   | 'invalid_role'
-  | 'invalid_max_active'
-  | 'invalid_purge'
-  | 'invalid_emoji'
-  | 'max_active_below_current';
+  | 'invalid_purge';
 
-/** `activeNow` : le plafond ne peut pas passer sous le nombre d'assets actifs déjà présents. */
-export function applySettingsPatch(current: BoardSettings, patch: SettingsPatch, activeNow: number): Result<BoardSettings, SettingsError> {
+export function applySettingsPatch(current: BoardSettings, patch: SettingsPatch): Result<BoardSettings, SettingsError> {
   let next: BoardSettings = { ...current };
 
   if (patch.alertThresholdsMin !== undefined) {
@@ -145,24 +115,11 @@ export function applySettingsPatch(current: BoardSettings, patch: SettingsPatch,
     }
   }
 
-  if (patch.maxActive !== undefined) {
-    if (!Number.isInteger(patch.maxActive) || patch.maxActive < 1 || patch.maxActive > HARD_MAX_ACTIVE) return err('invalid_max_active');
-    if (patch.maxActive < activeNow) return err('max_active_below_current');
-    next = { ...next, maxActive: patch.maxActive };
-  }
-
   if (patch.purgeAfterHours !== undefined) {
     if (!Number.isInteger(patch.purgeAfterHours) || patch.purgeAfterHours < 0 || patch.purgeAfterHours > MAX_PURGE_HOURS) {
       return err('invalid_purge');
     }
     next = { ...next, purgeAfterHours: patch.purgeAfterHours === 0 ? null : patch.purgeAfterHours };
-  }
-
-  for (const key of ['regionEmoji', 'locationEmoji'] as const) {
-    const value = patch[key];
-    if (value === undefined) continue;
-    if (value !== null && !isValidEmoji(value)) return err('invalid_emoji');
-    next = { ...next, [key]: value };
   }
 
   return ok({

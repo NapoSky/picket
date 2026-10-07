@@ -12,7 +12,7 @@ Les commandes commencent par `/picket`, `/todolist` ou `/timers`, fonctionnent d
 | `/timers strike` | membre | Barre un timer du tableau. |
 | `/timers cleanup` | officier | Retire les timers barrés du tableau. |
 | `/timers repair` | officier | Republie les messages du tableau depuis les timers enregistrés. |
-| `/timers settings` | officier | Montre ou modifie les réglages du tableau : alertes, limites, purge. |
+| `/timers settings` | officier | Ouvre le panneau privé du tableau de ce canal, sans argument : alertes, rôles, droits, doublons et nettoyage. |
 
 ## Le panneau `/picket settings`
 

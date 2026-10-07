@@ -79,6 +79,7 @@ import {
   TIMERS_ROOT,
   TimerSweep,
   UpdateBoardSettings,
+  createTimerSettingsPanel,
   timersCommands,
   timersFamily,
   type Localizer,
@@ -128,6 +129,14 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
   const lifecycle = new PostgresGuildLifecycleRepository(db);
   const messaging = (options.discord ?? offlineDiscordPorts).messaging;
   const timers = timerServices(db, options, logger, settings);
+  const access = createGuildAccessPolicy(new ResolveAccess(permissions));
+  const gate = createGuildGate(new GetSuspension(lifecycle, options.guildRetentionDays));
+  const features = createFeatureGate(settings);
+  const timerPanel = createTimerSettingsPanel({
+    getSettings: new GetBoardSettings(timers.store), updateSettings: new UpdateBoardSettings(timers.deps),
+    access, gate, features, clock: options.clock,
+    ...(options.discord?.guildRoles ? { guildRoles: options.discord.guildRoles } : {}),
+  });
   const showPermissions = new ShowPermissions(permissions);
   const panel = createSettingsPanel({
     settings: new GetGuildSettings(settings), update: new UpdateGuildSettings(settings, options.i18n.locales),
@@ -142,20 +151,20 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
   const status = statusCommand(new GetGuildStatus(settings), showPermissions);
   return {
     aliases: [...panel.aliases, { ...status, path: ['picket', 'permissions', 'show'] }],
-    entries: [status, panel.command,
+    entries: [status, panel.command, timerPanel.command,
       ...todolistCommands(),
       ...timersCommands({
         createBoard: new CreateBoard(timers.deps),
         strike: new StrikeAsset(timers.deps),
         cleanup: new CleanupBoard(timers.deps),
         repair: new RepairBoard(timers.deps),
-        updateSettings: new UpdateBoardSettings(timers.deps),
         getSettings: new GetBoardSettings(timers.store),
         listActive: new ListActiveAssets(timers.store),
       }),
     ],
     families: [
       ...panel.families,
+      timerPanel.family,
       todolistFamily({ create: new CreateTodolist(messaging), tick: new TickTodolistItem(messaging, new PostgresKeyedLock(db)),
         created: { record: (input) => new PostgresGuildAuditRepository(db).recordTodolist(input) },
       }),
@@ -165,10 +174,10 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
         acknowledge: new AcknowledgeAlert(timers.deps),
       }),
     ],
-    access: createGuildAccessPolicy(new ResolveAccess(permissions)),
-    gate: createGuildGate(new GetSuspension(lifecycle, options.guildRetentionDays)),
+    access,
+    gate,
     language: createGuildLanguage(new GetGuildLocale(settings)),
-    features: createFeatureGate(settings),
+    features,
   };
 }
 

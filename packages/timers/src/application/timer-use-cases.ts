@@ -12,7 +12,7 @@ import {
   type TimerAsset,
 } from '../domain/asset';
 import { DEFAULT_BOARD_SETTINGS, applySettingsPatch, settingsEqual, type BoardSettings, type SettingsError, type SettingsPatch } from '../domain/board-settings';
-import { MAX_BOARDS_PER_GUILD } from '../domain/constants';
+import { MAX_ACTIVE_PER_BOARD, MAX_BOARDS_PER_GUILD } from '../domain/constants';
 import { validateAssetInput, type AssetInput, type ValidationError } from '../domain/validation';
 import type { BoardMaintenance, MaintenanceOutcome } from './board-maintenance';
 import type { BoardRecord, Mutation, TimerStore } from './ports';
@@ -122,12 +122,12 @@ export class AddAsset {
       input.guildId,
       board.id,
       (state): Mutation<AddDecision> => {
-        // Les réglages sont relus sous le verrou de la ligne : un quota abaissé entre-temps est respecté.
-        const { maxActive, duplicates } = state.board.settings;
+        // Relire les réglages et compter les actifs sous le verrou : les ajouts concurrents respectent le quota fixe.
+        const { duplicates } = state.board.settings;
         const active = activeAssets(state.assets);
         const identical = active.find((asset) => sameResource(asset, { ...candidate, code: candidate.code }));
         if (identical !== undefined && duplicates === 'refuse') return { result: { kind: 'duplicate' } };
-        if (active.length >= maxActive) return { result: { kind: 'quota', max: maxActive } };
+        if (active.length >= MAX_ACTIVE_PER_BOARD) return { result: { kind: 'quota', max: MAX_ACTIVE_PER_BOARD } };
 
         const struck = state.assets.find((asset) => asset.status === 'struck' && sameResource(asset, candidate));
         const base = { type: candidate.type, name: candidate.name, code: candidate.code, region: candidate.regionKey, location: candidate.locationKey };
@@ -346,15 +346,15 @@ export class UpdateBoardSettings {
     this.#deps = deps;
   }
 
-  async execute(input: { guildId: GuildId; channelId: ChannelId; actor: UserId; patch: SettingsPatch }): Promise<SettingsResult> {
+  async execute(input: { guildId: GuildId; channelId: ChannelId; boardId?: string; actor: UserId; patch: SettingsPatch }): Promise<SettingsResult> {
     const { store, coalescer, clock } = this.#deps;
     const board = await store.boardByChannel(input.guildId, input.channelId);
-    if (board === null) return { kind: 'no_board' };
+    if (board === null || (input.boardId !== undefined && board.id !== input.boardId)) return { kind: 'no_board' };
     const decision = await store.mutate<SettingsDecision>(
       input.guildId,
       board.id,
       (state): Mutation<SettingsDecision> => {
-        const next = applySettingsPatch(state.board.settings, input.patch, activeAssets(state.assets).length);
+        const next = applySettingsPatch(state.board.settings, input.patch);
         if (!next.ok) return { result: { kind: 'invalid', error: next.error } };
         if (settingsEqual(next.value, state.board.settings)) return { result: { kind: 'unchanged', settings: next.value } };
         return {

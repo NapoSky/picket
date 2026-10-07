@@ -5,8 +5,8 @@ export const MAX_NAME_LENGTH = 15;
 export const MIN_DURATION_S = 60;
 export const MAX_DURATION_S = 30 * 24 * 3600;
 
-export const DEFAULT_MAX_ACTIVE = 50;
-export const HARD_MAX_ACTIVE = 100;
+/** Quota fixe par tableau, toutes pages confondues. */
+export const MAX_ACTIVE_PER_BOARD = 50;
 export const MAX_BOARDS_PER_GUILD = 10;
 /** Un board sans aucun timer et sans modification depuis ce délai est supprimé avec ses données. */
 export const ABANDONED_AFTER_DAYS = 30;
@@ -19,6 +19,6 @@ export const MAX_PURGE_HOURS = 30 * 24;
 
 export const BOARD_COLOR = 0x2b5fb3;
 
-/** Icônes d'en-tête de lieu quand le board n'en choisit pas (emojis de la communauté PICKET). */
+/** Icônes fixes d'en-tête de lieu (emojis de la communauté PICKET). */
 export const DEFAULT_REGION_EMOJI = '<:region:1556691725001687090>';
 export const DEFAULT_LOCATION_EMOJI = '<:Storage:1556691752050499734>';

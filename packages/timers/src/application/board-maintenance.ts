@@ -92,8 +92,8 @@ export class BoardMaintenance {
 
     try {
       const icons = {
-        region: board.settings.regionEmoji ?? DEFAULT_REGION_EMOJI,
-        location: board.settings.locationEmoji ?? DEFAULT_LOCATION_EMOJI,
+        region: DEFAULT_REGION_EMOJI,
+        location: DEFAULT_LOCATION_EMOJI,
       };
       const rendered = renderBoard({ assets, texts: boardTexts(t), now, icons });
       await this.#syncPages(board, rendered, await store.pages(guildId, boardId), force);

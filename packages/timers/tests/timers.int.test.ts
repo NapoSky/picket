@@ -112,14 +112,12 @@ describe('adding timers', () => {
   it('TIM-EC-05: refuses beyond the quota before creating or editing any message', async () => {
     const h = timerHarness(database);
     await h.boardWithMessage();
-    await h.updateSettings.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, patch: { maxActive: 2 } });
-    await h.add({ name: 'A' });
-    await h.add({ name: 'B' });
+    await Promise.all(Array.from({ length: 50 }, (_, n) => h.add({ name: `Depot ${n}` })));
     const calls = [...h.messaging.calls];
     const result = await h.addAsset.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, ownerId: h.ids.user, asset: h.assetInput({ name: 'C' }) });
-    expect(result).toEqual({ kind: 'quota', max: 2 });
+    expect(result).toEqual({ kind: 'quota', max: 50 });
     expect(h.messaging.calls).toEqual(calls);
-    expect(await count("SELECT count(*) AS n FROM timer_assets WHERE status = 'active'")).toBe('2');
+    expect(await count("SELECT count(*) AS n FROM timer_assets WHERE status = 'active'")).toBe('50');
   });
 
   it('refuses an invalid timer without touching the database or Discord', async () => {
@@ -612,6 +610,32 @@ describe('automatic purge (TIM-RQ-07)', () => {
 });
 
 describe('board settings', () => {
+  it('uses the fixed limit and icons for legacy boards without deleting existing timers', async () => {
+    const h = timerHarness(database);
+    const boardId = await h.boardWithMessage();
+    await h.add();
+    await queryAsAdmin(database, 'UPDATE timer_boards SET settings = settings || $1::jsonb WHERE id = $2', [JSON.stringify({ maxActive: 100, regionEmoji: '🌍', locationEmoji: '📍' }), boardId]);
+    // Simulate a board created under the previous configurable quota, already above the new fixed limit.
+    await queryAsAdmin(database, `INSERT INTO timer_assets (id, board_id, guild_id, type, name, code, region_key, location_key, owner_user_id, direction, duration_s, started_at)
+      SELECT 'legacy' || lpad(n::text, 8, '0'), a.board_id, a.guild_id, a.type, 'Depot ' || n, a.code, a.region_key, a.location_key, a.owner_user_id, a.direction, a.duration_s, a.started_at
+      FROM timer_assets a CROSS JOIN generate_series(1, 50) n WHERE a.board_id = $1`, [boardId]);
+    await h.repair.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user });
+    expect((await h.store.state(h.ids.guild, boardId))?.assets).toHaveLength(51);
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings).toEqual(DEFAULT_BOARD_SETTINGS);
+    expect(JSON.stringify(h.boardMessages().map((message) => message.view))).not.toContain('🌍');
+    expect(JSON.stringify(h.boardMessages().map((message) => message.view))).not.toContain('📍');
+    expect(await h.addAsset.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, ownerId: h.ids.user, asset: h.assetInput({ name: 'Extra' }) })).toEqual({ kind: 'quota', max: 50 });
+  });
+
+  it('does not apply a panel change to a replacement board in the same channel', async () => {
+    const h = timerHarness(database);
+    const oldId = await h.boardWithMessage();
+    await h.store.archive(h.ids.guild, oldId, 'unknown_channel', h.clock.now());
+    await h.boardWithMessage();
+    expect(await h.updateSettings.execute({ guildId: h.ids.guild, channelId: h.ids.channel, boardId: oldId, actor: h.ids.user, patch: { alertSilent: false } })).toEqual({ kind: 'no_board' });
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.alertSilent).toBe(true);
+  });
+
   it('shows nothing to change, applies a change, refuses an invalid one', async () => {
     const h = timerHarness(database);
     await h.boardWithMessage();
@@ -620,13 +644,13 @@ describe('board settings', () => {
       h.updateSettings.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, patch });
 
     expect(await settings({ alertSilent: true })).toMatchObject({ kind: 'unchanged' });
-    expect(await settings({ alertSilent: false, maxActive: 60 })).toMatchObject({ kind: 'updated', settings: { alertSilent: false, maxActive: 60 }, sync: { synced: true } });
-    expect(await settings({ maxActive: 0 })).toEqual({ kind: 'invalid', error: 'invalid_max_active' });
+    expect(await settings({ alertSilent: false })).toMatchObject({ kind: 'updated', settings: { alertSilent: false }, sync: { synced: true } });
+    expect(await settings({ purgeAfterHours: -1 })).toEqual({ kind: 'invalid', error: 'invalid_purge' });
     expect(await h.updateSettings.execute({ guildId: h.ids.guild, channelId: h.ids.otherChannel, actor: h.ids.user, patch: {} })).toEqual({ kind: 'no_board' });
 
     const current = await h.getSettings.execute(h.ids.guild, h.ids.channel);
     expect(current?.activeCount).toBe(1);
-    expect(current?.board.settings).toMatchObject({ alertSilent: false, maxActive: 60 });
+    expect(current?.board.settings).toMatchObject({ alertSilent: false });
     expect(await queryAsAdmin(database, "SELECT detail FROM timer_events WHERE action = 'settings'")).toHaveLength(1);
   });
 

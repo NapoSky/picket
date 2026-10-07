@@ -12,7 +12,7 @@ Commands start with `/picket`, `/todolist` or `/timers`, work inside a server an
 | `/timers strike` | member | Strikes a timer off the board. |
 | `/timers cleanup` | officer | Removes the struck timers from the board. |
 | `/timers repair` | officer | Reposts the board messages from the saved timers. |
-| `/timers settings` | officer | Shows or changes the settings of the board: alerts, limits, purge. |
+| `/timers settings` | officer | Opens this channel’s private board panel with no arguments: alerts, roles, access, duplicates and cleanup. |
 
 ## The `/picket settings` panel
 

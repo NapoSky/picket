@@ -17,5 +17,5 @@ export * from './domain/schedule';
 export * from './domain/validation';
 export * from './infrastructure/postgres-timer-store';
 export * from './infrastructure/random-asset-ids';
-export * from './presentation/discord/settings-input';
+export * from './presentation/discord/settings-panel';
 export * from './presentation/discord/timers-commands';

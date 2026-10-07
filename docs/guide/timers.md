@@ -1,48 +1,46 @@
 # Timers
 
-A timer board is a message in a channel that lists the resources your regiment has to keep an eye on (stockpiles,
-facilities, fields, ships, tanks, trains), each with its countdown and a button to reset it. PICKET warns you before a
-countdown ends.
+A stockpile to renew, a ship to monitor, a field whose last refresh you want to track: timers help your group keep an
+eye on shared resources. Everyone can see deadlines in Discord, reset a timer after an intervention and receive an
+alert before it expires.
 
-## Set up a board
+Create a **board in a channel**, then let members add their timers. PICKET groups resources by location and adds
+messages as the board grows. You do not need to manage pages yourself.
 
-An officer runs `/timers create` in the channel that should hold the board. The bot needs **View Channel**,
-**Send Messages** (or **Send Messages in Threads**) and **Embed Links** there; PICKET tells you which one is missing.
-A channel has one board, and a server can have up to 10. If the channel already has one (for example because its
-messages were deleted by hand), `/timers create` reposts it with its timers instead of creating a second one.
+## Who can do what?
 
-## Add a timer
+These are **PICKET access levels** configured for your server, rather than your ranks in the game.
 
-Anyone with the member level runs `/timers add`:
-
-| Option | Meaning |
+| Access | What you can do |
 | --- | --- |
-| `type` | What the timer tracks (see the table below). |
-| `place` | The town. Start typing its name (or its region) and pick one of the suggestions. |
-| `owner` | Who looks after it. You, if you leave it empty. |
+| **Member** | Add, refresh and strike timers, and acknowledge alerts. |
+| **Officer** | Everything a member can do, plus create, configure, clean up and repair boards. Enable or disable Timers in `/picket settings`. |
+| **Discord administrator** | Everything an officer can do, plus manage access roles and export or delete server data. |
 
-A form then asks for the **name** (15 characters at most), the **code** when the type has one, and the **duration** when
-the timer counts down.
+By default, all server members can use timers, and administrators can create boards. An administrator can adjust
+access in `/picket settings` → **Permissions**. See the [permissions guide](./permissions) for details.
 
-| Type | Counts | Code | Default duration |
-| --- | --- | --- | --- |
-| Stockpile | down | 6 digits, required | 50 h |
-| Facility | down | none | 50 h |
-| Field | up (time since the last refresh) | none | not asked |
-| Naval ship | down | 3 to 6 letters or digits, optional | 48 h |
-| Tank | down | 3 to 6 letters or digits, optional | 48 h |
-| Train | down | 3 to 6 letters or digits, optional | 48 h |
+## Your first timer
 
-The durations of 50 h and 48 h are the ones the bot started with; you can type any duration between 1 minute and 30
-days. Write hours (`50`, `1.5`) or units (`90m`, `2h30m`, `1d 12h`).
+Suppose your group needs to renew a stockpile regularly.
 
-PICKET never corrects a place on its own: pick a suggestion, or the command is refused.
+1. **An officer prepares the channel**: run `/timers create` in `#timers`. The board appears in that channel.
+2. **A member adds the resource**: run `/timers add`, choose **Stockpile** and select a location from the suggestions.
+   The optional `owner` sets a person responsible for it; otherwise, that person is you.
+3. **Fill in the form**: for example, name `North depot`, code `123456`, duration `50h`. Submit it: the timer appears
+   on the board with its owner and deadline.
+4. **After renewing the stockpile in the game**, click the letter corresponding to its timer. The countdown starts
+   again for 50 hours.
 
-## Read the board
+The bot needs **View Channel**, **Send Messages** (or **Send Messages in Threads**) and **Embed Links**. PICKET points
+out a missing permission when you create the board.
 
-The board groups the timers by place. Each place has a header (region, then town), followed by three columns: **Asset**
-(letter, type and name), **Code**, and **Timer** (the moment the countdown ends, or the time since the last refresh,
-then the owner):
+## Keeping track of resources
+
+### Reading the board
+
+Timers are grouped by region and town. Each resource shows its name, code where applicable, deadline or elapsed time,
+and owner. For example:
 
 ```text
 [region] Allod's Bight
@@ -51,77 +49,145 @@ Asset                Code      Timer
 📦 🇦・North depot    123456    in 2 days・@Jules
 ```
 
-- The letter is the one on the button below the board. Letters restart on each message: a board holds **25 active
-  timers per message**, and PICKET adds a message when it needs one.
-- A timer whose countdown is over stays on the board, with its time shown as past, until someone strikes it (or the
-  board purges it).
-- Under the last message, the board shows when it was last updated.
-- A struck timer is crossed out, has no button, and keeps its original duration.
+The letter **🇦** identifies the timer's button. Letters start again at A on each message: use the button underneath
+the message containing your resource. The first message shows when the board was updated. An expired timer stays
+visible with a past deadline; a struck timer is crossed out and no longer has a button.
 
-## Refresh a timer
+### Updating or removing a resource
 
-Click its letter button. The countdown restarts from its duration (or from zero for a field). Many clicks at once are
-all taken into account, and the board is updated once, not once per click.
-
-## Strike and clean up
-
-- `/timers strike` suggests the active timers of the channel. A struck timer stays visible, crossed out.
-- Adding the same timer again (same type, name, place and code) brings the struck one back instead of creating a
-  duplicate.
-- `/timers cleanup` removes the struck timers right away. Otherwise they are deleted for good 24 hours later (see
-  `purge-after`), as are expired timers.
-- A board with no timer at all and no change for 30 days is deleted, with its message and its data. `/timers create`
-  makes a new one. The board is not deleted while it holds a timer.
-- After `/timers cleanup`, the board keeps at least one message.
-
-## Alerts
-
-By default, PICKET posts a **silent** alert in the channel 2 hours before a countdown ends, with a ✅ button that
-removes it. The alert goes away on its own when the timer is refreshed, struck or expired, and comes back for the next
-deadline after a refresh.
-
-If PICKET was interrupted, it sends one alert for the closest threshold reached, never a burst of old ones.
-
-To notify a role, add it with `/timers settings alert-role`. A role can be notified when it is mentionable, or when
-PICKET has the Discord permission **Mention @everyone, @here and All Roles**.
-
-## Settings
-
-`/timers settings` without option shows the settings. With options, it changes them.
-
-| Option | Meaning | Default |
-| --- | --- | --- |
-| `alerts` | Send alerts. | on |
-| `thresholds` | When to alert before the end, for example `6h, 2h, 30m` (4 at most, from 5 minutes to 7 days). | `2h` |
-| `alert-role`, `alert-role-action` | Roles to notify (5 at most): add, remove, or clear all. | none |
-| `silent` | Alerts without push notification. | on |
-| `duplicates` | Identical active timer: add it with a warning, or refuse it. | warn |
-| `restrict-changes` | Only the owner of a timer and officers can strike or refresh it. | off |
-| `max-active` | Active timers on the board (1 to 100). | 50 |
-| `purge-after` | Delete struck or expired timers after this many hours (0 = never). | 24 |
-| `reset-on-new-war` | Empty the board when a new war starts. Takes effect once the war log is released. | off |
-| `region-emoji` | Icon before the region in the board: an emoji, a custom emoji of your server (`<:name:id>`), or `default`. | PICKET icons |
-| `location-emoji` | Icon before the town in the board, same format. | PICKET icons |
-
-## Who can do what
-
-| Level | Can |
+| You want to… | Do this |
 | --- | --- |
-| member | Add, strike and refresh timers, acknowledge alerts. |
-| officer | Create a board, clean it up, repair it, change its settings. |
+| Record a renewal in the game | Click its letter button: the countdown restarts for its configured duration. For a field, elapsed time goes back to zero. |
+| Mark a resource as no longer needing attention | Run `/timers strike` and choose the suggested timer. It stays visible, crossed out. |
+| Remove struck timers from the board | An officer runs `/timers cleanup`. |
+| Start tracking a struck resource again | Add it with the same type, name, location and code: PICKET reactivates its timer. |
 
-With `restrict-changes`, a member can only strike or refresh their own timers.
+By default, members can refresh and strike other members' timers. An officer can reserve
+these two actions for the timer's owner and officers in `/timers settings` → **Board management**.
 
-## When something goes wrong
+### Receiving and acknowledging alerts
 
-- A moderator deleted a board message: the next change reposts it, or run `/timers repair`.
-- PICKET lacks a permission or Discord is slow: your change is saved, the answer tells you the board will be updated
-  later, and PICKET retries on its own.
-- The channel was deleted: the board is disabled and its history kept. Create a new one with `/timers create`.
+By default, PICKET posts a **silent alert 2 hours before the deadline**, in the board's channel. Click **✅** to
+acknowledge it and remove the alert message. This does not refresh or strike the timer.
+
+The alert also disappears when the timer is refreshed, struck or expired. A refresh prepares alerts for the next
+deadline. After an interruption, PICKET resumes with the nearest alert threshold already reached, rather than
+sending a backlog of old alerts.
+
+To notify a group, an officer can configure roles with `/timers settings`. The role must be mentionable, or the bot
+must have Discord's **Mention @everyone, @here, and All Roles** permission.
+
+## Adapting timers to your group
+
+### Choosing a type and duration
+
+| Resource | What the timer measures | Code | Suggested duration |
+| --- | --- | --- | --- |
+| Stockpile | Time remaining until the deadline | 6 digits, required | 50 h |
+| Facility | Time remaining until the deadline | None | 50 h |
+| Field | Time since the last refresh | None | No countdown |
+| Ship, tank or train | Time remaining until the deadline | 3 to 6 letters or digits, optional | 48 h |
+
+The suggested durations are defaults: adjust them to your needs. Enter hours (`50`, `1.5`) or combine units (`90m`,
+`2h30m`, `1d 12h`). For the location, start typing a town or region, then **select a suggestion**: PICKET does not guess
+a location from free text.
+
+### Configuring a board
+
+An officer runs `/timers settings` **in the board's channel**, with no arguments. PICKET opens a private panel:
+choose a section, click a button or fill in a form. Every change takes effect immediately and updates the same panel.
+These settings apply to this board, rather than every board on the server.
+
+| Screen | What you can configure |
+| --- | --- |
+| **Home** | View the active timer count, main settings and display status. |
+| **🔔 Alerts** | Enable or disable alerts, choose times before the deadline, silent mode and roles to notify. |
+| **🛡️ Board management** | Choose who can strike and refresh, handle duplicates and configure automatic cleanup. |
+
+To notify a role, choose it in the **Alerts** screen's selector. Add or remove roles one at a time, or clear them all.
+Adding `@everyone` requires confirmation. The **Edit** button opens a prefilled form for alert thresholds or cleanup
+delay: you do not need to know any parameter names.
+
+Disabling alerts requires confirmation. For automatic cleanup, a new non-zero delay also requires confirmation:
+struck or expired timers already past that delay may be deleted immediately.
+
+::: details Available settings and defaults
+
+| Setting | Choices | Default |
+| --- | --- | --- |
+| Alerts | Enabled or disabled. | Enabled |
+| Time before the deadline | For example `6h, 2h, 30m`: up to 4 thresholds, from 5 minutes to 7 days. | `2h` |
+| Roles to notify | Up to 5 roles. | None |
+| Notifications | Silent mode or push notifications. | Silent |
+| Identical timers | Allow with a warning, or refuse the addition. | Allow and warn |
+| Who can strike and refresh | All members, or the owner and officers only. | All members |
+| Automatic cleanup | After 1 to 720 hours; `0` disables it. | 24 h |
+
+:::
+
+Region and town icons use PICKET's icons, and the limit is fixed at **50 active timers per board**.
+Resetting for a new war is shown as **Coming soon**, without an activation button: it depends on the war-log,
+which is not available yet.
+
+The panel is reserved for the person who opens it and expires after 15 minutes without an update. Run
+`/timers settings` again to open a new one. Access is checked again for every interaction. During transition,
+a command with old arguments opens this panel **without applying its arguments**.
+
+To enable or disable the **entire Timers module**, use `/picket settings`. Disabling it suspends timer interactions
+and background processing while keeping the data.
+
+## Limits
+
+A **board** is the collection of timers in one channel; a **message** is a page of that board.
+
+| Limit | Value |
+| --- | --- |
+| Boards per server | 10 |
+| Boards per channel | 1 |
+| Active timers per board, across all pages | 50, fixed limit |
+| Active timers per message | At most 25; fewer if the content length requires it |
+| Messages per board | Added and removed automatically to fit the content, keeping at least one message |
+| Timer name | 15 characters |
+| Countdown duration | From 1 minute to 30 days |
+
+**26 active timers take at least two messages, but still count as one board in one channel.** The server limit of
+10 boards therefore allows up to 10 timer channels, each with several messages.
+
+A **struck** timer frees a place in the active quota. An **expired** timer still counts until it is struck or purged.
+If an older board already has more than 50 active timers, they are kept, but adding more is blocked until the count
+falls below 50.
+
+By default, struck timers are deleted 24 hours after being struck; expired timers, 24 hours after their deadline.
+An empty board with no changes for 30 days is also deleted. A board that still contains a timer is kept.
+
+## If something goes wrong
+
+| Situation | What to do |
+| --- | --- |
+| A command or button is refused | Check your PICKET roles, whether Timers is enabled and Discord permissions. If changes are restricted to owners, also check the timer's owner. Access is checked again for every action. |
+| You cannot add another timer | The limit is 50 active timers. Strike resources you no longer need to free a place. Expired timers still count until struck or purged. |
+| The location is refused | Try adding again and select a town or region suggestion. |
+| A board message was deleted | The next change republishes it; an officer can also run `/timers repair`. |
+| PICKET says the display will update later | Your change is saved. Check the bot's permissions if needed; PICKET retries automatically. |
+| The channel was deleted | Its board is disabled and its data kept. An officer can create a board in another channel. |
+| An old empty board disappeared | After 30 days without activity, it is deleted. Run `/timers create` to make a new one. |
 
 ## What PICKET stores
 
-Unlike todo lists, the timers live in PICKET's database, because countdowns and alerts must survive a deleted message
-or a restart. It stores the board settings, each timer (type, name, code, place, owner, start, duration) and a history
-of who did what. Names and codes are visible to everyone who can read the channel: do not type personal data in
-them. See the [Privacy Policy](../legal/privacy).
+Timers are saved in PICKET's database so they keep working after a restart and their display can be rebuilt. This
+includes server, channel and message identifiers, board settings, tracked resources (**type, name, code, location,
+owner, start time, duration and state**) and the information needed for alerts.
+
+PICKET also keeps an action history and server-related application logs, including dates, the identifiers of the
+people involved and action details. Timer names and codes may appear in that history. **Database logs have a 30-day
+retention period**; timer data is not subject to this logging period and follows the separate deletion lifecycle
+described above. Data from a board disabled after its channel is deleted is kept until the server's data is deleted.
+
+Names and codes are visible to people who can read the board's channel. If an audit channel is configured, timer
+creation, reactivation, striking, removal and alert acknowledgements may also be reported there with available action
+details. Refreshes
+are not posted in that channel. The 30-day log retention **does not delete audit messages already posted in Discord**.
+
+An administrator can export stored data or request its deletion in `/picket settings` → **Data**. Deleting the bot's
+data does not automatically delete Discord messages. See the [Privacy Policy](../legal/privacy) for the general
+retention policy.

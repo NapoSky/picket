@@ -57,54 +57,7 @@
         "description": "Republier les messages du tableau depuis les timers enregistrés"
       },
       "settings": {
-        "description": "Voir ou modifier les réglages du tableau de ce canal",
-        "options": {
-          "alerts": {
-            "description": "Envoyer les alertes d'expiration"
-          },
-          "thresholds": {
-            "description": "Quand alerter avant l'expiration, par exemple 6h, 2h, 30m"
-          },
-          "alertRole": {
-            "description": "Rôle à notifier dans les alertes"
-          },
-          "alertRoleAction": {
-            "description": "Ajouter ou retirer ce rôle, ou vider la liste",
-            "choices": {
-              "add": "Ajouter",
-              "remove": "Retirer",
-              "clear": "Vider tous les rôles"
-            }
-          },
-          "silent": {
-            "description": "Alertes sans notification push"
-          },
-          "duplicates": {
-            "description": "Que faire si un timer actif identique existe",
-            "choices": {
-              "warn": "L'ajouter et prévenir",
-              "refuse": "Le refuser"
-            }
-          },
-          "restrictChanges": {
-            "description": "Seuls le propriétaire et les officiers peuvent barrer ou rafraîchir"
-          },
-          "maxActive": {
-            "description": "Nombre maximal de timers actifs sur le tableau"
-          },
-          "purgeAfter": {
-            "description": "Supprimer les timers barrés ou expirés après N heures (0 = jamais)"
-          },
-          "resetOnNewWar": {
-            "description": "Vider le tableau au début d'une nouvelle guerre"
-          },
-          "regionEmoji": {
-            "description": "Icône devant la région dans le tableau (un emoji, ou default)"
-          },
-          "locationEmoji": {
-            "description": "Icône devant la ville dans le tableau (un emoji, ou default)"
-          }
-        }
+        "description": "Ouvrir le panneau privé des réglages du tableau de ce canal"
       }
     },
     "picket": {
@@ -220,7 +173,6 @@
       "durationTooLong": "La durée est trop longue (maximum {{max}})."
     },
     "settings": {
-      "show": "Alertes : {{alerts}}\nSeuils d'alerte : {{thresholds}}\nRôles notifiés : {{roles}}\nMode des alertes : {{mode}}\nTimers identiques : {{duplicates}}\nBarrer et rafraîchir : {{changes}}\nTimers actifs : {{active}}/{{max}}\nPurge automatique : {{purge}}\nVidé à chaque nouvelle guerre : {{reset}}\nIcônes d'en-tête : {{icons}}\nMessages du tableau : {{sync}}",
       "on": "activées",
       "off": "désactivées",
       "none": "aucun",
@@ -239,11 +191,48 @@
       "invalidThresholds": "Seuils invalides. Exemple : 6h, 2h, 30m ({{max}} au plus, chacun entre {{min}} minutes et 7 jours).",
       "tooManyRoles": "{{max}} rôles au plus peuvent être notifiés.",
       "invalidRole": "Rôle invalide.",
-      "roleNeeded": "Indiquez un rôle à ajouter ou à retirer.",
-      "invalidMaxActive": "La limite doit être comprise entre 1 et {{max}}.",
-      "maxBelowCurrent": "Le tableau contient déjà plus de timers actifs que cette limite.",
-      "invalidPurge": "La purge automatique doit être comprise entre 0 (jamais) et {{max}} heures.",
-      "invalidEmoji": "Indiquez un seul emoji, ou le mot default pour rétablir l'icône par défaut. Un emoji personnalisé ressemble à <:nom:123456789012345678>."
+      "invalidPurge": "La purge automatique doit être comprise entre 0 (jamais) et {{max}} heures."
+    },
+    "panel": {
+      "title": "Réglages du tableau",
+      "active": "timers actifs",
+      "help": "Ce panneau privé règle uniquement le tableau de ce canal. Chaque changement est appliqué immédiatement. La limite est de 50 timers actifs.",
+      "alerts": "Alertes",
+      "manage": "Gestion du tableau",
+      "configure": "Configurer",
+      "edit": "Modifier",
+      "alertsHelp": "Choisissez quand prévenir le groupe et quels rôles notifier. Ces préférences restent enregistrées si vous désactivez les alertes.",
+      "thresholds": "Quand prévenir ?",
+      "thresholdInput": "Délais avant l’échéance",
+      "notifications": "Notifications",
+      "notificationsHelp": "Le mode silencieux évite les notifications push, y compris pour les rôles mentionnés.",
+      "notify": "Activer les notifications",
+      "makeSilent": "Rendre silencieux",
+      "roles": "Rôles à notifier",
+      "rolesHelp": "Ajoutez ou retirez les rôles un par un ({{max}} au maximum). Un rôle doit être mentionnable, ou PICKET doit avoir la permission de mentionner tous les rôles.",
+      "clearRoles": "Retirer tous les rôles",
+      "rolesUnavailable": "Impossible de vérifier les rôles pour le moment. Réessayez.",
+      "changes": "Qui peut barrer et rafraîchir ?",
+      "changesHelp": "Les officiers et administrateurs gardent toujours ces droits.",
+      "allowEveryone": "Autoriser tous les membres",
+      "ownersOnly": "Réserver aux responsables",
+      "duplicates": "Timers identiques",
+      "duplicatesHelp": "Un doublon a le même type, nom, lieu et code qu’un timer actif.",
+      "warnDuplicates": "Autoriser et prévenir",
+      "refuseDuplicates": "Refuser les doublons",
+      "purge": "Nettoyage automatique",
+      "purgeSummary": "Nettoyage automatique : {{purge}}",
+      "purgeHelp": "Retire définitivement les timers barrés ou expirés après le délai choisi. 0 désactive ce nettoyage.",
+      "purgeInput": "Délai en heures (0 = jamais)",
+      "purgeConfirm": "Supprimer les timers barrés ou expirés après {{hours}} h ? Ceux qui ont déjà dépassé ce délai seront supprimés dès l’application du réglage. Cette suppression est définitive.",
+      "war": "Nouvelle guerre — À venir",
+      "warHelp": "Le reset automatique dépend du war-log, qui n’est pas encore disponible. Aucun reset lié à une nouvelle guerre n’est effectué actuellement.",
+      "disableTitle": "Désactiver les alertes ?",
+      "disableHelp": "PICKET n’enverra plus de nouvelles alertes pour ce tableau. Les timers restent suivis et les alertes déjà publiées peuvent toujours être acquittées.",
+      "everyoneHelp": "Ajouter le rôle @everyone à la liste des rôles à notifier ? Il représente tous les membres du serveur.",
+      "syncPending": "Affichage en attente de mise à jour. Les données sont enregistrées ; PICKET réessaie automatiquement.",
+      "expired": "Ce panneau a expiré ou son tableau a changé. Relancez /timers settings dans le canal du tableau.",
+      "legacy": "Les arguments de cette commande ont été remplacés par ce panneau. Aucun réglage n’a été modifié : choisissez une action ci-dessous."
     }
   },
   "status": {
