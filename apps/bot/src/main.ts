@@ -1,8 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { hostname } from 'node:os';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { loadConfig, type Role } from '@picket/config';
-import { DiscordRestGuildChannels, DiscordRestGuildRoles, DiscordRestInteractionReplies, DiscordRestMessaging, createInteractionServer } from '@picket/discord';
+import { loadConfig, loggingConfig, type Role } from '@picket/config';
+import { DiscordRestGuildChannels, DiscordRestGuildRoles, DiscordRestInteractionReplies, DiscordRestMessaging, createDiscordBotRest, createInteractionServer } from '@picket/discord';
 import { createI18n } from '@picket/i18n';
 import { systemClock } from '@picket/kernel';
 import { createGuildLogDestination, createHealthServer, createLogger } from '@picket/observability';
@@ -14,7 +14,7 @@ const IMPLEMENTED_ROLES: ReadonlySet<Role> = new Set(['http-ingress', 'shard-run
 
 async function run(): Promise<void> {
   const config = loadConfig(process.env);
-  let logger = createLogger({ level: config.logLevel, service: 'picket' });
+  let logger = createLogger({ level: config.logLevel, service: 'picket', version: config.version });
 
   process.on('unhandledRejection', (reason) => {
     logger.fatal({ err: reason }, 'unhandled rejection');
@@ -35,13 +35,14 @@ async function run(): Promise<void> {
     onPoolError: (error) => logger.error({ err: error }, 'database pool error'),
   });
   const guildLogs = new PostgresGuildApplicationLogs(database.db);
-  const logDestination = createGuildLogDestination({ append: (entries) => guildLogs.append(entries) });
-  logger = createLogger({ level: config.logLevel, service: 'picket', destination: logDestination.destination });
+  const logDestination = createGuildLogDestination({ version: config.version, append: (entries) => guildLogs.append(entries) });
+  logger = createLogger({ level: config.logLevel, service: 'picket', version: config.version, destination: logDestination.destination });
+  const rest = createDiscordBotRest(config.discord.botToken, { globalRequestsPerSecond: config.discord.restGlobalRps });
   const discord = {
-    messaging: new DiscordRestMessaging(config.discord.botToken),
+    messaging: new DiscordRestMessaging(config.discord.botToken, {}, rest),
     replies: new DiscordRestInteractionReplies(),
-    guildRoles: new DiscordRestGuildRoles(config.discord.botToken),
-    guildChannels: new DiscordRestGuildChannels(config.discord.botToken),
+    guildRoles: new DiscordRestGuildRoles(config.discord.botToken, {}, rest),
+    guildChannels: new DiscordRestGuildChannels(config.discord.botToken, {}, rest),
   };
   const composition = {
     clock: systemClock,
@@ -76,6 +77,7 @@ async function run(): Promise<void> {
         botToken: config.discord.botToken,
         shardCount: config.shardCount,
         holder,
+        rest,
       })
     : null;
   const jobs = config.roles.includes('job-runner') ? buildJobRunner(database.db, logger, { ...composition, holder }) : null;
@@ -85,7 +87,7 @@ async function run(): Promise<void> {
   shards?.start();
   jobs?.start();
   logger.info(
-    { roles: config.roles, port: config.http.port, healthPort: config.http.healthPort, shardCount: config.shardCount },
+    { roles: config.roles, port: config.http.port, healthPort: config.http.healthPort, shardCount: config.shardCount, restGlobalRps: config.discord.restGlobalRps, databasePoolMax: config.database.poolMax },
     'picket started',
   );
 
@@ -125,6 +127,7 @@ async function run(): Promise<void> {
 }
 
 run().catch((error: unknown) => {
-  console.error('picket failed to start:', error instanceof Error ? error.message : error);
+  createLogger({ ...loggingConfig(process.env), service: 'picket' })
+    .fatal({ error: error instanceof Error ? error.message : 'Unknown startup error' }, 'picket failed to start');
   process.exit(1);
 });

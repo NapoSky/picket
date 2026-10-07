@@ -23,3 +23,4 @@ export * from './infrastructure/rest-messaging';
 export * from './infrastructure/rest-guild-roles';
 export * from './infrastructure/rest-guild-channels';
 export * from './infrastructure/signature';
+export * from './infrastructure/bot-rest';

@@ -6,9 +6,15 @@ coverage/
 .env.*
 !.env.example
 secrets/
+backups/
+*.dump
+*.dump.age
+deploy/.rollout.lock
 *.log
 .DS_Store
 .vscode/
 docs/.vitepress/cache/
 docs/.vitepress/.temp/
 draft/
+
+__pycache__/

@@ -3,13 +3,13 @@ FROM node:24-alpine AS base
 WORKDIR /app
 RUN corepack enable
 
-# Compilation de tous les packages (TypeScript 7).
+# Build all packages (TypeScript 7).
 FROM base AS build
 COPY . .
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 RUN pnpm build
-# Ne garde que ce qui sert à l'exécution : manifestes, sorties compilées, migrations SQL.
+# Keep only runtime files: manifests, compiled output, and SQL migrations.
 RUN mkdir /out \
  && cp package.json pnpm-lock.yaml pnpm-workspace.yaml LICENSE NOTICE /out/ \
  && for dir in apps/* packages/*; do \
@@ -20,19 +20,21 @@ RUN mkdir /out \
       done; \
     done
 
-# Dépendances de production du seul bot (sans testcontainers ni outils de test).
+# Install production dependencies for the bot only (without testcontainers or test tools).
 FROM base AS production-dependencies
 COPY --from=build /out ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --prod --frozen-lockfile --filter "@picket/bot..."
-# i18next déclare TypeScript en peer optionnel : pnpm l'installe quand même (compilateur natif et ses CVE Go).
+# i18next declares TypeScript as an optional peer: pnpm still installs it (native compiler with Go CVEs).
 RUN rm -rf node_modules/.pnpm/typescript@* node_modules/.pnpm/@typescript+*
 
-# Image finale : pas de pnpm, pas de sources, utilisateur non privilégié.
+# Final image: no pnpm, no source files, and an unprivileged user.
 FROM node:24-alpine AS runtime
-ENV NODE_ENV=production
+ARG PICKET_VERSION=unknown
+ENV NODE_ENV=production PICKET_VERSION=${PICKET_VERSION}
+LABEL org.opencontainers.image.revision=${PICKET_VERSION}
 WORKDIR /app
-# npm n'est pas utilisé à l'exécution et embarque ses propres dépendances vulnérables.
+# npm is not used at runtime and bundles its own vulnerable dependencies.
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=production-dependencies --chown=node:node /app ./
 USER node

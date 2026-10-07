@@ -1,4 +1,4 @@
-import { REST } from '@discordjs/rest';
+import { createDiscordBotRest, type DiscordBotRestClient } from '../bot-rest';
 import { CloseCodes, WebSocketManager, WebSocketShardEvents, type SessionInfo } from '@discordjs/ws';
 import { GatewayIntentBits } from 'discord-api-types/v10';
 import type { GatewaySessionStore } from '@picket/coordination';
@@ -11,6 +11,7 @@ import type { ShardConnection, ShardConnectionParams } from './shard-runner';
 
 export interface WsConnectorDependencies {
   readonly token: Secret;
+  readonly rest?: DiscordBotRestClient;
   readonly sessions: GatewaySessionStore;
   readonly handler: GatewayEventHandler;
   readonly logger: Logger;
@@ -19,9 +20,10 @@ export interface WsConnectorDependencies {
 
 /** Seul intent demandé : `Guilds` (non privilégié). Aucun intent de contenu ni de membres. */
 const INTENTS = GatewayIntentBits.Guilds;
+type SharedWsConnectorDependencies = WsConnectorDependencies & { readonly rest: DiscordBotRestClient };
 
 class DiscordWsShardConnection implements ShardConnection {
-  readonly #deps: WsConnectorDependencies;
+  readonly #deps: SharedWsConnectorDependencies;
   readonly #shardId: number;
   readonly #shardCount: number;
   readonly #lease: Lease;
@@ -33,7 +35,7 @@ class DiscordWsShardConnection implements ShardConnection {
   #preserving = false;
   #timer: ReturnType<typeof setInterval> | null = null;
 
-  constructor(deps: WsConnectorDependencies, params: ShardConnectionParams) {
+  constructor(deps: SharedWsConnectorDependencies, params: ShardConnectionParams) {
     this.#deps = deps;
     this.#shardId = params.shardId;
     this.#shardCount = params.shardCount;
@@ -51,7 +53,7 @@ class DiscordWsShardConnection implements ShardConnection {
     const manager = new WebSocketManager({
       token,
       intents: INTENTS,
-      rest: new REST({ version: '10' }).setToken(token),
+      rest: this.#deps.rest,
       shardCount: this.#shardCount,
       shardIds: [this.#shardId],
       retrieveSessionInfo: () => this.#latest,
@@ -132,5 +134,6 @@ class DiscordWsShardConnection implements ShardConnection {
 export function createWsShardConnector(
   deps: WsConnectorDependencies,
 ): (params: ShardConnectionParams) => ShardConnection {
-  return (params) => new DiscordWsShardConnection(deps, params);
+  const shared = { ...deps, rest: deps.rest ?? createDiscordBotRest(deps.token) };
+  return (params) => new DiscordWsShardConnection(shared, params);
 }

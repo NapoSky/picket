@@ -26,7 +26,11 @@ Uniquement les administrateurs du serveur : le propriétaire, et toute personne 
 
 ## Langues
 
-PICKET répond dans la langue choisie pour le serveur avec `/picket settings`. Par défaut (`Automatique`), il
-répond dans la langue de la personne qui lance la commande (anglais et français fournis), puis dans celle de la
-communauté Discord, puis en anglais. Les noms de commandes sont toujours en anglais ; leurs descriptions suivent la
-langue de votre Discord. Voir [Traduire](../contributing/translating) pour ajouter la vôtre.
+PICKET propose **l’anglais, le français, l’allemand, l’espagnol et le portugais du Brésil**. Choisissez une langue fixe
+pour tout le monde dans `/picket settings` → **Langue**, ou conservez **Automatique** : PICKET suit la langue Discord
+de la personne, puis celle du serveur Discord, puis l’anglais. Les variantes espagnoles utilisent le catalogue
+espagnol ; les variantes portugaises utilisent le catalogue du portugais du Brésil lorsqu’aucune traduction exacte
+n’est disponible.
+
+Les noms de commandes restent en anglais ; leurs descriptions suivent la langue de votre Discord.
+Voir [Traduire](../contributing/translating) pour ajouter une langue ou améliorer une traduction existante.

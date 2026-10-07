@@ -28,13 +28,15 @@ describe('guild log destination', () => {
   it('keeps failed batches for retry, with stable identifiers and no private data in the failure diagnostic', async () => {
     const append = jest.fn<Promise<void>, [readonly GuildApplicationLog[]]>().mockRejectedValueOnce(new Error('SECRET')).mockResolvedValue(undefined);
     const diagnostics = { write: jest.fn() };
-    const destination = createGuildLogDestination({ append, diagnostics });
-    const logger = createLogger({ level: 'info', service: 'picket', destination: destination.destination });
+    const destination = createGuildLogDestination({ append, diagnostics, version: 'abc1234' });
+    const logger = createLogger({ level: 'info', service: 'picket', version: 'abc1234', destination: destination.destination });
     logger.child({ guild_id: GUILD_A }).info({ user_id: '500000000000000001' }, 'tick');
     await destination.flush();
     expect(append).toHaveBeenCalledTimes(2);
     expect(append.mock.calls[0]?.[0]).toEqual(append.mock.calls[1]?.[0]);
     const output = JSON.stringify(diagnostics.write.mock.calls);
+    expect(JSON.parse(diagnostics.write.mock.calls[0]?.[0] as string)).toMatchObject({ version: 'abc1234' });
+    expect(append.mock.calls[0]?.[0][0]?.record).toMatchObject({ version: 'abc1234' });
     expect(output).toContain('guild log persistence unavailable');
     expect(output).not.toContain('SECRET');
     expect(output).not.toContain(GUILD_A);

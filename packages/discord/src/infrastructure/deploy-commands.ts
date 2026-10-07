@@ -1,4 +1,5 @@
-import { REST } from '@discordjs/rest';
+import type { REST, RESTOptions } from '@discordjs/rest';
+import { createDiscordBotRest } from './bot-rest';
 import { Routes } from 'discord-api-types/v10';
 import type { ApplicationId, Secret } from '@picket/kernel';
 import type { CommandRegistry } from '../application/commands';
@@ -17,9 +18,9 @@ export class DiscordRestCommandsApi implements CommandsApi {
   readonly #rest: REST;
   readonly #applicationId: ApplicationId;
 
-  constructor(applicationId: ApplicationId, botToken: Secret) {
+  constructor(applicationId: ApplicationId, botToken: Secret, options: Partial<RESTOptions> = {}) {
     this.#applicationId = applicationId;
-    this.#rest = new REST({ version: '10' }).setToken(botToken.reveal());
+    this.#rest = createDiscordBotRest(botToken, { globalRequestsPerSecond: 5, ...options });
   }
 
   async replaceGlobalCommands(payload: CommandsPayload): Promise<void> {

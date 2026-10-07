@@ -17,6 +17,7 @@ const FILE_SECRET_KEYS = ['DISCORD_BOT_TOKEN', 'DATABASE_URL', 'DATABASE_MIGRATO
 const port = z.coerce.number().int().min(1).max(65535);
 const postgresUrl = z.url({ protocol: /^postgres(ql)?$/ });
 const logLevel = z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info');
+const version = z.string().min(1).max(256).regex(/^[a-zA-Z0-9._/@:-]+$/).default('unknown');
 
 const csvRoles = z
   .string()
@@ -31,6 +32,7 @@ const csvRoles = z
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
   LOG_LEVEL: logLevel,
+  PICKET_VERSION: version,
   HTTP_PORT: port.default(8080),
   HEALTH_PORT: port.default(8081),
   SHUTDOWN_DRAIN_MS: z.coerce.number().int().min(0).max(120_000).default(10_000),
@@ -38,6 +40,7 @@ const envSchema = z.object({
   DISCORD_APPLICATION_ID: z.string().regex(/^\d{15,25}$/),
   DISCORD_PUBLIC_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/),
   DISCORD_BOT_TOKEN: z.string().min(1),
+  DISCORD_REST_GLOBAL_RPS: z.coerce.number().int().min(1).max(40).default(20),
   DATABASE_URL: postgresUrl,
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
   GUILD_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
@@ -46,6 +49,7 @@ const envSchema = z.object({
 
 const migrationEnvSchema = z.object({
   LOG_LEVEL: logLevel,
+  PICKET_VERSION: version,
   DATABASE_MIGRATOR_URL: postgresUrl,
   DATABASE_APP_ROLE: z.string().regex(/^[a-z_][a-z0-9_]{0,62}$/).default('picket_app'),
 });
@@ -53,6 +57,7 @@ const migrationEnvSchema = z.object({
 export interface AppConfig {
   readonly env: 'development' | 'test' | 'production';
   readonly logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
+  readonly version: string;
   readonly http: { readonly port: number; readonly healthPort: number };
   readonly shutdownDrainMs: number;
   readonly roles: readonly Role[];
@@ -60,6 +65,7 @@ export interface AppConfig {
     readonly applicationId: ApplicationId;
     readonly publicKey: string;
     readonly botToken: Secret;
+    readonly restGlobalRps: number;
   };
   readonly database: { readonly url: Secret; readonly poolMax: number };
   /** Délai entre la désactivation d'une guilde et la suppression définitive de ses données. */
@@ -70,6 +76,7 @@ export interface AppConfig {
 
 export interface MigrationConfig {
   readonly logLevel: AppConfig['logLevel'];
+  readonly version: string;
   readonly migratorUrl: Secret;
   readonly appRole: string;
 }
@@ -111,6 +118,7 @@ export function loadConfig(env: Env, options: LoadConfigOptions = {}): AppConfig
   return {
     env: data.NODE_ENV,
     logLevel: data.LOG_LEVEL,
+    version: data.PICKET_VERSION,
     http: { port: data.HTTP_PORT, healthPort: data.HEALTH_PORT },
     shutdownDrainMs: data.SHUTDOWN_DRAIN_MS,
     roles: data.ROLES,
@@ -118,6 +126,7 @@ export function loadConfig(env: Env, options: LoadConfigOptions = {}): AppConfig
       applicationId: ApplicationId.assert(data.DISCORD_APPLICATION_ID),
       publicKey: data.DISCORD_PUBLIC_KEY.toLowerCase(),
       botToken: new Secret(data.DISCORD_BOT_TOKEN),
+      restGlobalRps: data.DISCORD_REST_GLOBAL_RPS,
     },
     database: { url: new Secret(data.DATABASE_URL), poolMax: data.DATABASE_POOL_MAX },
     guildRetentionDays: data.GUILD_RETENTION_DAYS,
@@ -129,7 +138,18 @@ export function loadMigrationConfig(env: Env, options: LoadConfigOptions = {}): 
   const data = parseEnv(migrationEnvSchema, env, options);
   return {
     logLevel: data.LOG_LEVEL,
+    version: data.PICKET_VERSION,
     migratorUrl: new Secret(data.DATABASE_MIGRATOR_URL),
     appRole: data.DATABASE_APP_ROLE,
+  };
+}
+
+/** Safe bootstrap identity, also available when the full configuration fails validation. */
+export function loggingConfig(env: Env): { readonly level: AppConfig['logLevel']; readonly version: string } {
+  const parsedLevel = logLevel.safeParse(env.LOG_LEVEL);
+  const parsedVersion = version.safeParse(env.PICKET_VERSION);
+  return {
+    level: parsedLevel.success ? parsedLevel.data : 'info',
+    version: parsedVersion.success ? parsedVersion.data : 'unknown',
   };
 }

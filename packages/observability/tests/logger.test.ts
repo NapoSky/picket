@@ -15,9 +15,9 @@ function capture(): { lines: () => Record<string, unknown>[]; stream: Writable }
 describe('createLogger', () => {
   it('emits JSON with the service name and structured fields', () => {
     const { stream, lines } = capture();
-    const logger = createLogger({ level: 'info', service: 'picket', destination: stream });
+    const logger = createLogger({ level: 'info', service: 'picket', version: 'abc1234', destination: stream });
     logger.child({ guild_id: '1' }).info({ action: 'x' }, 'hello');
-    expect(lines()[0]).toMatchObject({ service: 'picket', guild_id: '1', action: 'x', msg: 'hello', level: 30 });
+    expect(lines()[0]).toMatchObject({ service: 'picket', version: 'abc1234', guild_id: '1', action: 'x', msg: 'hello', level: 30 });
   });
 
   it('redacts tokens and connection strings', () => {

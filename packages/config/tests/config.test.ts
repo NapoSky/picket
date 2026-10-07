@@ -1,4 +1,4 @@
-import { ConfigError, loadConfig, loadMigrationConfig, type Env } from '@picket/config';
+import { ConfigError, loadConfig, loadMigrationConfig, loggingConfig, type Env } from '@picket/config';
 
 const valid: Env = {
   DISCORD_APPLICATION_ID: '123456789012345678',
@@ -17,6 +17,28 @@ describe('loadConfig', () => {
     expect(config.database.poolMax).toBe(10);
     expect(config.guildRetentionDays).toBe(30);
     expect(config.shardCount).toBe(1);
+    expect(config.discord.restGlobalRps).toBe(20);
+    expect(config.version).toBe('unknown');
+  });
+
+  it('accepts an immutable image reference and preserves it for bootstrap and migration logs', () => {
+    const image = 'ghcr.io/example/picket@sha256:' + 'a'.repeat(64);
+    expect(loadConfig({ ...valid, PICKET_VERSION: image }).version).toBe(image);
+    expect(loadMigrationConfig({ DATABASE_MIGRATOR_URL: valid.DATABASE_URL, PICKET_VERSION: image }).version).toBe(image);
+    expect(loggingConfig({ PICKET_VERSION: image, LOG_LEVEL: 'bad' })).toEqual({ level: 'info', version: image });
+    expect(loggingConfig({ PICKET_VERSION: 'bad\nvalue' }).version).toBe('unknown');
+  });
+
+  it('bounds the REST budget and PostgreSQL pool independently', () => {
+    const config = loadConfig({ ...valid, DISCORD_REST_GLOBAL_RPS: '10', DATABASE_POOL_MAX: '5' });
+    expect(config.discord.restGlobalRps).toBe(10);
+    expect(config.database.poolMax).toBe(5);
+    for (const value of ['0', '-1', '41', 'abc', '1.5']) {
+      expect(() => loadConfig({ ...valid, DISCORD_REST_GLOBAL_RPS: value })).toThrow(ConfigError);
+    }
+    for (const value of ['0', '101', 'abc', '1.5']) {
+      expect(() => loadConfig({ ...valid, DATABASE_POOL_MAX: value })).toThrow(ConfigError);
+    }
   });
 
   it('bounds the shard count', () => {

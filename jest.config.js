@@ -41,7 +41,7 @@ module.exports = {
       // Un Postgres jetable (Testcontainers) partagé par toutes les suites.
       globalSetup: '<rootDir>/packages/testing/src/global-setup.ts',
       globalTeardown: '<rootDir>/packages/testing/src/global-teardown.ts',
-      testTimeout: 60_000,
+      setupFilesAfterEnv: ['<rootDir>/packages/testing/tests/integration-setup.ts'],
     },
   ],
   collectCoverageFrom: ['packages/*/src/**/*.ts', 'apps/*/src/**/*.ts', '!**/index.ts'],

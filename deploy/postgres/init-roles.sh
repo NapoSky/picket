@@ -1,8 +1,8 @@
 #!/bin/sh
-# Initialise les rôles Postgres au premier démarrage du volume (docker-entrypoint-initdb.d).
-#   picket_migrator : propriétaire de la base, exécute les migrations.
-#   picket_app      : rôle de l'application, ni propriétaire ni BYPASSRLS, donc soumis à la RLS.
-# Les mots de passe viennent de PICKET_*_PASSWORD_FILE (Docker secrets) ou de PICKET_*_PASSWORD.
+# Initialize PostgreSQL roles on the volume's first startup (docker-entrypoint-initdb.d).
+#   picket_migrator: database owner, runs migrations.
+#   picket_app: application role, neither owner nor BYPASSRLS, so row security applies.
+# Passwords come from PICKET_*_PASSWORD_FILE (Docker secrets) or PICKET_*_PASSWORD.
 set -eu
 
 secret() {

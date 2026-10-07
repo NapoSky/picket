@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { DiscordAPIError, HTTPError, RateLimitError } from '@discordjs/rest';
+import { DiscordAPIError, HTTPError, RateLimitError, RESTEvents } from '@discordjs/rest';
 import {
   ApplicationId,
   ChannelId,
@@ -14,6 +14,7 @@ import {
   DiscordRestGuildRoles,
   DiscordRestGuildChannels,
   DiscordRestMessaging,
+  createDiscordBotRest,
   mapRestError,
   toRestMessage,
   type MessageView,
@@ -176,6 +177,43 @@ describe('Discord REST adapters against a local server', () => {
 
   const messaging = () => new DiscordRestMessaging(new Secret('bot-token'), { api, retries: 0 });
   const replies = () => new DiscordRestInteractionReplies({ api, retries: 0 });
+
+  it('shares the authenticated quota across messages, roles, and channel inspection, while webhooks remain available', async () => {
+    const token = new Secret('bot-token');
+    const rest = createDiscordBotRest(token, { api, retries: 0, globalRequestsPerSecond: 2 });
+    const limited = new Promise<void>((resolve) => {
+      rest.on(RESTEvents.RateLimited, (event) => { if (event.global) resolve(); });
+    });
+    respond = (request, response) => {
+      if (request.url?.endsWith('/roles')) json(response, 200, []);
+      else if (request.url?.includes('/channels/')) json(response, 200, { id: channel, guild_id: '700000000000000002', type: 0 });
+      else json(response, 200, {});
+    };
+    await new DiscordRestMessaging(token, {}, rest).edit(channel, message, view);
+    await new DiscordRestGuildRoles(token, {}, rest).names(GuildId.assert('700000000000000001'));
+    const queued = new DiscordRestGuildChannels(token, {}, rest).inspect(GuildId.assert('700000000000000001'), channel);
+    await limited;
+    expect(seen).toHaveLength(2);
+    await replies().editOriginal({ applicationId: application, token: new Secret('interaction-token') }, 'still available');
+    expect(seen).toHaveLength(3);
+    expect(seen[2]?.authorization).toBeUndefined();
+    expect(await queued).toEqual({ kind: 'blocked', reason: 'wrong_guild' });
+    expect(seen).toHaveLength(4);
+  });
+
+  it('honours Discord Retry-After on a global 429 and retries the original request', async () => {
+    let attempts = 0;
+    respond = (_request, response) => {
+      attempts++;
+      if (attempts === 1) {
+        response.setHeader('retry-after', '0.05');
+        response.setHeader('x-ratelimit-global', 'true');
+        json(response, 429, { message: 'rate limited', retry_after: 0.05, global: true });
+      } else json(response, 200, { id: message });
+    };
+    expect(await messaging().send(channel, view)).toBe(message);
+    expect(attempts).toBe(2);
+  });
 
   it('uses nonce deduplication on creation and never sends it when editing', async () => {
     respond = (_request, response) => json(response, 200, { id: message });

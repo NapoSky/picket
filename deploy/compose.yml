@@ -1,10 +1,13 @@
-# Déploiement : `./rollout.sh <image>` (voir le script). Le service `picket` n'a ni `container_name` ni port publié :
-# docker-rollout doit pouvoir faire cohabiter deux répliques le temps de la bascule. Seul Traefik publie le port 443.
+# Deploy with `./rollout.sh <image>` (see the script). The `picket` service has no `container_name` or published port:
+# docker-rollout must allow two replicas to coexist during the switch. Only Traefik publishes port 443.
 name: picket
 
 x-picket-environment: &picket-environment
   NODE_ENV: production
   LOG_LEVEL: ${LOG_LEVEL:-info}
+  PICKET_VERSION: ${PICKET_IMAGE:?set PICKET_IMAGE}
+  DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+  DISCORD_REST_GLOBAL_RPS: ${DISCORD_REST_GLOBAL_RPS:-20}
   DISCORD_APPLICATION_ID: ${DISCORD_APPLICATION_ID:?set DISCORD_APPLICATION_ID in .env}
   DISCORD_PUBLIC_KEY: ${DISCORD_PUBLIC_KEY:?set DISCORD_PUBLIC_KEY in .env}
   DISCORD_BOT_TOKEN_FILE: /run/secrets/discord_bot_token
@@ -22,8 +25,8 @@ x-hardening: &hardening
     - no-new-privileges:true
 
 services:
-  # Point d'entrée HTTPS de la stack : 443 seulement (pas de port 80, la redirection se fait chez Cloudflare), certificats
-  # Let's Encrypt par défi DNS-01 Cloudflare. Il lit les étiquettes Docker des autres services.
+  # Stack HTTPS entrypoint: port 443 only (no port 80; Cloudflare handles redirects), with Let's Encrypt certificates
+  # obtained through the Cloudflare DNS-01 challenge. Reads Docker labels from the other services.
   traefik:
     image: traefik:v3.7.13
     restart: unless-stopped
@@ -44,7 +47,7 @@ services:
       - --providers.docker.exposedByDefault=false
       - --providers.docker.network=picket_edge
       - --entrypoints.https.address=:443
-      # Plages Cloudflare (https://www.cloudflare.com/ips/) : seules sources dont on croit les en-têtes X-Forwarded-*.
+      # Cloudflare ranges (https://www.cloudflare.com/ips/): the only trusted sources for X-Forwarded-* headers.
       - --entrypoints.https.forwardedHeaders.trustedIPs=103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/13,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17
       - --certificatesresolvers.certbot.acme.dnschallenge.provider=cloudflare
       - --certificatesresolvers.certbot.acme.dnschallenge.delaybeforecheck=0
@@ -94,7 +97,7 @@ services:
     environment:
       <<: *picket-environment
       ROLES: http-ingress,shard-runner,job-runner
-      # Laisse Traefik retirer la réplique (healthcheck KO) avant de refuser des connexions.
+      # Allow Traefik to remove the replica (failed health check) before refusing connections.
       SHUTDOWN_DRAIN_MS: "15000"
     secrets:
       - discord_bot_token
@@ -115,13 +118,52 @@ services:
     labels:
       traefik.enable: "true"
       traefik.docker.network: picket_edge
-      # Seule route exposée : les interactions Discord. Santé et métriques restent internes.
+      # Only Discord interactions are exposed. Health and metrics remain internal.
       traefik.http.routers.picket.rule: Host(`${PICKET_HOST:?set PICKET_HOST}`) && Path(`/interactions`) && Method(`POST`)
       traefik.http.routers.picket.entrypoints: https
       traefik.http.routers.picket.tls.certresolver: certbot
       traefik.http.services.picket.loadbalancer.server.port: "8080"
 
-  # Tâches ponctuelles : `docker compose run --rm migrate`.
+  # One-off tasks: `docker compose run --rm migrate`.
+  # Backup tools stay in their own image. Store only an age PUBLIC recipient on this host.
+  # backup.sh and rollout.sh supply UID/GID dynamically; create BACKUP_DIR as the deployment user.
+  backup:
+    image: picket-postgres-backup:18
+    build:
+      context: ./backup
+      args:
+        PICKET_VERSION: ${PICKET_IMAGE:?set PICKET_IMAGE}
+    profiles: [tools]
+    restart: unless-stopped
+    init: true
+    <<: *hardening
+    user: "${PICKET_BACKUP_UID:-1000}:${PICKET_BACKUP_GID:-1000}"
+    environment:
+      PGHOST: postgres
+      PGDATABASE: picket
+      PGCONNECT_TIMEOUT: "10"
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    volumes:
+      - type: bind
+        source: ${BACKUP_DIR:-../backups}
+        target: /backups
+        bind:
+          create_host_path: false
+    secrets:
+      - postgres_password
+      - backup_recipients
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import pathlib,time; assert time.time()-float(pathlib.Path('/backups/.last-success').read_text()) < 26*3600"]
+      interval: 5m
+      timeout: 5s
+      retries: 1
+      start_period: 5m
+
   migrate:
     image: ${PICKET_IMAGE:?set PICKET_IMAGE}
     profiles: [tools]
@@ -131,6 +173,7 @@ services:
     environment:
       NODE_ENV: production
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      PICKET_VERSION: ${PICKET_IMAGE:?set PICKET_IMAGE}
       DATABASE_MIGRATOR_URL_FILE: /run/secrets/database_migrator_url
     secrets:
       - database_migrator_url
@@ -158,8 +201,8 @@ services:
       - internal
       - edge
 
-  # Suppression définitive des données des guildes dont la rétention est échue.
-  # Également exécutée chaque nuit vers 3 h (Europe/Paris) par le job-runner ; code de sortie 1 si une guilde a échoué.
+  # Permanently delete data for guilds past their retention period.
+  # Also runs nightly around 03:00 (Europe/Paris) in the job-runner; exits with code 1 if any guild purge fails.
   purge:
     image: ${PICKET_IMAGE:?set PICKET_IMAGE}
     profiles: [tools]
@@ -180,8 +223,8 @@ services:
 networks:
   internal:
     internal: true
-  # Traefik et les services qui doivent joindre Discord (sortie Internet). Nom explicite : Traefik compare le nom réel
-  # du réseau Docker (avec le préfixe du projet), un nom faux le fait choisir une adresse au hasard.
+  # Traefik and services that need to reach Discord (Internet access). Explicit name: Traefik matches the actual Docker
+  # network name (including the project prefix); a wrong name makes it choose an arbitrary address.
   edge:
     name: picket_edge
 
@@ -190,6 +233,8 @@ volumes:
   traefik-acme:
 
 secrets:
+  backup_recipients:
+    file: ./secrets/backup_recipients
   postgres_password:
     file: ./secrets/postgres_password
   picket_migrator_password:

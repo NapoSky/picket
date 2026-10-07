@@ -6,6 +6,7 @@ import {
   INTERACTION_RECEIPT_RETENTION_DAYS,
   ShardRunner,
   createWsShardConnector,
+  type DiscordBotRestClient,
   type AccessPolicy,
   type CommandEntry,
   type ComponentFamily,
@@ -331,7 +332,7 @@ export function buildGatewayHandler(db: Db, logger: Logger, options: Composition
 export function buildShardRunner(
   db: Db,
   logger: Logger,
-  options: CompositionOptions & { readonly botToken: Secret; readonly shardCount: number; readonly holder: string },
+  options: CompositionOptions & { readonly botToken: Secret; readonly shardCount: number; readonly holder: string; readonly rest?: DiscordBotRestClient },
 ): ShardRunner {
   return new ShardRunner({
     shardCount: options.shardCount,
@@ -341,6 +342,7 @@ export function buildShardRunner(
     logger,
     connect: createWsShardConnector({
       token: options.botToken,
+      ...(options.rest ? { rest: options.rest } : {}),
       sessions: new PostgresGatewaySessionStore(db),
       handler: buildGatewayHandler(db, logger, options),
       logger,

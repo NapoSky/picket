@@ -7,7 +7,13 @@
 coverage
 secrets
 deploy/secrets
+**/backups
+**/*.dump
+**/*.dump.age
+deploy/.rollout.lock
 draft
 .env
 .env.*
 !.env.example
+
+**/__pycache__

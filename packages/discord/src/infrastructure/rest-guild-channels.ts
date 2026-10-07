@@ -1,4 +1,5 @@
-import { REST, type RESTOptions } from '@discordjs/rest';
+import { createDiscordBotRest } from './bot-rest';
+import type { REST, RESTOptions } from '@discordjs/rest';
 import { ChannelType, PermissionFlagsBits, Routes, type APIChannel, type APIGuild, type APIGuildMember, type APIRole, type APIUser } from 'discord-api-types/v10';
 import { UserId, type ChannelId, type GuildId, type Secret } from '@picket/kernel';
 import { channelPermissions, type AuditChannelAccess, type GuildChannels } from '../application/guild-channels';
@@ -7,8 +8,8 @@ import { mapRestError } from './rest-messaging';
 export class DiscordRestGuildChannels implements GuildChannels {
   readonly #rest: REST;
   #identity: Promise<string> | undefined;
-  constructor(token: Secret, options: Partial<RESTOptions> = {}) {
-    this.#rest = new REST({ version: '10', timeout: 10_000, retries: 2, ...options }).setToken(token.reveal());
+  constructor(token: Secret, options: Partial<RESTOptions> = {}, rest?: REST) {
+    this.#rest = rest ?? createDiscordBotRest(token, options);
   }
   async inspect(guildId: GuildId, channelId: ChannelId): Promise<AuditChannelAccess> {
     try {

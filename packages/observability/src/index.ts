@@ -7,6 +7,7 @@ export * from './guild-log-destination';
 export interface CreateLoggerOptions {
   readonly level: string;
   readonly service: string;
+  readonly version?: string;
   readonly destination?: DestinationStream;
 }
 
@@ -28,7 +29,7 @@ export function createLogger(options: CreateLoggerOptions): Logger {
   return pino(
     {
       level: options.level,
-      base: { service: options.service },
+      base: { service: options.service, version: options.version ?? 'unknown' },
       timestamp: pino.stdTimeFunctions.isoTime,
       redact: { paths: REDACTED_PATHS, censor: '[REDACTED]' },
     },

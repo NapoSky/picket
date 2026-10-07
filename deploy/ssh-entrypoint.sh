@@ -1,7 +1,7 @@
 #!/bin/sh
-# Commande forcée de la clé SSH utilisée par GitHub Actions (voir la documentation d'auto-hébergement) :
+# Forced command for the SSH key used by GitHub Actions (see the self-hosting documentation):
 #   command="/opt/picket/deploy/ssh-entrypoint.sh",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding ssh-ed25519 AAAA… picket-deploy
-# La clé ne peut rien faire d'autre que déployer une image identifiée par son condensat.
+# The key can only deploy an image referenced by its digest.
 set -eu
 
 image="${SSH_ORIGINAL_COMMAND:-}"
@@ -11,8 +11,8 @@ if ! printf '%s' "$image" | grep -Eq '^ghcr\.io/[a-z0-9][a-z0-9._/-]*@sha256:[0-
   exit 2
 fi
 
-# Le workflow envoie sur l'entrée standard le jeton éphémère du job (GITHUB_TOKEN, lecture des paquets) :
-# aucun jeton personnel n'est stocké sur le serveur, et celui-ci expire à la fin du job.
+# The workflow sends the temporary job token through standard input (GITHUB_TOKEN, package read access):
+# no personal token is stored on the server, and the job token expires when the job ends.
 IFS= read -r registry_token || true
 if [ -n "$registry_token" ]; then
   printf '%s' "$registry_token" | docker login ghcr.io -u github-actions --password-stdin > /dev/null

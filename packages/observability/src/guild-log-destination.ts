@@ -6,6 +6,7 @@ export interface GuildLogDestinationOptions {
   readonly append: (entries: readonly GuildApplicationLog[]) => Promise<void>;
   /** Diagnostics globaux uniquement : aucune copie des lignes contenant des données de serveur. */
   readonly diagnostics?: DestinationStream;
+  readonly version?: string;
 }
 
 const BATCH_SIZE = 100;
@@ -23,7 +24,7 @@ export function createGuildLogDestination(options: GuildLogDestinationOptions) {
   let closed = false;
 
   const reportFailure = () => diagnostics.write(JSON.stringify({
-    level: 50, time: new Date().toISOString(), service: 'picket', msg: 'guild log persistence unavailable',
+    level: 50, time: new Date().toISOString(), service: 'picket', version: options.version ?? 'unknown', msg: 'guild log persistence unavailable',
   }) + '\n');
 
   function drain() {

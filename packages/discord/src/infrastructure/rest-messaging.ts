@@ -1,4 +1,5 @@
-import { DiscordAPIError, HTTPError, RateLimitError, REST, type RESTOptions } from '@discordjs/rest';
+import { createDiscordBotRest } from './bot-rest';
+import { DiscordAPIError, HTTPError, RateLimitError, type REST, type RESTOptions } from '@discordjs/rest';
 import {
   ButtonStyle,
   ComponentType,
@@ -130,8 +131,8 @@ function toStoredMessage(message: APIMessage): StoredMessage {
 export class DiscordRestMessaging implements Messaging {
   readonly #rest: REST;
 
-  constructor(botToken: Secret, options: Partial<RESTOptions> = {}) {
-    this.#rest = new REST({ version: '10', timeout: 10_000, retries: 2, ...options }).setToken(botToken.reveal());
+  constructor(botToken: Secret, options: Partial<RESTOptions> = {}, rest?: REST) {
+    this.#rest = rest ?? createDiscordBotRest(botToken, options);
   }
 
   async send(channelId: ChannelId, message: MessageView): Promise<MessageId> {

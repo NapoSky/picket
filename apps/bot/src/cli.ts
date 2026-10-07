@@ -1,4 +1,4 @@
-import { loadConfig, loadMigrationConfig } from '@picket/config';
+import { loadConfig, loadMigrationConfig, loggingConfig } from '@picket/config';
 import {
   DiscordRestCommandsApi,
   PostgresDeployedHashStore,
@@ -14,14 +14,14 @@ const USAGE = 'Usage: cli <migrate | deploy-commands [--force] | purge>';
 
 async function runMigrate(): Promise<void> {
   const config = loadMigrationConfig(process.env);
-  const logger = createLogger({ level: config.logLevel, service: 'picket-cli' });
+  const logger = createLogger({ level: config.logLevel, service: 'picket-cli', version: config.version });
   const result = await migrate({ connectionString: config.migratorUrl, appRole: config.appRole });
   logger.info({ applied: result.applied, alreadyApplied: result.alreadyApplied }, 'migrations done');
 }
 
 async function runDeployCommands(force: boolean): Promise<void> {
   const config = loadConfig(process.env);
-  const logger = createLogger({ level: config.logLevel, service: 'picket-cli' });
+  const logger = createLogger({ level: config.logLevel, service: 'picket-cli', version: config.version });
   const database = createDatabase({ connectionString: config.database.url, maxConnections: 2, applicationName: 'picket-cli' });
   try {
     const result = await deployCommands({
@@ -43,7 +43,7 @@ async function runDeployCommands(force: boolean): Promise<void> {
 /** Nettoyage ponctuel ; également exécuté automatiquement par le job-runner. */
 async function runPurge(): Promise<number> {
   const config = loadConfig(process.env);
-  const logger = createLogger({ level: config.logLevel, service: 'picket-cli' });
+  const logger = createLogger({ level: config.logLevel, service: 'picket-cli', version: config.version });
   const database = createDatabase({ connectionString: config.database.url, maxConnections: 2, applicationName: 'picket-cli' });
   try {
     const report = await buildRetentionJob(database.db, logger, {
@@ -70,7 +70,7 @@ async function main(): Promise<number> {
     case 'purge':
       return runPurge();
     default:
-      console.error(USAGE);
+      createLogger({ ...loggingConfig(process.env), service: 'picket-cli' }).error({}, USAGE);
       return 2;
   }
 }
@@ -78,7 +78,8 @@ async function main(): Promise<number> {
 main().then(
   (code) => process.exit(code),
   (error: unknown) => {
-    console.error('cli failed:', error instanceof Error ? error.message : error);
+    createLogger({ ...loggingConfig(process.env), service: 'picket-cli' })
+      .fatal({ error: error instanceof Error ? error.message : 'Unknown CLI error' }, 'cli failed');
     process.exit(1);
   },
 );
