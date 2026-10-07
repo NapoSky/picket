@@ -63,6 +63,11 @@ Un timer expiré reste visible avec une échéance passée ; un timer barré app
 | Retirer les timers barrés du tableau | Un officier lance `/timers cleanup`. |
 | Reprendre le suivi d'une ressource barrée | Ajoutez-la à nouveau avec le même type, nom, lieu et code : PICKET réactive son timer. |
 
+Un ajout identique à un timer **déjà actif est refusé** : utilisez son bouton pour le rafraîchir. Un timer
+**barré est réactivé** avec le même identifiant quand vous l'ajoutez à nouveau. PICKET compare le type, le nom
+(sans tenir compte des majuscules), le lieu et le code. Changer le responsable ou la durée ne crée pas une ressource
+différente. Un timer expiré est encore actif tant qu'il n'a pas été barré ou purgé.
+
 Par défaut, les membres peuvent rafraîchir et barrer les timers des autres. Un officier peut réserver
 ces deux actions au responsable du timer et aux officiers dans `/timers settings` → **Gestion du tableau**.
 
@@ -103,7 +108,7 @@ immédiatement et le même panneau est actualisé. Les réglages concernent ce t
 | --- | --- |
 | **Accueil** | Consulter le nombre de timers actifs, les principaux réglages et l'état de l'affichage. |
 | **🔔 Alertes** | Activer ou désactiver les alertes, choisir les délais avant l'échéance, le mode silencieux et les rôles à notifier. |
-| **🛡️ Gestion du tableau** | Choisir qui peut barrer et rafraîchir, gérer les doublons et régler le nettoyage automatique. |
+| **🛡️ Gestion du tableau** | Choisir qui peut barrer et rafraîchir, et régler le nettoyage automatique. |
 
 Pour notifier un rôle, choisissez-le dans le sélecteur de l'écran **Alertes**. Vous pouvez ajouter ou retirer les rôles
 un par un, ou tous les retirer. L'ajout de `@everyone` demande confirmation. Le bouton **Modifier** ouvre un formulaire
@@ -120,7 +125,6 @@ aussi confirmation : les timers barrés ou expirés qui dépassent déjà ce dé
 | Délais avant l'échéance | Par exemple `6h, 2h, 30m` : jusqu'à 4 délais, de 5 minutes à 7 jours. | `2h` |
 | Rôles à notifier | Jusqu'à 5 rôles. | Aucun |
 | Notifications | Mode silencieux ou notifications push. | Silencieux |
-| Timers identiques | Autoriser avec un avertissement, ou refuser l'ajout. | Autoriser et prévenir |
 | Qui peut barrer et rafraîchir | Tous les membres, ou le responsable et les officiers uniquement. | Tous les membres |
 | Nettoyage automatique | Après 1 à 720 heures ; `0` le désactive. | 24 h |
 

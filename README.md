@@ -27,7 +27,7 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 | **Server settings** | Language, time zone, audit channel, per-feature switches |
 | **Multi-server** | Every server is isolated at the database level (row-level security) |
 | **Data management** | Retention period after the bot is removed, scheduled deletion on demand, nothing kept longer than needed |
-| **Languages** | English and French; add one by dropping a JSON file in [`packages/i18n/locales`](packages/i18n/locales) (Weblate-ready) |
+| **Languages** | English, French, German, Spanish and Brazilian Portuguese; add one by dropping a JSON file in [`packages/i18n/locales`](packages/i18n/locales) |
 | **Operations** | Zero-downtime rolling updates, several identical replicas, signed requests only, secrets kept out of the repository and the logs |
 | War log | Planned |
 
@@ -129,7 +129,7 @@ commands.
 
 ## Translate
 
-English is the source language. Add or improve a language by editing `packages/i18n/locales/<discord-locale>.json`; the
+English is the source language. Submit translations as pull requests with a UTF-8 i18next JSON file in `packages/i18n/locales/<discord-locale>.json`; the
 file name is the Discord locale code. The CI checks keys, placeholders and Discord's length limits. Details in the
 [translation guide](https://docs.picket-foxhole.com/contributing/translating).
 

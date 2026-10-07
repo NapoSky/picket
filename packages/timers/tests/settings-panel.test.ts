@@ -59,7 +59,7 @@ describe('timer settings panel', () => {
     expect(payload[0]?.options?.[0]).not.toHaveProperty('options');
   });
 
-  it.each(['fr', 'en'])('renders all screens within Discord limits in %s, including five roles', async (locale) => {
+  it.each(testI18n.locales)('renders all screens within Discord limits in %s, including five roles', async (locale) => {
     const ui = setup(locale);
     const home = await ui.open();
     expect(view(home).accentColor).toBe(0x5865f2);
@@ -100,7 +100,8 @@ describe('timer settings panel', () => {
     const home = await ui.open();
     const manage = await ui.click(control(home, 'view', 'manage'));
     view(await ui.click(control(manage, 'guard', '1'), { componentKind: 'stringSelect', selectedValues: ['1'] }));
-    view(await ui.click(control(manage, 'dups'), { componentKind: 'stringSelect', selectedValues: ['warn', 'refuse'] }));
+    const oldPolicy = control(manage, 'guard', '1').replace('.guard.1', '.dups.0');
+    view(await ui.click(oldPolicy, { componentKind: 'stringSelect', selectedValues: ['warn', 'refuse'] }));
     expect(ui.update).not.toHaveBeenCalled();
     const form = await ui.click(control(manage, 'form', 'purge'));
     if (form?.kind !== 'modal') throw new Error('expected modal');

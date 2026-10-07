@@ -45,7 +45,7 @@ son API publique, ou quand du code hors de `@picket/config` lit `process.env`.
 
 ## Ajouter une commande
 
-1. Ajoutez les textes dans `packages/i18n/locales/en.json` et `fr.json`, puis lancez `pnpm i18n:keys`.
+1. Ajoutez les textes dans `packages/i18n/locales/en.json` et traduisez-les dans chaque catalogue livré, puis lancez `pnpm i18n:keys`.
 2. Écrivez le cas d'usage dans la couche `application/`, avec un port pour ce dont il a besoin.
 3. Ajoutez l'adaptateur dans `infrastructure/` et la commande dans `presentation/discord/` (niveau, options, handler
    utilisant `t`).

@@ -1,0 +1,385 @@
+{
+  "errors": {
+    "duplicate": "Esta interação já foi processada.",
+    "guildOnly": "Este comando só pode ser usado em um servidor.",
+    "denied": "Você não tem acesso a este comando (nível necessário: {{level}}).",
+    "unknownCommand": "Este comando não está mais disponível.",
+    "expired": "Esta interação não está mais disponível.",
+    "failure": "Algo deu errado. Tente novamente mais tarde.",
+    "timeout": "A solicitação demorou demais. Tente novamente.",
+    "featureDisabled": "Esta função está desativada neste servidor. Um oficial pode ativá-la em /picket settings.",
+    "suspended": "A exclusão dos dados do PICKET está agendada para {{date}}. Um administrador do servidor pode cancelá-la em /picket settings → Dados."
+  },
+  "levels": {
+    "member": "membro",
+    "officer": "oficial",
+    "admin": "administrador",
+    "none": "nenhum"
+  },
+  "commands": {
+    "todolist": {
+      "description": "Listas de tarefas interativas",
+      "create": {
+        "description": "Publicar uma lista de tarefas neste canal"
+      }
+    },
+    "timers": {
+      "description": "Painel de temporizadores do Foxhole",
+      "create": {
+        "description": "Criar o painel de temporizadores neste canal"
+      },
+      "add": {
+        "description": "Adicionar um temporizador ao painel deste canal",
+        "options": {
+          "type": {
+            "description": "O que o temporizador acompanha"
+          },
+          "place": {
+            "description": "Cidade ou local (digite um nome; a região é exibida)"
+          },
+          "owner": {
+            "description": "Quem fica responsável (você por padrão)"
+          }
+        }
+      },
+      "strike": {
+        "description": "Riscar um temporizador do painel",
+        "options": {
+          "timer": {
+            "description": "Temporizador que você quer riscar"
+          }
+        }
+      },
+      "cleanup": {
+        "description": "Remover os temporizadores riscados do painel"
+      },
+      "repair": {
+        "description": "Republicar as mensagens do painel com os temporizadores salvos"
+      },
+      "settings": {
+        "description": "Abrir as configurações privadas do painel deste canal"
+      }
+    },
+    "picket": {
+      "description": "Administração e informações do PICKET",
+      "status": {
+        "description": "Mostrar o status do PICKET neste servidor"
+      },
+      "settings": {
+        "description": "Abrir o painel privado de configurações do servidor"
+      }
+    }
+  },
+  "discordPermissions": {
+    "viewChannel": "Ver canal",
+    "sendMessages": "Enviar mensagens",
+    "embedLinks": "Inserir links"
+  },
+  "todolist": {
+    "title": "📋 Lista de tarefas",
+    "footer": "📋 {{page}}/{{total}}",
+    "modal": {
+      "title": "Nova lista de tarefas",
+      "label": "Tarefas (uma por linha)",
+      "placeholder": "__Preparação__\nA・Caixas (x2)\n🇧- Caminhões\nO texto livre permanece como escrito"
+    },
+    "created": {
+      "one": "Lista de tarefas publicada.",
+      "many": "Lista de tarefas publicada em {{count}} mensagens."
+    },
+    "completed": "Lista de tarefas concluída: a mensagem foi removida.",
+    "completedPage": "Página {{page}}/{{total}} concluída: a mensagem foi removida.",
+    "alreadyDone": "Esta tarefa já foi concluída.",
+    "errors": {
+      "empty": "Não há nada para publicar: o texto está vazio.",
+      "inputTooLong": "O texto é longo demais (máximo de {{max}} caracteres).",
+      "noItems": "Nenhuma tarefa encontrada. Comece uma linha com um emoji de letra (🇦- Caixas) ou uma letra maiúscula seguida de ・ (A・Caixas).",
+      "tooManyItems": "Tarefas demais (máximo de {{max}}).",
+      "itemTooLong": "Linha {{line}}: a tarefa é longa demais (máximo de {{max}} caracteres).",
+      "tooLongToRender": "Esta lista é longa demais para ser exibida. Reduza o texto livre.",
+      "yourText": "Seu texto, para copiar novamente:",
+      "missingPermissions": "Não consigo publicar aqui. Faltam permissões neste canal: {{missing}}.",
+      "cannotPost": "Não consegui publicar neste canal. Confira minhas permissões e tente novamente.",
+      "cannotEdit": "Não consegui atualizar esta lista. Confira minhas permissões neste canal.",
+      "unreadable": "Esta lista não pode mais ser lida. Exclua-a e crie uma nova.",
+      "busy": "Esta lista está sendo modificada. Tente novamente.",
+      "noChannel": "Não é possível criar uma lista de tarefas neste canal."
+    }
+  },
+  "timers": {
+    "board": {
+      "title": "⏱️ Temporizadores e renovações",
+      "empty": "Ainda não há temporizadores. Adicione um com /timers add.",
+      "updated": "🕓 Última atualização",
+      "asset": "Recurso",
+      "code": "Código",
+      "timer": "Temporizador"
+    },
+    "types": {
+      "stockpile": "Depósito",
+      "facility": "Instalação",
+      "field": "Campo",
+      "naval_ship": "Navio de guerra",
+      "tank": "Tanque",
+      "train": "Trem"
+    },
+    "alert": {
+      "text": "{{icon}} **{{name}}** ({{place}}) expira {{time}}."
+    },
+    "modal": {
+      "title": "Novo temporizador: {{type}}",
+      "name": "Nome",
+      "namePlaceholder": "Nome curto, no máximo 15 caracteres",
+      "code": "Código",
+      "codeStockpile": "Código de depósito com 6 dígitos",
+      "codeShort": "De 3 a 6 letras ou dígitos (opcional)",
+      "duration": "Duração",
+      "durationPlaceholder": "Horas (50, 1.5) ou 2h30m, 1d 12h"
+    },
+    "created": "Painel de temporizadores criado. Os temporizadores adicionados com /timers add aparecem aqui.",
+    "added": "Temporizador adicionado: {{name}} ({{place}}), {{time}}.",
+    "reactivated": "Temporizador reativado no painel: {{name}} ({{place}}), {{time}}.",
+    "struck": "Temporizador riscado: {{name}}.",
+    "cleaned": {
+      "one": "1 temporizador riscado removido.",
+      "many": "{{count}} temporizadores riscados removidos."
+    },
+    "nothingToClean": "Nada para limpar: não há temporizadores riscados.",
+    "repaired": "As mensagens do painel foram republicadas.",
+    "restored": "Este canal já tinha um painel de temporizadores: ele foi republicado com seus temporizadores.",
+    "errors": {
+      "noBoard": "Este canal não tem um painel de temporizadores. Um oficial pode criá-lo com /timers create.",
+      "boardQuota": "Este servidor já tem {{max}} painéis de temporizadores.",
+      "missingPermissions": "Não consigo publicar aqui. Faltam permissões neste canal: {{missing}}.",
+      "noChannel": "Não é possível criar um painel de temporizadores neste canal.",
+      "quota": "Este painel já tem {{max}} temporizadores ativos. Risque alguns antes de adicionar outros.",
+      "duplicate": "Já existe um temporizador ativo idêntico neste painel. Use o botão dele para renová-lo.",
+      "notFound": "Este temporizador não existe mais.",
+      "alreadyStruck": "Este temporizador já está riscado.",
+      "forbidden": "Neste painel, apenas o responsável pelo temporizador e os oficiais podem modificá-lo.",
+      "boardDisabled": "O canal deste painel não existe mais, então o painel foi desativado. Crie um novo com /timers create.",
+      "syncPending": "Salvo, mas ainda não foi possível atualizar a mensagem do painel ({{reason}}). Vou tentar novamente automaticamente.",
+      "unknownType": "Tipo de temporizador desconhecido.",
+      "unknownPlace": "Local desconhecido. Comece a digitar o nome da cidade e escolha uma das sugestões.",
+      "unknownRegion": "Região desconhecida. Escolha uma das sugestões.",
+      "unknownLocation": "Local desconhecido. Escolha uma das sugestões para essa região.",
+      "nameEmpty": "O nome está vazio.",
+      "nameTooLong": "O nome é longo demais (máximo de {{max}} caracteres).",
+      "codeRequired": "Um depósito precisa de um código com 6 dígitos.",
+      "codeInvalid": "Código inválido. Um código de depósito tem 6 dígitos; os demais têm de 3 a 6 letras ou dígitos.",
+      "durationInvalid": "Duração inválida. Use horas (50, 1.5) ou unidades (2h30m, 1d 12h).",
+      "durationTooShort": "A duração é curta demais (mínimo de {{min}}).",
+      "durationTooLong": "A duração é longa demais (máximo de {{max}})."
+    },
+    "settings": {
+      "on": "ativado",
+      "off": "desativado",
+      "none": "nenhum",
+      "never": "nunca",
+      "silent": "silencioso",
+      "notifying": "com notificação push",
+      "changesEveryone": "todos os membros",
+      "changesRestricted": "apenas o responsável e os oficiais",
+      "purgeAfter": "após {{hours}} h",
+      "syncOk": "atualizado",
+      "syncFailed": "pendente ({{reason}})",
+      "updated": "Configurações do painel atualizadas.",
+      "unchanged": "Nada para alterar.",
+      "invalidThresholds": "Limiares inválidos. Exemplo: 6h, 2h, 30m (no máximo {{max}}, cada um entre {{min}} minutos e 7 dias).",
+      "tooManyRoles": "É possível notificar no máximo {{max}} cargos.",
+      "invalidRole": "Cargo inválido.",
+      "invalidPurge": "A limpeza automática deve estar entre 0 (nunca) e {{max}} horas."
+    },
+    "panel": {
+      "title": "Configurações do painel",
+      "active": "temporizadores ativos",
+      "help": "Este painel privado configura apenas o painel deste canal. Cada alteração tem efeito imediato. O limite é de 50 temporizadores ativos.",
+      "alerts": "Alertas",
+      "manage": "Gerenciar painel",
+      "configure": "Configurar",
+      "edit": "Editar",
+      "alertsHelp": "Escolha quando avisar o grupo e quais cargos notificar. Essas preferências são mantidas ao desativar os alertas.",
+      "thresholds": "Quando alertar?",
+      "thresholdInput": "Tempo antes do vencimento",
+      "notifications": "Notificações",
+      "notificationsHelp": "O modo silencioso impede notificações push, inclusive para os cargos mencionados.",
+      "notify": "Ativar notificações",
+      "makeSilent": "Silenciar",
+      "roles": "Cargos a notificar",
+      "rolesHelp": "Adicione ou remova cargos um de cada vez (até {{max}}). O cargo deve permitir menções, ou o PICKET precisa ter permissão para mencionar todos os cargos.",
+      "clearRoles": "Remover todos os cargos",
+      "rolesUnavailable": "Não foi possível verificar os cargos agora. Tente novamente.",
+      "changes": "Quem pode riscar e renovar?",
+      "changesHelp": "Oficiais e administradores sempre mantêm essas permissões.",
+      "allowEveryone": "Permitir todos os membros",
+      "ownersOnly": "Restringir aos responsáveis",
+      "purge": "Limpeza automática",
+      "purgeSummary": "Limpeza automática: {{purge}}",
+      "purgeHelp": "Remove permanentemente os temporizadores riscados ou expirados após o prazo escolhido. 0 desativa esta limpeza.",
+      "purgeInput": "Prazo em horas (0 = nunca)",
+      "purgeConfirm": "Excluir temporizadores riscados ou expirados após {{hours}} h? Os que já passaram desse prazo serão excluídos assim que a configuração for aplicada. Esta exclusão é permanente.",
+      "war": "Nova guerra — Em breve",
+      "warHelp": "Os reinícios automáticos dependem do registro de guerra, que ainda não está disponível. Atualmente, nenhuma nova guerra provoca um reinício automático.",
+      "disableTitle": "Desativar os alertas?",
+      "disableHelp": "O PICKET deixará de enviar novos alertas para este painel. Os temporizadores continuarão sendo acompanhados e os alertas existentes ainda poderão ser confirmados.",
+      "everyoneHelp": "Adicionar o cargo @everyone aos cargos a notificar? Ele representa todos os membros do servidor.",
+      "syncPending": "Atualização da exibição pendente. Seus dados estão salvos; o PICKET tenta novamente automaticamente.",
+      "expired": "Este painel expirou ou o painel de temporizadores mudou. Execute /timers settings novamente no canal do painel.",
+      "legacy": "Os argumentos do comando foram substituídos por este painel. Nenhuma configuração foi alterada: escolha uma ação abaixo."
+    }
+  },
+  "status": {
+    "body": "O PICKET está funcionando.\nIdioma: {{locale}} - Fuso horário: {{timezone}}\nFunções ativadas: {{features}}\nCanal de auditoria: {{audit}}",
+    "auditConfigured": "configurado",
+    "auditMissing": "não configurado",
+    "languageAuto": "automático"
+  },
+  "features": {
+    "timers": "Temporizadores",
+    "todolists": "Listas de tarefas",
+    "warlog": "Registro de guerra"
+  },
+  "settings": {
+    "invalidOption": "Valor inválido.",
+    "rejected": {
+      "unsupportedLanguage": "Este idioma não está disponível.",
+      "invalidTimezone": "Fuso horário desconhecido. Use um nome IANA, como Europe/Paris, America/New_York ou UTC."
+    }
+  },
+  "permissions": {
+    "show": {
+      "level": "Seu nível de acesso: {{level}}",
+      "officers": "Cargos de oficial: {{roles}}",
+      "members": "Cargos de membro: {{roles}}",
+      "noOfficers": "nenhum (apenas administradores do servidor)",
+      "noMembers": "nenhum",
+      "warning": "Aviso: {{text}}"
+    },
+    "warnings": {
+      "no_officer_role": "Nenhum cargo de oficial configurado: apenas administradores do servidor podem usar comandos de oficial.",
+      "member_open_to_everyone": "Todos os membros do servidor podem usar comandos de membro."
+    },
+    "set": {
+      "everyoneNotOfficer": "@everyone não pode ser um cargo de oficial."
+    }
+  },
+  "data": {
+    "export": "Exportar dados",
+    "exportHelp": "Baixe um arquivo JSON com os dados armazenados deste servidor: configurações, cargos permitidos, registros de auditoria, painéis e temporizadores, histórico, alertas, identificadores técnicos e registros da aplicação. Os registros de auditoria, o histórico e os registros da aplicação são mantidos por 30 dias. As listas de tarefas ficam no Discord. Os antigos registros externos e os backups do operador não estão incluídos.",
+    "exportReady": "📥 Aqui estão os dados do seu servidor. Este arquivo só é visível para você. Ele inclui identificadores do Discord: mantenha-o privado. Nenhuma configuração foi alterada.",
+    "exportTooLarge": "A exportação completa ultrapassa o limite de upload de {{limitMb}} MB. Nenhum arquivo parcial foi enviado. Entre em contato com o operador do PICKET para obter seus dados.",
+    "cancelled": "A exclusão agendada foi cancelada. O PICKET está ativo novamente.",
+    "nothingScheduled": "Nenhuma exclusão está agendada para este servidor."
+  },
+  "panel": {
+    "title": "PICKET · Configurações do servidor",
+    "home": "Visão geral",
+    "homeHelp": "Escolha o idioma e os módulos do seu servidor. Cada alteração tem efeito imediato.",
+    "permissions": "Permissões",
+    "advanced": "Avançado",
+    "data": "Dados",
+    "refresh": "Atualizar",
+    "back": "Voltar",
+    "next": "Próxima",
+    "previous": "Anterior",
+    "page": "Página {{page}} / {{total}}",
+    "saved": "Salvo.",
+    "unchanged": "Nada para alterar.",
+    "expired": "Este painel expirou. Abra /picket settings novamente.",
+    "owner": "Este painel pertence a outro usuário. Abra seu próprio painel com /picket settings.",
+    "language": "Idioma",
+    "auto": "Automático — segue o idioma do Discord de cada usuário",
+    "chooseLanguage": "Escolher um idioma",
+    "languageHelp": "**Automático** segue o idioma do Discord de cada pessoa, depois o do servidor e, por último, o inglês. Escolha um **idioma fixo** para que o PICKET use o mesmo idioma para todos.",
+    "timersHelp": "Acompanhe prazos e receba alertas dos seus painéis.",
+    "todolistsHelp": "Compartilhe listas de tarefas para marcar como concluídas no Discord.",
+    "enabled": "Ativado",
+    "disabled": "Desativado",
+    "enable": "Ativar",
+    "disable": "Desativar",
+    "disableTitle": "Desativar {{feature}}?",
+    "disableHelp": "As interações e os processos em segundo plano deste módulo serão interrompidos.\n\n**Os dados existentes serão mantidos.**",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "access": "Seu nível de acesso: **{{level}}**",
+    "soon": "Registro de guerra · Em breve",
+    "reserved": "O fuso horário é salvo para funções futuras e atualmente não tem efeito operacional.",
+    "timezone": "Fuso horário (IANA)",
+    "changeTimezone": "Alterar fuso horário",
+    "audit": "**Canal de auditoria**: {{channel}}",
+    "chooseChannel": "Escolher um canal de auditoria",
+    "clearChannel": "Remover o canal",
+    "auditHelp": "Publica alterações de configuração, criação de listas de tarefas, criação e remoção de temporizadores e confirmações de alertas. O conteúdo das listas e as renovações de temporizadores não são incluídos.",
+    "member": "Quem pode usar o PICKET?",
+    "officer": "Quem pode configurar o PICKET?",
+    "addRole": "Adicionar um cargo",
+    "removeRole": "Remover um cargo configurado",
+    "rolesEmpty": "Nenhum cargo configurado.",
+    "roleCount_one": "{{count}} cargo permitido",
+    "roleCount_other": "{{count}} cargos permitidos",
+    "adminImplicit": "Os administradores do servidor sempre têm acesso.",
+    "readOnly": "Somente administradores podem alterar estas permissões.",
+    "everyone": "Dar acesso a @everyone",
+    "restrict": "Remover acesso de @everyone",
+    "restrictHelp": "Adicione um cargo de membro antes de remover @everyone se os membros devem manter o acesso.",
+    "everyoneTitle": "Permitir que todos usem o PICKET?",
+    "everyoneHelp": "Todos os membros deste servidor poderão usar comandos de membro. O acesso de oficial continuará restrito.",
+    "deletionHelp": "A exclusão **suspende o PICKET imediatamente**. Após o período de retenção configurado, as configurações do servidor, os cargos de acesso, os temporizadores, o histórico e os registros de auditoria serão **apagados permanentemente**.\n\nAs mensagens do Discord, incluindo as listas de tarefas, **não são excluídas automaticamente**.",
+    "deletionDate": "**Data da exclusão**: <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
+    "schedule": "Agendar exclusão",
+    "deleteTitle": "Confirmar exclusão permanente dos dados?",
+    "deleteConfirm": "Confirmar exclusão",
+    "suspendedTitle": "O PICKET está em pausa",
+    "suspended": "O PICKET está suspenso. A exclusão dos dados está agendada para <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
+    "recovery": "Somente um administrador do servidor pode cancelar a exclusão. As outras configurações ficam indisponíveis durante a suspensão.",
+    "cancelDeletion": "Cancelar exclusão",
+    "legacy": "Os comandos foram movidos para este painel. Nenhum argumento dos comandos antigos foi aplicado.",
+    "statusReserved": "Fuso horário: apenas pré-configuração. Registro de guerra: em breve.",
+    "roleLabel": "Cargo {{id}}"
+  },
+  "audit": {
+    "configuration": "Configuração do servidor alterada",
+    "language": "Idioma alterado",
+    "timezone": "Fuso horário alterado",
+    "channel": "Canal de auditoria alterado",
+    "feature": "Módulos alterados",
+    "permissions": "Permissões alteradas",
+    "roleDeleted": "Cargo excluído removido das permissões",
+    "suspended": "Servidor suspenso · exclusão agendada",
+    "resumed": "Exclusão do servidor cancelada",
+    "departed": "Bot removido do servidor",
+    "returned": "Bot de volta ao servidor",
+    "test": "Teste do canal de auditoria",
+    "timerCreated": "Temporizador criado",
+    "timerReactivated": "Temporizador reativado",
+    "timerStruck": "Temporizador riscado",
+    "timerCleanup": "Temporizadores riscados removidos",
+    "timerReset": "Temporizadores removidos · reinício de guerra",
+    "alertAcknowledged": "Alerta confirmado",
+    "todolistCreated": "Lista de tarefas criada",
+    "actor": "Por {{actor}}",
+    "system": "PICKET (ação automática)",
+    "modules": "Módulos",
+    "timer": "Temporizador",
+    "location": "Local",
+    "count": "Temporizadores removidos",
+    "threshold": "Limiar do alerta",
+    "source": "Canal de origem",
+    "pages": "Páginas",
+    "messages": "Abrir mensagens",
+    "paused": "⚠️ A publicação de auditoria está em pausa: o bot não consegue usar o canal configurado. Um oficial pode testá-lo e retomar a publicação em Configurações → Avançado.",
+    "testButton": "Testar / retomar auditoria",
+    "queued": "Uma mensagem de teste foi colocada na fila do canal de auditoria. A publicação foi retomada.",
+    "blocked": "O bot não consegue usar este canal. Confira se ele pertence a este servidor e se o PICKET tem as permissões Ver canal, Enviar mensagens e Inserir links.",
+    "unavailable": "O Discord está temporariamente indisponível. Tente novamente.",
+    "noChannel": "Selecione um canal de auditoria primeiro.",
+    "added": "Adicionado",
+    "removed": "Removido",
+    "suspension": "Suspenso desde",
+    "memberAccess": "Acesso de membro",
+    "officerAccess": "Acesso de oficial",
+    "open": "Aberto",
+    "pageCount_one": "{{count}} página",
+    "pageCount_other": "{{count}} páginas"
+  }
+}

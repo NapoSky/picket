@@ -12,8 +12,8 @@ const discordLocales = Object.values(Locale) as string[];
 describe('shipped catalogs', () => {
   const catalogs = loadCatalogs();
 
-  it('ships English as the source and French', () => {
-    expect(Object.keys(catalogs)).toEqual(expect.arrayContaining(['en', 'fr']));
+  it('ships English as the source, French, German, Spanish and Brazilian Portuguese', () => {
+    expect(Object.keys(catalogs)).toEqual(expect.arrayContaining(['en', 'fr', 'de', 'es-ES', 'pt-BR']));
   });
 
   it('passes every CI check (known keys, placeholders, Discord limits, locale file names)', () => {
@@ -25,12 +25,51 @@ describe('shipped catalogs', () => {
     expect(generated).toBe(renderKeys(catalogs['en']));
   });
 
-  it('translates every English key into French (no silent fallback for shipped languages)', () => {
+  it.each(Object.keys(catalogs).filter((locale) => locale !== DEFAULT_LOCALE))('translates every English key into %s (no silent fallback)', (locale) => {
     const flat = (value: unknown, prefix = ''): string[] =>
       Object.entries(value as Record<string, unknown>).flatMap(([k, v]) =>
         typeof v === 'object' && v !== null ? flat(v, `${prefix}${k}.`) : [`${prefix}${k}`],
       );
-    expect(flat(catalogs['fr']).sort()).toEqual(flat(catalogs['en']).sort());
+    expect(flat(catalogs[locale]).sort()).toEqual(flat(catalogs['en']).sort());
+  });
+
+  it.each([
+    ['de-DE', 'de', 'Gespeichert.'],
+    ['de', 'de', 'Gespeichert.'],
+    ['es', 'es-ES', 'Guardado.'],
+    ['es-ES', 'es-ES', 'Guardado.'],
+    ['es-419', 'es-ES', 'Guardado.'],
+    ['ES-mx', 'es-ES', 'Guardado.'],
+    ['pt-BR', 'pt-BR', 'Salvo.'],
+    ['pt-br', 'pt-BR', 'Salvo.'],
+    ['pt', 'pt-BR', 'Salvo.'],
+    ['pt-PT', 'pt-BR', 'Salvo.'],
+  ])('provides the %s user with the %s catalog', (candidate, locale, saved) => {
+    const i18n = createI18n(catalogs);
+    expect(i18n.resolve(candidate, 'fr')).toBe(locale);
+    expect(i18n.translator(candidate).t('panel.saved')).toBe(saved);
+  });
+
+  it.each([
+    ['de', 'zugelassene Rolle', 'zugelassene Rollen', 'Seite', 'Seiten'],
+    ['es-ES', 'rol permitido', 'roles permitidos', 'página', 'páginas'],
+  ])('renders counts and interpolated Discord timestamps in %s', (locale, role, roles, page, pages) => {
+    const t = createI18n(catalogs).translator(locale).t;
+    for (const count of [0, 1, 2]) {
+      expect(t('panel.roleCount', { count })).toBe(`${count} ${count === 1 ? role : roles}`);
+      expect(t('audit.pageCount', { count })).toBe(`${count} ${count === 1 ? page : pages}`);
+    }
+    expect(t('panel.deletionDate', { timestamp: 1791370800 })).toContain('<t:1791370800:F> (<t:1791370800:R>)');
+  });
+
+  it('renders Portuguese counts and timer alerts with the resource name and Discord timestamp', () => {
+    const t = createI18n(catalogs).translator('pt-BR').t;
+    expect(t('panel.roleCount', { count: 1 })).toBe('1 cargo permitido');
+    expect(t('panel.roleCount', { count: 2 })).toBe('2 cargos permitidos');
+    expect(t('audit.pageCount', { count: 1 })).toBe('1 página');
+    expect(t('audit.pageCount', { count: 2 })).toBe('2 páginas');
+    expect(t('timers.alert.text', { icon: '⏱️', name: 'Alpha', place: 'Blemish', time: '<t:1791370800:R>' }))
+      .toBe('⏱️ **Alpha** (Blemish) expira <t:1791370800:R>.');
   });
 
   it('discovers every file of the locales directory', () => {
@@ -85,6 +124,8 @@ describe('createI18n', () => {
     [['en-US'], 'en'],
     [['pt-BR'], 'pt-BR'],
     [['pt-br'], 'pt-BR'],
+    [['pt'], 'pt-BR'],
+    [['pt-PT'], 'pt-BR'],
     [['de', 'fr'], 'fr'],
     [['de'], 'en'],
     [[undefined, null, ''], 'en'],
@@ -96,6 +137,15 @@ describe('createI18n', () => {
   it('prefers the first supported candidate (user locale before guild locale)', () => {
     expect(i18n.resolve('en-US', 'fr')).toBe('en');
     expect(i18n.resolve('de', 'fr')).toBe('fr');
+  });
+
+  it('prefers exact or base matches and never arbitrarily chooses between regional catalogs', () => {
+    const catalogs = { en: {}, 'es-ES': {}, 'es-419': {}, fr: {} };
+    const regional = createI18n(catalogs);
+    expect(regional.resolve('es-419')).toBe('es-419');
+    expect(regional.resolve('es-MX', 'fr')).toBe('fr');
+    expect(regional.resolve('es')).toBe('en');
+    expect(createI18n({ ...catalogs, es: {} }).resolve('es-MX')).toBe('es');
   });
 
   it('exposes command texts with localizations only for languages that translated them', () => {

@@ -15,8 +15,6 @@ export interface BoardSettings {
   readonly alertRoleIds: readonly RoleId[];
   /** Sans notification push, même pour les rôles mentionnés. */
   readonly alertSilent: boolean;
-  /** `warn` : on ajoute et on prévient ; `refuse` : on n'ajoute pas un doublon actif. */
-  readonly duplicates: 'warn' | 'refuse';
   /** Barrer et rafraîchir réservés au propriétaire de l'asset et aux officiers. */
   readonly restrictChanges: boolean;
   /** Heures après lesquelles un asset barré ou expiré est supprimé ; `null` : jamais. */
@@ -29,7 +27,6 @@ export const DEFAULT_BOARD_SETTINGS: BoardSettings = {
   alertThresholdsMin: [120],
   alertRoleIds: [],
   alertSilent: true,
-  duplicates: 'warn',
   restrictChanges: false,
   purgeAfterHours: 24,
   resetOnNewWar: false,
@@ -59,7 +56,6 @@ export function parseBoardSettings(raw: unknown): BoardSettings {
     alertThresholdsMin: isThresholdList(source['alertThresholdsMin']) ? sortThresholds(source['alertThresholdsMin']) : defaults.alertThresholdsMin,
     alertRoleIds: roles,
     alertSilent: typeof source['alertSilent'] === 'boolean' ? source['alertSilent'] : defaults.alertSilent,
-    duplicates: source['duplicates'] === 'refuse' ? 'refuse' : 'warn',
     restrictChanges: typeof source['restrictChanges'] === 'boolean' ? source['restrictChanges'] : defaults.restrictChanges,
     purgeAfterHours:
       typeof purge === 'number' && Number.isInteger(purge) && purge >= 1 && purge <= MAX_PURGE_HOURS
@@ -78,7 +74,6 @@ export interface SettingsPatch {
   readonly alertThresholdsMin?: readonly number[];
   readonly alertRole?: { readonly action: 'add' | 'remove' | 'clear'; readonly roleId?: RoleId };
   readonly alertSilent?: boolean;
-  readonly duplicates?: 'warn' | 'refuse';
   readonly restrictChanges?: boolean;
   /** 0 : jamais. */
   readonly purgeAfterHours?: number;
@@ -126,7 +121,6 @@ export function applySettingsPatch(current: BoardSettings, patch: SettingsPatch)
     ...next,
     ...(patch.alertsEnabled !== undefined ? { alertsEnabled: patch.alertsEnabled } : {}),
     ...(patch.alertSilent !== undefined ? { alertSilent: patch.alertSilent } : {}),
-    ...(patch.duplicates !== undefined ? { duplicates: patch.duplicates } : {}),
     ...(patch.restrictChanges !== undefined ? { restrictChanges: patch.restrictChanges } : {}),
     ...(patch.resetOnNewWar !== undefined ? { resetOnNewWar: patch.resetOnNewWar } : {}),
   });

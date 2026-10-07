@@ -135,18 +135,39 @@ describe('adding timers', () => {
     expect(await h.addAsset.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, ownerId: h.ids.user, asset: h.assetInput() })).toEqual({ kind: 'no_board' });
   });
 
-  it('TIM-RQ-08: warns about an identical active timer by default, and refuses it when the board says so', async () => {
+  it('TIM-RQ-08: refuses an identical active timer, regardless of legacy settings, owner or duration', async () => {
+    const h = timerHarness(database);
+    const boardId = await h.boardWithMessage();
+    await h.add();
+    await queryAsAdmin(database, 'UPDATE timer_boards SET settings = settings || $1::jsonb WHERE id = $2', [JSON.stringify({ duplicates: 'warn' }), boardId]);
+    const calls = [...h.messaging.calls];
+    const result = await h.addAsset.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, ownerId: h.ids.other, asset: h.assetInput({ name: 'DEPOT', duration: '10' }) });
+    expect(result).toEqual({ kind: 'duplicate' });
+    expect(h.lines()).toHaveLength(1);
+    expect(h.messaging.calls).toEqual(calls);
+    expect(await count("SELECT count(*) AS n FROM timer_events WHERE action = 'add'")).toBe('1');
+  });
+
+  it('allows only one concurrent addition of the same resource', async () => {
     const h = timerHarness(database);
     await h.boardWithMessage();
-    await h.add();
-    const second = await h.addAsset.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, ownerId: h.ids.user, asset: h.assetInput({ name: 'DEPOT' }) });
-    expect(second).toMatchObject({ kind: 'added', duplicateWarning: true, reactivated: false });
-    expect(h.lines()).toHaveLength(2);
+    const results = await Promise.all([h.ids.user, h.ids.other].map((actor) => h.addAsset.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor, ownerId: actor, asset: h.assetInput() })));
+    expect(results.map((result) => result.kind).sort()).toEqual(['added', 'duplicate']);
+    expect(await count('SELECT count(*) AS n FROM timer_assets')).toBe('1');
+    expect(await count("SELECT count(*) AS n FROM timer_events WHERE action = 'add'")).toBe('1');
+    expect(h.lines()).toHaveLength(1);
+  });
 
-    await h.updateSettings.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, patch: { duplicates: 'refuse' } });
-    const third = await h.addAsset.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, ownerId: h.ids.user, asset: h.assetInput() });
-    expect(third).toEqual({ kind: 'duplicate' });
-    expect(h.lines()).toHaveLength(2);
+  it('keeps an expired timer active for duplicate checks until it is struck', async () => {
+    const h = timerHarness(database);
+    await h.boardWithMessage();
+    const first = await h.add({ duration: '1h' });
+    h.clock.advance(2 * HOUR_MS);
+    const input = { guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, ownerId: h.ids.user, asset: h.assetInput() };
+    expect(await h.addAsset.execute(input)).toEqual({ kind: 'duplicate' });
+    await h.strike.execute({ guildId: h.ids.guild, channelId: h.ids.channel, userId: h.ids.user, level: 'member', assetId: first.id });
+    expect(await h.addAsset.execute(input)).toMatchObject({ kind: 'added', reactivated: true, asset: { id: first.id } });
+    expect(await count('SELECT count(*) AS n FROM timer_assets')).toBe('1');
   });
 
   it('brings a struck timer back instead of duplicating it: same id, new duration, new owner', async () => {
@@ -155,7 +176,7 @@ describe('adding timers', () => {
     const first = await h.add({ name: 'Depot' });
     await h.strike.execute({ guildId: h.ids.guild, channelId: h.ids.channel, userId: h.ids.user, level: 'member', assetId: first.id });
     const again = await h.addAsset.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, ownerId: h.ids.other, asset: h.assetInput({ name: 'depot', duration: '10' }) });
-    expect(again).toMatchObject({ kind: 'added', reactivated: true, duplicateWarning: false });
+    expect(again).toMatchObject({ kind: 'added', reactivated: true });
     expect(await queryAsAdmin(database, 'SELECT id, status, duration_s, owner_user_id FROM timer_assets')).toEqual([
       { id: first.id, status: 'active', duration_s: 36_000, owner_user_id: h.ids.other },
     ]);

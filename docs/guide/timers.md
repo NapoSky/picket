@@ -62,6 +62,11 @@ visible with a past deadline; a struck timer is crossed out and no longer has a 
 | Remove struck timers from the board | An officer runs `/timers cleanup`. |
 | Start tracking a struck resource again | Add it with the same type, name, location and code: PICKET reactivates its timer. |
 
+An addition identical to an **already active timer is refused**: use its button to refresh it. Adding a
+**struck timer reactivates it** with the same identifier. PICKET compares type, name (case insensitive), location
+and code. Changing the owner or duration does not make it a different resource. An expired timer remains active
+until it is struck or purged.
+
 By default, members can refresh and strike other members' timers. An officer can reserve
 these two actions for the timer's owner and officers in `/timers settings` → **Board management**.
 
@@ -102,7 +107,7 @@ These settings apply to this board, rather than every board on the server.
 | --- | --- |
 | **Home** | View the active timer count, main settings and display status. |
 | **🔔 Alerts** | Enable or disable alerts, choose times before the deadline, silent mode and roles to notify. |
-| **🛡️ Board management** | Choose who can strike and refresh, handle duplicates and configure automatic cleanup. |
+| **🛡️ Board management** | Choose who can strike and refresh, and configure automatic cleanup. |
 
 To notify a role, choose it in the **Alerts** screen's selector. Add or remove roles one at a time, or clear them all.
 Adding `@everyone` requires confirmation. The **Edit** button opens a prefilled form for alert thresholds or cleanup
@@ -119,7 +124,6 @@ struck or expired timers already past that delay may be deleted immediately.
 | Time before the deadline | For example `6h, 2h, 30m`: up to 4 thresholds, from 5 minutes to 7 days. | `2h` |
 | Roles to notify | Up to 5 roles. | None |
 | Notifications | Silent mode or push notifications. | Silent |
-| Identical timers | Allow with a warning, or refuse the addition. | Allow and warn |
 | Who can strike and refresh | All members, or the owner and officers only. | All members |
 | Automatic cleanup | After 1 to 720 hours; `0` disables it. | 24 h |
 

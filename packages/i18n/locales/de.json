@@ -1,0 +1,385 @@
+{
+  "errors": {
+    "duplicate": "Diese Interaktion wurde bereits verarbeitet.",
+    "guildOnly": "Dieser Befehl kann nur auf einem Server verwendet werden.",
+    "denied": "Du hast keinen Zugriff auf diesen Befehl (erforderliche Stufe: {{level}}).",
+    "unknownCommand": "Dieser Befehl ist nicht mehr verfügbar.",
+    "expired": "Diese Interaktion ist nicht mehr verfügbar.",
+    "failure": "Etwas ist schiefgelaufen. Bitte versuche es später erneut.",
+    "timeout": "Die Anfrage hat zu lange gedauert. Bitte versuche es erneut.",
+    "featureDisabled": "Diese Funktion ist auf diesem Server deaktiviert. Ein Offizier kann sie in /picket settings aktivieren.",
+    "suspended": "Die PICKET-Daten werden am {{date}} gelöscht. Ein Serveradministrator kann dies in /picket settings → Daten abbrechen."
+  },
+  "levels": {
+    "member": "Mitglied",
+    "officer": "Offizier",
+    "admin": "Administrator",
+    "none": "keine"
+  },
+  "commands": {
+    "todolist": {
+      "description": "Interaktive Aufgabenlisten",
+      "create": {
+        "description": "Eine Aufgabenliste in diesem Kanal veröffentlichen"
+      }
+    },
+    "timers": {
+      "description": "Übersicht für Foxhole-Timer",
+      "create": {
+        "description": "Die Timer-Übersicht in diesem Kanal erstellen"
+      },
+      "add": {
+        "description": "Einen Timer zur Übersicht dieses Kanals hinzufügen",
+        "options": {
+          "type": {
+            "description": "Was der Timer überwacht"
+          },
+          "place": {
+            "description": "Stadt oder Ort (Namen eingeben; die Region wird angezeigt)"
+          },
+          "owner": {
+            "description": "Wer sich darum kümmert (standardmäßig du)"
+          }
+        }
+      },
+      "strike": {
+        "description": "Einen Timer in der Übersicht durchstreichen",
+        "options": {
+          "timer": {
+            "description": "Durchzustreichender Timer"
+          }
+        }
+      },
+      "cleanup": {
+        "description": "Durchgestrichene Timer aus der Übersicht entfernen"
+      },
+      "repair": {
+        "description": "Die Nachrichten der Übersicht aus den gespeicherten Timern wiederherstellen"
+      },
+      "settings": {
+        "description": "Das private Einstellungsfenster für die Übersicht dieses Kanals öffnen"
+      }
+    },
+    "picket": {
+      "description": "PICKET-Verwaltung und Informationen",
+      "status": {
+        "description": "Den PICKET-Status für diesen Server anzeigen"
+      },
+      "settings": {
+        "description": "Das private Einstellungsfenster für den Server öffnen"
+      }
+    }
+  },
+  "discordPermissions": {
+    "viewChannel": "Kanal ansehen",
+    "sendMessages": "Nachrichten senden",
+    "embedLinks": "Links einbetten"
+  },
+  "todolist": {
+    "title": "📋 Aufgabenliste",
+    "footer": "📋 {{page}}/{{total}}",
+    "modal": {
+      "title": "Neue Aufgabenliste",
+      "label": "Aufgaben (eine pro Zeile)",
+      "placeholder": "__Vorbereitung__\nA・Kisten (x2)\n🇧- Lkw\nFreitext bleibt unverändert"
+    },
+    "created": {
+      "one": "Aufgabenliste veröffentlicht.",
+      "many": "Aufgabenliste in {{count}} Nachrichten veröffentlicht."
+    },
+    "completed": "Aufgabenliste erledigt: Die Nachricht wurde entfernt.",
+    "completedPage": "Seite {{page}}/{{total}} erledigt: Die Nachricht wurde entfernt.",
+    "alreadyDone": "Diese Aufgabe wurde bereits erledigt.",
+    "errors": {
+      "empty": "Nichts zu veröffentlichen: Der Text ist leer.",
+      "inputTooLong": "Der Text ist zu lang (maximal {{max}} Zeichen).",
+      "noItems": "Keine Aufgabe gefunden. Beginne eine Aufgabenzeile mit einem Buchstaben-Emoji (🇦- Kisten) oder einem Großbuchstaben und ・ (A・Kisten).",
+      "tooManyItems": "Zu viele Aufgaben (maximal {{max}}).",
+      "itemTooLong": "Zeile {{line}}: Die Aufgabe ist zu lang (maximal {{max}} Zeichen).",
+      "tooLongToRender": "Diese Liste ist zu lang, um sie anzuzeigen. Kürze den Freitext.",
+      "yourText": "Dein Text zum Kopieren:",
+      "missingPermissions": "Ich kann hier nichts veröffentlichen. Fehlende Berechtigungen in diesem Kanal: {{missing}}.",
+      "cannotPost": "Ich konnte in diesem Kanal nichts veröffentlichen. Prüfe meine Berechtigungen und versuche es erneut.",
+      "cannotEdit": "Ich konnte diese Liste nicht aktualisieren. Prüfe meine Berechtigungen in diesem Kanal.",
+      "unreadable": "Diese Liste kann nicht mehr gelesen werden. Lösche sie und erstelle eine neue.",
+      "busy": "Diese Liste wird gerade bearbeitet. Bitte versuche es erneut.",
+      "noChannel": "In diesem Kanal kann keine Aufgabenliste erstellt werden."
+    }
+  },
+  "timers": {
+    "board": {
+      "title": "⏱️ Timer und Verlängerungen",
+      "empty": "Noch kein Timer. Füge einen mit /timers add hinzu.",
+      "updated": "🕓 Letzte Aktualisierung",
+      "asset": "Objekt",
+      "code": "Code",
+      "timer": "Timer"
+    },
+    "types": {
+      "stockpile": "Reservelager",
+      "facility": "Anlage",
+      "field": "Feld",
+      "naval_ship": "Kriegsschiff",
+      "tank": "Panzer",
+      "train": "Zug"
+    },
+    "alert": {
+      "text": "{{icon}} **{{name}}** ({{place}}) läuft {{time}} ab."
+    },
+    "modal": {
+      "title": "Neuer Timer: {{type}}",
+      "name": "Name",
+      "namePlaceholder": "Kurzer Name, höchstens 15 Zeichen",
+      "code": "Code",
+      "codeStockpile": "6-stelliger Reservelager-Code",
+      "codeShort": "3 bis 6 Buchstaben oder Ziffern (optional)",
+      "duration": "Dauer",
+      "durationPlaceholder": "Stunden (50, 1.5) oder 2h30m, 1d 12h"
+    },
+    "created": "Timer-Übersicht erstellt. Mit /timers add hinzugefügte Timer erscheinen hier.",
+    "added": "Timer hinzugefügt: {{name}} ({{place}}), {{time}}.",
+    "reactivated": "Timer wieder in der Übersicht: {{name}} ({{place}}), {{time}}.",
+    "struck": "Timer durchgestrichen: {{name}}.",
+    "cleaned": {
+      "one": "1 durchgestrichener Timer entfernt.",
+      "many": "{{count}} durchgestrichene Timer entfernt."
+    },
+    "nothingToClean": "Nichts zu bereinigen: Kein Timer ist durchgestrichen.",
+    "repaired": "Die Nachrichten der Übersicht wurden erneut veröffentlicht.",
+    "restored": "Dieser Kanal hatte bereits eine Timer-Übersicht: Sie wurde mit ihren Timern erneut veröffentlicht.",
+    "errors": {
+      "noBoard": "Dieser Kanal hat keine Timer-Übersicht. Ein Offizier kann sie mit /timers create erstellen.",
+      "boardQuota": "Dieser Server hat bereits {{max}} Timer-Übersichten.",
+      "missingPermissions": "Ich kann hier nichts veröffentlichen. Fehlende Berechtigungen in diesem Kanal: {{missing}}.",
+      "noChannel": "In diesem Kanal kann keine Timer-Übersicht erstellt werden.",
+      "quota": "Diese Übersicht hat bereits {{max}} aktive Timer. Streiche einige durch, bevor du weitere hinzufügst.",
+      "duplicate": "Ein identischer aktiver Timer ist bereits in dieser Übersicht. Verlängere ihn mit seiner Schaltfläche.",
+      "notFound": "Dieser Timer existiert nicht mehr.",
+      "alreadyStruck": "Dieser Timer ist bereits durchgestrichen.",
+      "forbidden": "In dieser Übersicht können nur der Verantwortliche eines Timers und Offiziere ihn ändern.",
+      "boardDisabled": "Der Kanal dieser Übersicht existiert nicht mehr. Sie ist daher deaktiviert. Erstelle mit /timers create eine neue.",
+      "syncPending": "Gespeichert, aber die Nachricht der Übersicht konnte noch nicht aktualisiert werden ({{reason}}). Ich versuche es automatisch erneut.",
+      "unknownType": "Unbekannter Timer-Typ.",
+      "unknownPlace": "Unbekannter Ort. Gib den Anfang des Stadtnamens ein und wähle einen Vorschlag.",
+      "unknownRegion": "Unbekannte Region. Wähle einen der Vorschläge.",
+      "unknownLocation": "Unbekannter Ort. Wähle einen der Vorschläge für diese Region.",
+      "nameEmpty": "Der Name ist leer.",
+      "nameTooLong": "Der Name ist zu lang (maximal {{max}} Zeichen).",
+      "codeRequired": "Für ein Reservelager ist ein 6-stelliger Code erforderlich.",
+      "codeInvalid": "Ungültiger Code. Reservelager-Codes haben 6 Ziffern; andere Codes haben 3 bis 6 Buchstaben oder Ziffern.",
+      "durationInvalid": "Ungültige Dauer. Verwende Stunden (50, 1.5) oder Einheiten (2h30m, 1d 12h).",
+      "durationTooShort": "Die Dauer ist zu kurz (mindestens {{min}}).",
+      "durationTooLong": "Die Dauer ist zu lang (maximal {{max}})."
+    },
+    "settings": {
+      "on": "an",
+      "off": "aus",
+      "none": "keine",
+      "never": "nie",
+      "silent": "stumm",
+      "notifying": "mit Push-Benachrichtigung",
+      "changesEveryone": "jedes Mitglied",
+      "changesRestricted": "nur Verantwortliche und Offiziere",
+      "purgeAfter": "nach {{hours}} h",
+      "syncOk": "aktuell",
+      "syncFailed": "ausstehend ({{reason}})",
+      "updated": "Einstellungen der Übersicht aktualisiert.",
+      "unchanged": "Nichts zu ändern.",
+      "invalidThresholds": "Ungültige Schwellen. Beispiel: 6h, 2h, 30m (höchstens {{max}}, jeweils zwischen {{min}} Minuten und 7 Tagen).",
+      "tooManyRoles": "Höchstens {{max}} Rollen können benachrichtigt werden.",
+      "invalidRole": "Ungültige Rolle.",
+      "invalidPurge": "Die automatische Bereinigung muss zwischen 0 (nie) und {{max}} Stunden liegen."
+    },
+    "panel": {
+      "title": "Einstellungen der Übersicht",
+      "active": "aktive Timer",
+      "help": "Dieses private Fenster konfiguriert nur die Übersicht dieses Kanals. Jede Änderung wirkt sofort. Das Limit beträgt 50 aktive Timer.",
+      "alerts": "Warnungen",
+      "manage": "Übersicht verwalten",
+      "configure": "Konfigurieren",
+      "edit": "Bearbeiten",
+      "alertsHelp": "Wähle, wann die Gruppe gewarnt wird und welche Rollen benachrichtigt werden. Diese Einstellungen bleiben beim Deaktivieren der Warnungen erhalten.",
+      "thresholds": "Wann warnen?",
+      "thresholdInput": "Zeit vor Ablauf",
+      "notifications": "Benachrichtigungen",
+      "notificationsHelp": "Der Stummmodus unterdrückt Push-Benachrichtigungen, auch für erwähnte Rollen.",
+      "notify": "Benachrichtigungen aktivieren",
+      "makeSilent": "Stummschalten",
+      "roles": "Zu benachrichtigende Rollen",
+      "rolesHelp": "Füge Rollen einzeln hinzu oder entferne sie (höchstens {{max}}). Eine Rolle muss erwähnbar sein, oder PICKET benötigt die Berechtigung, alle Rollen zu erwähnen.",
+      "clearRoles": "Alle Rollen entfernen",
+      "rolesUnavailable": "Die Rollen können gerade nicht überprüft werden. Versuche es erneut.",
+      "changes": "Wer darf durchstreichen und verlängern?",
+      "changesHelp": "Offiziere und Administratoren behalten diese Berechtigungen immer.",
+      "allowEveryone": "Alle Mitglieder zulassen",
+      "ownersOnly": "Auf Verantwortliche beschränken",
+      "purge": "Automatische Bereinigung",
+      "purgeSummary": "Automatische Bereinigung: {{purge}}",
+      "purgeHelp": "Entfernt durchgestrichene oder abgelaufene Timer nach der gewählten Frist endgültig. 0 deaktiviert diese Bereinigung.",
+      "purgeInput": "Frist in Stunden (0 = nie)",
+      "purgeConfirm": "Durchgestrichene oder abgelaufene Timer nach {{hours}} h löschen? Timer, die diese Frist bereits überschritten haben, werden sofort gelöscht. Diese Löschung ist endgültig.",
+      "war": "Neuer Krieg — Demnächst",
+      "warHelp": "Automatische Zurücksetzungen benötigen das noch nicht verfügbare Kriegsprotokoll. Aktuell werden Timer bei einem neuen Krieg nicht automatisch zurückgesetzt.",
+      "disableTitle": "Warnungen deaktivieren?",
+      "disableHelp": "PICKET sendet keine neuen Warnungen für diese Übersicht mehr. Timer werden weiter überwacht, und vorhandene Warnmeldungen können weiterhin bestätigt werden.",
+      "everyoneHelp": "Die Rolle @everyone zu den zu benachrichtigenden Rollen hinzufügen? Sie umfasst alle Mitglieder des Servers.",
+      "syncPending": "Aktualisierung der Anzeige ausstehend. Deine Daten sind gespeichert; PICKET versucht es automatisch erneut.",
+      "expired": "Dieses Fenster ist abgelaufen oder seine Übersicht hat sich geändert. Führe /timers settings erneut im Kanal der Übersicht aus.",
+      "legacy": "Befehlsargumente wurden durch dieses Fenster ersetzt. Es wurde nichts geändert: Wähle unten eine Aktion."
+    }
+  },
+  "status": {
+    "body": "PICKET ist einsatzbereit.\nSprache: {{locale}} - Zeitzone: {{timezone}}\nAktivierte Funktionen: {{features}}\nAudit-Kanal: {{audit}}",
+    "auditConfigured": "konfiguriert",
+    "auditMissing": "nicht konfiguriert",
+    "languageAuto": "automatisch"
+  },
+  "features": {
+    "timers": "Timer",
+    "todolists": "Aufgabenlisten",
+    "warlog": "Kriegsprotokoll"
+  },
+  "settings": {
+    "invalidOption": "Ungültiger Wert.",
+    "rejected": {
+      "unsupportedLanguage": "Diese Sprache ist nicht verfügbar.",
+      "invalidTimezone": "Unbekannte Zeitzone. Verwende einen IANA-Namen wie Europe/Paris, America/New_York oder UTC."
+    }
+  },
+  "permissions": {
+    "show": {
+      "level": "Deine Zugriffsstufe: {{level}}",
+      "officers": "Offiziersrollen: {{roles}}",
+      "members": "Mitgliedsrollen: {{roles}}",
+      "noOfficers": "keine (nur Serveradministratoren)",
+      "noMembers": "keine",
+      "warning": "Hinweis: {{text}}"
+    },
+    "warnings": {
+      "no_officer_role": "Keine Offiziersrolle konfiguriert: Nur Serveradministratoren können Offiziersbefehle verwenden.",
+      "member_open_to_everyone": "Alle auf dem Server können Mitgliedsbefehle verwenden."
+    },
+    "set": {
+      "everyoneNotOfficer": "@everyone kann keine Offiziersrolle sein."
+    }
+  },
+  "data": {
+    "export": "Daten exportieren",
+    "exportHelp": "Lade eine JSON-Datei mit den für diesen Server gespeicherten Daten herunter: Einstellungen, zugelassene Rollen, Audit-Einträge, Übersichten und Timer, Verlauf, Warnungen, technische Kennungen und Anwendungsprotokolle. Audit-Einträge, Verlauf und Anwendungsprotokolle werden 30 Tage aufbewahrt. Aufgabenlisten bleiben in Discord. Frühere externe Protokolle und Sicherungen des Betreibers sind nicht enthalten.",
+    "exportReady": "📥 Hier sind die Daten deines Servers. Diese Datei ist nur für dich sichtbar. Sie enthält Discord-Kennungen: Bewahre sie vertraulich auf. Es wurden keine Einstellungen geändert.",
+    "exportTooLarge": "Der vollständige Export überschreitet das Upload-Limit von {{limitMb}} MB. Es wurde keine unvollständige Datei gesendet. Wende dich an den PICKET-Betreiber, um deine Daten zu erhalten.",
+    "cancelled": "Die geplante Löschung wurde abgebrochen. PICKET ist wieder aktiv.",
+    "nothingScheduled": "Für diesen Server ist keine Löschung geplant."
+  },
+  "panel": {
+    "title": "PICKET · Servereinstellungen",
+    "home": "Übersicht",
+    "homeHelp": "Wähle Sprache und Module für deinen Server. Jede Änderung wirkt sofort.",
+    "permissions": "Berechtigungen",
+    "advanced": "Erweitert",
+    "data": "Daten",
+    "refresh": "Aktualisieren",
+    "back": "Zurück",
+    "next": "Weiter",
+    "previous": "Zurück",
+    "page": "Seite {{page}} / {{total}}",
+    "saved": "Gespeichert.",
+    "unchanged": "Nichts zu ändern.",
+    "expired": "Dieses Fenster ist abgelaufen. Öffne /picket settings erneut.",
+    "owner": "Dieses Fenster gehört einem anderen Nutzer. Öffne selbst /picket settings.",
+    "language": "Sprache",
+    "auto": "Automatisch — folgt der Discord-Sprache jedes Nutzers",
+    "chooseLanguage": "Sprache auswählen",
+    "languageHelp": "**Automatisch** folgt der Discord-Sprache der jeweiligen Person, dann der Serversprache, dann Englisch. Wähle eine **feste Sprache**, damit PICKET für alle dieselbe Sprache verwendet.",
+    "timersHelp": "Überwache Fristen und erhalte Warnungen von deinen Übersichten.",
+    "todolistsHelp": "Teile Aufgabenlisten zum Abhaken in Discord.",
+    "enabled": "Aktiviert",
+    "disabled": "Deaktiviert",
+    "enable": "Aktivieren",
+    "disable": "Deaktivieren",
+    "disableTitle": "{{feature}} deaktivieren?",
+    "disableHelp": "Interaktionen und Hintergrundverarbeitung für dieses Modul werden angehalten.\n\n**Vorhandene Daten bleiben erhalten.**",
+    "confirm": "Bestätigen",
+    "cancel": "Abbrechen",
+    "access": "Deine Zugriffsstufe: **{{level}}**",
+    "soon": "Kriegsprotokoll · Demnächst",
+    "reserved": "Die Zeitzone wird für zukünftige Funktionen gespeichert und hat derzeit keine Auswirkung.",
+    "timezone": "Zeitzone (IANA)",
+    "changeTimezone": "Zeitzone ändern",
+    "audit": "**Audit-Kanal**: {{channel}}",
+    "chooseChannel": "Audit-Kanal auswählen",
+    "clearChannel": "Kanal entfernen",
+    "auditHelp": "Veröffentlicht Konfigurationsänderungen, erstellte Aufgabenlisten, erstellte und entfernte Timer sowie bestätigte Warnungen. Listeninhalte und Timer-Verlängerungen werden nicht veröffentlicht.",
+    "member": "Wer darf PICKET nutzen?",
+    "officer": "Wer darf PICKET konfigurieren?",
+    "addRole": "Rolle hinzufügen",
+    "removeRole": "Konfigurierte Rolle entfernen",
+    "rolesEmpty": "Keine Rolle konfiguriert.",
+    "roleCount_one": "{{count}} zugelassene Rolle",
+    "roleCount_other": "{{count}} zugelassene Rollen",
+    "adminImplicit": "Serveradministratoren haben immer Zugriff.",
+    "readOnly": "Nur Administratoren können diese Berechtigungen ändern.",
+    "everyone": "Zugriff für @everyone öffnen",
+    "restrict": "Zugriff für @everyone entfernen",
+    "restrictHelp": "Füge eine Mitgliedsrolle hinzu, bevor du @everyone entfernst, wenn Mitglieder weiterhin Zugriff haben sollen.",
+    "everyoneTitle": "Allen die Nutzung von PICKET erlauben?",
+    "everyoneHelp": "Alle Mitglieder dieses Servers können Mitgliedsbefehle verwenden. Der Offizierszugriff bleibt beschränkt.",
+    "deletionHelp": "Die Löschung **setzt PICKET sofort aus**. Nach der konfigurierten Aufbewahrungsfrist werden Serverkonfiguration, Zugriffsrollen, Timer, Verlauf und Audit-Einträge **endgültig gelöscht**.\n\nDiscord-Nachrichten, einschließlich Aufgabenlisten, werden **nicht automatisch gelöscht**.",
+    "deletionDate": "**Löschdatum**: <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
+    "schedule": "Löschung planen",
+    "deleteTitle": "Endgültige Datenlöschung bestätigen?",
+    "deleteConfirm": "Löschung bestätigen",
+    "suspendedTitle": "PICKET ist pausiert",
+    "suspended": "PICKET ist ausgesetzt. Die Datenlöschung ist für <t:{{timestamp}}:F> (<t:{{timestamp}}:R>) geplant.",
+    "recovery": "Nur ein Serveradministrator kann die Löschung abbrechen. Andere Einstellungen sind während der Aussetzung nicht verfügbar.",
+    "cancelDeletion": "Löschung abbrechen",
+    "legacy": "Befehle wurden in dieses Fenster verschoben. Alte Befehlsargumente wurden nicht angewendet.",
+    "statusReserved": "Zeitzone: nur Vorabkonfiguration. Kriegsprotokoll: demnächst.",
+    "roleLabel": "Rolle {{id}}"
+  },
+  "audit": {
+    "configuration": "Serverkonfiguration geändert",
+    "language": "Sprache geändert",
+    "timezone": "Zeitzone geändert",
+    "channel": "Audit-Kanal geändert",
+    "feature": "Module geändert",
+    "permissions": "Berechtigungen geändert",
+    "roleDeleted": "Gelöschte Rolle aus Berechtigungen entfernt",
+    "suspended": "Server ausgesetzt · Löschung geplant",
+    "resumed": "Serverlöschung abgebrochen",
+    "departed": "Bot vom Server entfernt",
+    "returned": "Bot zum Server zurückgekehrt",
+    "test": "Test des Audit-Kanals",
+    "timerCreated": "Timer erstellt",
+    "timerReactivated": "Timer reaktiviert",
+    "timerStruck": "Timer durchgestrichen",
+    "timerCleanup": "Durchgestrichene Timer entfernt",
+    "timerReset": "Timer entfernt · Kriegswechsel",
+    "alertAcknowledged": "Warnung bestätigt",
+    "todolistCreated": "Aufgabenliste erstellt",
+    "actor": "Von {{actor}}",
+    "system": "PICKET (automatische Aktion)",
+    "modules": "Module",
+    "timer": "Timer",
+    "location": "Ort",
+    "count": "Entfernte Timer",
+    "threshold": "Warnschwelle",
+    "source": "Quellkanal",
+    "pages": "Seiten",
+    "messages": "Nachrichten öffnen",
+    "paused": "⚠️ Audit-Veröffentlichung pausiert: Der Bot kann den konfigurierten Kanal nicht nutzen. Ein Offizier kann ihn unter Einstellungen → Erweitert testen und die Veröffentlichung fortsetzen.",
+    "testButton": "Audit testen / fortsetzen",
+    "queued": "Eine Testnachricht wird im Audit-Kanal veröffentlicht. Die Veröffentlichung wurde fortgesetzt.",
+    "blocked": "Der Bot kann diesen Kanal nicht nutzen. Prüfe, ob er zu diesem Server gehört und PICKET die Berechtigungen Kanal ansehen, Nachrichten senden und Links einbetten hat.",
+    "unavailable": "Discord ist vorübergehend nicht verfügbar. Bitte versuche es erneut.",
+    "noChannel": "Wähle zuerst einen Audit-Kanal.",
+    "added": "Hinzugefügt",
+    "removed": "Entfernt",
+    "suspension": "Ausgesetzt seit",
+    "memberAccess": "Mitgliedszugriff",
+    "officerAccess": "Offizierszugriff",
+    "open": "Offen",
+    "pageCount_one": "{{count}} Seite",
+    "pageCount_other": "{{count}} Seiten"
+  }
+}

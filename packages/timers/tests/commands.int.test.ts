@@ -249,16 +249,16 @@ describe('timer modal submission', () => {
     expect(h.lines()).toHaveLength(0);
   });
 
-  it('warns about a duplicate and relays a Discord failure without losing the timer', async () => {
+  it('refuses a duplicate and relays a Discord failure without losing the saved timer', async () => {
     const h = timerHarness(database);
     await h.boardWithMessage();
     const { modal, said } = app(h);
     await said(modal(stockpileModal(h), { name: 'Depot', code: '123456', duration: '50' }));
-    expect(await said(modal(stockpileModal(h), { name: 'depot', code: '123456', duration: '50' }))).toContain('an identical active timer was already on the board');
+    expect(await said(modal(stockpileModal(h), { name: 'depot', code: '123456', duration: '50' }))).toContain('An identical active timer is already on this board');
 
     h.messaging.failNext('edit', 'missing_permissions');
     expect(await said(modal(stockpileModal(h), { name: 'Other', code: '654321', duration: '50' }))).toContain('could not be updated yet (missing_permissions)');
-    expect(await h.listActive.execute(h.ids.guild, h.ids.channel, '')).toHaveLength(3);
+    expect(await h.listActive.execute(h.ids.guild, h.ids.channel, '')).toHaveLength(2);
   });
 
   it('refuses a forged or outdated id, and answers when the board is gone', async () => {
@@ -464,15 +464,15 @@ describe('/timers settings panel', () => {
     expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings.alertRoleIds).toEqual([]);
   });
 
-  it('sets duplicate handling and ownership restrictions through the management screen', async () => {
+  it('sets ownership restrictions without exposing a duplicate policy', async () => {
     const h = timerHarness(database);
     await h.boardWithMessage();
     const ui = app(h);
     await ui.command(['settings']);
     await ui.click(ui.control('view', 'manage'));
-    await ui.click(ui.control('dups'), { componentKind: 'stringSelect', selectedValues: ['refuse'] });
+    expect(ui.panel().components.some((item) => item.kind === 'stringSelect')).toBe(false);
     await ui.click(ui.control('guard', '1'));
-    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings).toMatchObject({ duplicates: 'refuse', restrictChanges: true });
+    expect((await h.getSettings.execute(h.ids.guild, h.ids.channel))?.board.settings).toMatchObject({ restrictChanges: true });
   });
 
   it('confirms an automatic cleanup delay before deleting already due timers, and accepts zero', async () => {

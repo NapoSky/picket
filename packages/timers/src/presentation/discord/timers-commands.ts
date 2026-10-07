@@ -370,8 +370,7 @@ export function timersFamily(deps: TimersFamilyDeps): ComponentFamily {
             place: placeOf(result.asset),
             time: momentOf(result.asset),
           });
-          const warning = result.duplicateWarning ? `\n${t('timers.duplicateWarning')}` : '';
-          return ephemeral(`${text}${warning}${syncNote(result.sync, t)}`);
+          return ephemeral(`${text}${syncNote(result.sync, t)}`);
         }
       }
     });

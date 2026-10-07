@@ -92,15 +92,13 @@ export type AddAssetResult =
       readonly kind: 'added';
       readonly asset: TimerAsset;
       readonly reactivated: boolean;
-      /** Un asset actif identique existait déjà (réglage « avertir »). */
-      readonly duplicateWarning: boolean;
       readonly sync: SyncStatus;
     };
 
 type AddDecision =
   | { readonly kind: 'quota'; readonly max: number }
   | { readonly kind: 'duplicate' }
-  | { readonly kind: 'added'; readonly asset: TimerAsset; readonly reactivated: boolean; readonly duplicateWarning: boolean };
+  | { readonly kind: 'added'; readonly asset: TimerAsset; readonly reactivated: boolean };
 
 export class AddAsset {
   readonly #deps: TimerUseCaseDeps;
@@ -122,11 +120,10 @@ export class AddAsset {
       input.guildId,
       board.id,
       (state): Mutation<AddDecision> => {
-        // Relire les réglages et compter les actifs sous le verrou : les ajouts concurrents respectent le quota fixe.
-        const { duplicates } = state.board.settings;
+        // Vérifier l'identité et le quota sous le verrou : deux ajouts simultanés ne créent pas de doublon.
         const active = activeAssets(state.assets);
-        const identical = active.find((asset) => sameResource(asset, { ...candidate, code: candidate.code }));
-        if (identical !== undefined && duplicates === 'refuse') return { result: { kind: 'duplicate' } };
+        const identical = active.find((asset) => sameResource(asset, candidate));
+        if (identical !== undefined) return { result: { kind: 'duplicate' } };
         if (active.length >= MAX_ACTIVE_PER_BOARD) return { result: { kind: 'quota', max: MAX_ACTIVE_PER_BOARD } };
 
         const struck = state.assets.find((asset) => asset.status === 'struck' && sameResource(asset, candidate));
@@ -134,7 +131,7 @@ export class AddAsset {
         if (struck !== undefined) {
           const asset = reactivateAsset(struck, { ownerId: input.ownerId, durationS: candidate.durationS, now });
           return {
-            result: { kind: 'added', asset, reactivated: true, duplicateWarning: identical !== undefined },
+            result: { kind: 'added', asset, reactivated: true },
             changes: [{ kind: 'update', asset }],
             events: [{ assetId: asset.id, actor: input.actor, action: 'reactivate', detail: { ...base, durationS: candidate.durationS, owner: input.ownerId } }],
           };
@@ -157,7 +154,7 @@ export class AddAsset {
           rev: 0,
         };
         return {
-          result: { kind: 'added', asset, reactivated: false, duplicateWarning: identical !== undefined },
+          result: { kind: 'added', asset, reactivated: false },
           changes: [{ kind: 'insert', asset }],
           events: [{ assetId: asset.id, actor: input.actor, action: 'add', detail: { ...base, durationS: candidate.durationS, owner: input.ownerId } }],
         };

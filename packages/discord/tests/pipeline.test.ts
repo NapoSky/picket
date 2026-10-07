@@ -272,15 +272,20 @@ describe('InteractionPipeline localization', () => {
     );
   });
 
-  it('falls back to the guild language when the user language is not supported', async () => {
+  it.each([
+    ['fr', "Vous n'avez pas accès"],
+    ['de', 'Du hast keinen Zugriff'],
+    ['es-ES', 'No tienes acceso'],
+    ['pt-BR', 'Você não tem acesso'],
+  ])('falls back to the %s guild language when the user language is not supported', async (guildLocale, expected) => {
     const { pipeline } = pipelineWith(async () => ephemeral('ok'), denyAll);
-    const reply = await pipeline.handle(makeInteraction({ locale: 'ja', guildLocale: 'fr' }));
-    expect(content(reply)).toContain("Vous n'avez pas accès");
+    const reply = await pipeline.handle(makeInteraction({ locale: 'ja', guildLocale }));
+    expect(content(reply)).toContain(expected);
   });
 
   it('falls back to English when neither language is supported, and for regional variants of English', async () => {
     const { pipeline } = pipelineWith(async () => ephemeral('ok'), denyAll);
-    expect(content(await pipeline.handle(makeInteraction({ locale: 'ja', guildLocale: 'de', id: InteractionId.assert('900000000000000021') })))).toContain('You do not have access');
+    expect(content(await pipeline.handle(makeInteraction({ locale: 'ja', guildLocale: 'ko', id: InteractionId.assert('900000000000000021') })))).toContain('You do not have access');
     expect(content(await pipeline.handle(makeInteraction({ locale: 'en-GB', id: InteractionId.assert('900000000000000022') })))).toContain('You do not have access');
   });
 

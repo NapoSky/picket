@@ -21,7 +21,7 @@ export interface LocalizedText {
 export interface I18n {
   readonly defaultLocale: string;
   readonly locales: readonly string[];
-  /** Premier candidat pris en charge (exact, puis langue seule), sinon la langue par défaut. */
+  /** Premier candidat pris en charge (exact, langue seule, variante unique), sinon la langue par défaut. */
   resolve(...candidates: readonly (string | null | undefined)[]): string;
   translator(locale: string): Translator;
   text(key: MessageKey): LocalizedText;
@@ -63,13 +63,23 @@ export function createI18n(catalogs: Catalogs = loadCatalogs()): I18n {
 
   const locales = Object.keys(catalogs);
   const known = new Map(locales.map((locale) => [locale.toLowerCase(), locale]));
+  // Par exemple, `es` et `es-419` utilisent `es-ES` tant qu'il s'agit de notre seule variante espagnole.
+  // Avec plusieurs variantes, on exige une correspondance exacte ou un catalogue de langue seul.
+  const variants = new Map<string, string[]>();
+  for (const locale of locales) {
+    const language = locale.toLowerCase().split('-')[0]!;
+    variants.set(language, [...(variants.get(language) ?? []), locale]);
+  }
+  const uniqueVariants = new Map([...variants].flatMap(([language, choices]) =>
+    choices.length === 1 ? [[language, choices[0]!] as const] : [],
+  ));
 
   const resolve: I18n['resolve'] = (...candidates) => {
     for (const candidate of candidates) {
       if (!candidate) continue;
       const lower = candidate.toLowerCase();
       const language = lower.split('-')[0] ?? lower;
-      const match = known.get(lower) ?? known.get(language);
+      const match = known.get(lower) ?? known.get(language) ?? uniqueVariants.get(language);
       if (match) return match;
     }
     return DEFAULT_LOCALE;

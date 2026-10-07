@@ -25,7 +25,6 @@ describe('parseBoardSettings', () => {
       alertThresholdsMin: [30, 360, 120],
       alertRoleIds: [role(1), 'bad', role(2)],
       alertSilent: false,
-      duplicates: 'refuse',
       restrictChanges: true,
       purgeAfterHours: 48,
       resetOnNewWar: true,
@@ -35,12 +34,11 @@ describe('parseBoardSettings', () => {
       alertThresholdsMin: [360, 120, 30],
       alertRoleIds: [role(1), role(2)],
       alertSilent: false,
-      duplicates: 'refuse',
       restrictChanges: true,
       purgeAfterHours: 48,
       resetOnNewWar: true,
     });
-    expect(parseBoardSettings({ maxActive: 100, regionEmoji: '🌍', locationEmoji: '📍' })).toEqual(DEFAULT_BOARD_SETTINGS);
+    expect(parseBoardSettings({ maxActive: 100, regionEmoji: '🌍', locationEmoji: '📍', duplicates: 'warn' })).toEqual(DEFAULT_BOARD_SETTINGS);
   });
 });
 

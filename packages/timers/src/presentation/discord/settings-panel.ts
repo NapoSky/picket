@@ -87,11 +87,6 @@ export function createTimerSettingsPanel(deps: TimerSettingsPanelDependencies): 
       case 'manage':
         components.push(text(`### 🛡️ ${t('timers.panel.manage')}`),
           { kind: 'section', text: `👤 **${t('timers.panel.changes')}**\n${t(settings.restrictChanges ? 'timers.settings.changesRestricted' : 'timers.settings.changesEveryone')}\n${t('timers.panel.changesHelp')}`, button: settings.restrictChanges ? button('timers.panel.allowEveryone', 'guard', '0') : button('timers.panel.ownersOnly', 'guard', '1') },
-          text(`📑 **${t('timers.panel.duplicates')}**\n${t('timers.panel.duplicatesHelp')}`),
-          { kind: 'stringSelect', customId: id('dups'), placeholder: t('timers.panel.duplicates'), options: [
-            { label: t('timers.panel.warnDuplicates'), value: 'warn', selected: settings.duplicates === 'warn' },
-            { label: t('timers.panel.refuseDuplicates'), value: 'refuse', selected: settings.duplicates === 'refuse' },
-          ] },
           { kind: 'section', text: `🧹 **${t('timers.panel.purge')}**\n${purge}\n${t('timers.panel.purgeHelp')}`, button: button('timers.panel.edit', 'form', 'purge', 'primary') },
           text(`🚧 **${t('timers.panel.war')}**\n${t('timers.panel.warHelp')}`));
         break;
@@ -178,7 +173,6 @@ export function createTimerSettingsPanel(deps: TimerSettingsPanelDependencies): 
         else if (action === 'purge' && /^\d{1,3}$/u.test(argument)) { patch = { purgeAfterHours: Number(argument) }; page = 'manage'; }
       } else if (interaction.kind === 'component' && interaction.selectedValues.length === 1) {
         const value = interaction.selectedValues[0]!;
-        if (action === 'dups' && interaction.componentKind === 'stringSelect' && (value === 'warn' || value === 'refuse')) { patch = { duplicates: value }; page = 'manage'; }
         if ((action === 'add' && interaction.componentKind === 'roleSelect') || (action === 'del' && interaction.componentKind === 'stringSelect')) {
           const role = RoleId.parse(value);
           if (!role.ok || (action === 'add' && interaction.resolvedRoles[value] === undefined)) return invalid('alerts');

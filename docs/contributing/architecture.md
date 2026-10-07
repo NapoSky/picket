@@ -43,7 +43,7 @@ database, HTTP or Node modules, when a package reaches into another one instead 
 
 ## Add a command
 
-1. Add the texts to `packages/i18n/locales/en.json` and `fr.json`, then run `pnpm i18n:keys`.
+1. Add the texts to `packages/i18n/locales/en.json` and translate them in every shipped catalog, then run `pnpm i18n:keys`.
 2. Write the use case in the `application/` layer, with a port for what it needs.
 3. Add the adapter in `infrastructure/` and the command in `presentation/discord/` (level, options, handler using `t`).
 4. Register it in `apps/bot/src/composition.ts`.
