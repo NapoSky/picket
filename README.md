@@ -74,37 +74,12 @@ Discord's installation link requests the configured scopes and permissions autom
 **Send Messages**, **Embed Links** and **Read Message History** where you use it, plus **Send Messages in Threads** for
 threads. It requests no privileged intent and reads its own messages to update your lists and boards.
 
-Want to run your own instance or work on the code? See **[Self-hosting and local development](SELF_HOSTING.md)**.
-
 Need help or want to share feedback? Join the **[PICKET support Discord](https://discord.gg/EUnVfq5EYs)**.
 
-## How it works
+## Self-hosting and development
 
-A modular monolith in a pnpm workspace, organised in clean layers (`domain`, `application`, `infrastructure`,
-`presentation`) that an architecture test enforces.
-
-| Package | Role |
-| --- | --- |
-| [`apps/bot`](apps/bot) | Composition root: HTTP server, Gateway runner, command line |
-| [`packages/kernel`](packages/kernel) | Identifiers, `Result`, clock, logger, secrets |
-| [`packages/config`](packages/config) | Environment validation |
-| [`packages/observability`](packages/observability) | Structured logs and health endpoints |
-| [`packages/i18n`](packages/i18n) | Translations and catalog checks |
-| [`packages/persistence`](packages/persistence) | Database access, migrations, row-level security |
-| [`packages/coordination`](packages/coordination) | Leases with fencing, per-key locks, Gateway session store |
-| [`packages/discord`](packages/discord) | Interaction pipeline, command and component registries, REST and Gateway adapters |
-| [`packages/guild`](packages/guild) | Servers: settings, permissions, lifecycle |
-| [`packages/game-data`](packages/game-data) | Regions and locations of the game, and the search behind the autocomplete |
-| [`packages/todolist`](packages/todolist) | Todo lists: grammar, layout, ticking |
-| [`packages/timers`](packages/timers) | Timer boards: database state, pure rendering, alerts, board upkeep |
-
-- **PostgreSQL** is the single source of truth. Every table that holds server data has row-level security.
-- Interactions arrive as **signed HTTP requests** (Ed25519); the Gateway is only used for server lifecycle events, with
-  the non-privileged `Guilds` intent.
-- Work that must run once (a Gateway shard, the periodic jobs) is held through a **lease with a fencing token**;
-  interactions are claimed once across replicas.
-- Buttons and forms share one chain with commands: duplicate detection, access level, feature switch, suspension,
-  language, error handling.
+To run your own instance, understand the architecture or work on the code, see the
+**[self-hosting and development guide](SELF_HOSTING.md)**.
 
 ## Contribute
 
