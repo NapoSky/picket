@@ -21,7 +21,7 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 
 | Area | State |
 | --- | --- |
-| **Todo lists** | `/todolist create` posts an interactive list; one button per item; quantities `(x3)`, categories, pagination beyond 25 items; the list lives in the Discord message, nothing is stored in the database |
+| **Todo lists** | `/todolist create` posts an interactive list; one button per item; quantities `(x3)`, categories, pagination beyond 25 items; list content and progress stay in Discord, with creation metadata in the audit log |
 | **Timers** | A countdown board per channel for stockpiles, facilities, fields, ships, tanks and trains; place suggestions as you type; one button per timer to refresh it, however many people click at once; silent expiry alerts with configurable thresholds and roles; strike, clean up, repair; the state lives in the database, so a deleted message is simply reposted |
 | **Permissions** | Three levels (`member`, `officer`, `admin`), roles configurable per server, audit log of every change |
 | **Server settings** | Language, time zone, audit channel, per-feature switches |
@@ -33,14 +33,26 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 
 ### Commands
 
-| Command | Level | What it does |
-| --- | --- | --- |
-| `/todolist create` | member | Opens a form and posts a todo list in the channel |
-| `/timers create` | officer | Creates the timer board of the channel |
-| `/timers add` / `strike` | member | Adds a timer (type, place, then a form) or strikes one |
-| `/timers cleanup` / `repair` / `settings` | officer | Removes struck timers, reposts the board, shows or changes its settings |
-| `/picket status` | member | Shows server settings, configured access roles and your access level |
-| `/picket settings` | officer | Opens the private configuration panel; permissions and data management are admin-only |
+Access roles are configured per server. Officers can also use member commands; server administrators have full access.
+
+**Officers and administrators**
+
+| Command | What it does |
+| --- | --- |
+| `/picket settings` | Opens the private server configuration panel; permission changes and data management are reserved for administrators |
+| `/timers create` | Creates the channel's timer board |
+| `/timers settings` | Opens the private timer configuration panel |
+| `/timers cleanup` | Removes struck timers |
+| `/timers repair` | Reposts the timer board |
+
+**Members**
+
+| Command | What it does |
+| --- | --- |
+| `/picket status` | Shows server settings, configured access roles and your access level |
+| `/todolist create` | Opens a form and posts a todo list in the channel |
+| `/timers add` | Adds a timer: choose its type and place, then fill in a form |
+| `/timers strike` | Strikes a timer |
 
 The full guide is in the [documentation](https://docs.picket-foxhole.com). By using the official instance you accept its
 [Terms of Service](https://docs.picket-foxhole.com/legal/terms) and
@@ -48,24 +60,21 @@ The full guide is in the [documentation](https://docs.picket-foxhole.com). By us
 
 ## Use it
 
-PICKET needs the **View Channel**, **Send Messages** (or **Send Messages in Threads**) and **Embed Links** permissions in
-the channels where you post todo lists. It requests no privileged intent and never reads message content.
+<p align="center">
+  <a href="https://discord.com/oauth2/authorize?client_id=1556492432521302146">
+    <img src="assets/picket-invite.svg" alt="Add PICKET to Discord — keep your regiment in sync with todo lists and timers" width="100%">
+  </a>
+</p>
 
-Invite link (replace `<APPLICATION_ID>`):
+**[Add PICKET to your server](https://discord.com/oauth2/authorize?client_id=1556492432521302146)**, then run
+`/picket settings` to choose your language and access roles. Create your first list with `/todolist create` or a timer
+board with `/timers create`.
 
-```text
-https://discord.com/oauth2/authorize?client_id=<APPLICATION_ID>&scope=bot%20applications.commands&permissions=274877926400
-```
+Discord's installation link requests the configured scopes and permissions automatically. PICKET needs **View Channel**,
+**Send Messages**, **Embed Links** and **Read Message History** where you use it, plus **Send Messages in Threads** for
+threads. It requests no privileged intent and reads its own messages to update your lists and boards.
 
-## Self-host it
-
-PICKET ships as one container image, run as several identical replicas on top of PostgreSQL. The [`deploy/`](deploy)
-directory contains a Docker Compose stack with its own Traefik (HTTPS on port 443 only, certificates through the
-Cloudflare DNS challenge), zero-downtime updates with `docker-rollout`, and a GitHub Actions workflow that deploys by
-image digest over a restricted SSH key.
-
-Start with the [installation guide](https://docs.picket-foxhole.com/self-hosting/install) and the
-[configuration reference](https://docs.picket-foxhole.com/self-hosting/configuration).
+Want to run your own instance or work on the code? See **[Self-hosting and local development](SELF_HOSTING.md)**.
 
 ## How it works
 
@@ -95,43 +104,25 @@ A modular monolith in a pnpm workspace, organised in clean layers (`domain`, `ap
 - Buttons and forms share one chain with commands: duplicate detection, access level, feature switch, suspension,
   language, error handling.
 
-## Develop
+## Contribute
 
-Requirements: Node 24, [pnpm](https://pnpm.io) 12 (`corepack enable`), and Docker for the integration tests.
+Bug reports, code, documentation and translations are welcome. Browse the
+[open issues](https://github.com/NapoSky/picket/issues) to find planned work and problems to help solve.
 
-```sh
-pnpm install
-pnpm build              # TypeScript 7 (tsc -b)
-pnpm test               # typecheck + unit tests (no Docker)
-pnpm test:int           # integration tests on a throw-away PostgreSQL (needs Docker)
-pnpm test:all           # both
-pnpm i18n:keys          # regenerate the typed translation keys after editing en.json
-pnpm docs:dev           # documentation site with live reload
-```
+- **Report a bug:** [open an issue](https://github.com/NapoSky/picket/issues/new) with the steps to reproduce, expected
+  behavior and what happened. Include the deployed version and relevant logs, with secrets and personal data removed.
+- **Suggest an improvement:** explain the user problem and the expected benefit in an issue. Discuss larger changes
+  before implementing them so their scope and architecture can be agreed.
+- **Contribute code:** fork the repository, create a branch and submit a focused pull request. Describe the change and
+  how you verified it. Use the [development guide](SELF_HOSTING.md#local-development) to set up and run the relevant
+  checks, and follow the [architecture guide](https://docs.picket-foxhole.com/contributing/architecture).
+- **Improve the documentation:** edit the Markdown files in [`docs/`](docs), keep English and French pages aligned and
+  check the result with `pnpm docs:build`.
+- **Translate the bot:** edit an existing catalog or submit a UTF-8 i18next JSON file in
+  [`packages/i18n/locales/<discord-locale>.json`](packages/i18n/locales), using English as the source. Preserve keys,
+  placeholders and Discord's length limits. See the [translation guide](https://docs.picket-foxhole.com/contributing/translating).
 
-Before integration tests, start Docker Engine or Docker Desktop and check `docker info`. Testcontainers starts its own
-PostgreSQL 18 container and creates isolated, migrated test databases; it does not use the development database below.
-No Discord credentials are needed: Discord replies and messages use test doubles.
-
-Run it locally against a development Discord application (never the production one):
-
-```sh
-cp .env.example .env                                    # fill in your development application and token
-docker compose -f compose.dev.yml up -d --wait          # local PostgreSQL
-pnpm build
-node --env-file=.env apps/bot/dist/cli.js migrate
-node --env-file=.env apps/bot/dist/cli.js deploy-commands
-node --env-file=.env apps/bot/dist/main.js
-```
-
-Discord must reach `POST /interactions` to deliver interactions, so expose the local port with a tunnel when you test
-commands.
-
-## Translate
-
-English is the source language. Submit translations as pull requests with a UTF-8 i18next JSON file in `packages/i18n/locales/<discord-locale>.json`; the
-file name is the Discord locale code. The CI checks keys, placeholders and Discord's length limits. Details in the
-[translation guide](https://docs.picket-foxhole.com/contributing/translating).
+Keep credentials, `.env` files, database dumps and generated build files out of pull requests.
 
 ## License
 
