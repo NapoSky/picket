@@ -15,7 +15,7 @@ export function statusCommand(useCase: GetGuildStatus, permissions: ShowPermissi
     handler: async ({ guildId, interaction, t }) => {
       const status = await useCase.execute(guildId);
       const features =
-        status.enabledFeatures.some((feature) => feature !== 'warlog') ? status.enabledFeatures.filter((feature) => feature !== 'warlog').join(', ') : t('levels.none');
+        status.enabledFeatures.length ? status.enabledFeatures.join(', ') : t('levels.none');
       const overview = await permissions.execute({ guildId, roleIds: interaction.memberRoleIds, permissions: interaction.memberPermissions });
       const roles = (values: readonly string[]) => values.length === 0 ? t('levels.none') : values.slice(0, 25).map((role) => role === guildId ? '@everyone' : `<@&${role}>`).join(', ') + (values.length > 25 ? ` (+${values.length - 25})` : '');
       return ephemeral([

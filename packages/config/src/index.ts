@@ -45,6 +45,8 @@ const envSchema = z.object({
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
   GUILD_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   SHARD_COUNT: z.coerce.number().int().min(1).max(256).default(1),
+  WAR_API_URL: z.url({ protocol: /^https$/ }).default('https://war-service-live.foxholeservices.com'),
+  WAR_LOG_POLL_INTERVAL: z.coerce.number().int().min(5).max(300).default(15),
 });
 
 const migrationEnvSchema = z.object({
@@ -72,6 +74,7 @@ export interface AppConfig {
   readonly guildRetentionDays: number;
   /** Nombre total de shards Gateway ; chaque shard a son bail et une seule connexion active. */
   readonly shardCount: number;
+  readonly warlog: { readonly apiUrl: string; readonly pollIntervalMs: number };
 }
 
 export interface MigrationConfig {
@@ -131,6 +134,7 @@ export function loadConfig(env: Env, options: LoadConfigOptions = {}): AppConfig
     database: { url: new Secret(data.DATABASE_URL), poolMax: data.DATABASE_POOL_MAX },
     guildRetentionDays: data.GUILD_RETENTION_DAYS,
     shardCount: data.SHARD_COUNT,
+    warlog: { apiUrl: data.WAR_API_URL, pollIntervalMs: data.WAR_LOG_POLL_INTERVAL * 1000 },
   };
 }
 

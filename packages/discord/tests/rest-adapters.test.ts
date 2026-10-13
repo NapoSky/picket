@@ -247,6 +247,23 @@ describe('Discord REST adapters against a local server', () => {
     expect(await channels.inspect(guild, channel)).toEqual({ kind: 'blocked', reason: 'wrong_guild' });
     destinationGuild = guild; destinationType = 2;
     expect(await channels.inspect(guild, channel)).toEqual({ kind: 'blocked', reason: 'unsupported_channel' });
+    destinationType = 5; deny = '0';
+    expect(await channels.inspect(guild, channel)).toEqual({ kind: 'ready', locale: 'fr' });
+    expect(await channels.inspect(guild, channel, { textOnly: true })).toEqual({ kind: 'blocked', reason: 'unsupported_channel' });
+  });
+
+  it('reserves the shared budget for every actual attempt, including a rate-limit retry', async () => {
+    let attempts = 0;
+    respond = (_request, response) => {
+      attempts += 1;
+      if (attempts === 1) { response.setHeader('retry-after', '0.05'); json(response, 429, { message: 'limited', retry_after: .05, global: true }); }
+      else json(response, 200, { id: message });
+    };
+    const budget = { acquire: jest.fn().mockResolvedValue(undefined) };
+    const token = new Secret('bot-token');
+    const rest = createDiscordBotRest(token, { api, retries: 0 }, budget);
+    expect(await new DiscordRestMessaging(token, {}, rest).send(channel, view)).toBe(message);
+    expect(attempts).toBe(2); expect(budget.acquire).toHaveBeenCalledTimes(2);
   });
 
   it('posts a message with the bot token and returns the new identifier', async () => {

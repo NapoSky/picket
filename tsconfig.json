@@ -11,6 +11,7 @@
     { "path": "packages/game-data" },
     { "path": "packages/todolist" },
     { "path": "packages/timers" },
+    { "path": "packages/warlog" },
     { "path": "apps/bot" }
   ]
 }

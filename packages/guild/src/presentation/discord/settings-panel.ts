@@ -125,7 +125,7 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
           text(`📨 ${t('panel.audit', { channel: settings.auditChannelId === null ? t('status.auditMissing') : `<#${settings.auditChannelId}>` })}`), text(t('panel.auditHelp')),
           { kind: 'channelSelect', customId: id('psedit', 'channel'), placeholder: t('panel.chooseChannel') },
           ...(settings.auditFailure ? [text(t('audit.paused'))] : []),
-          { kind: 'buttons', buttons: [button('panel.clearChannel', 'psedit', 'clearChannel'), ...(deps.audit && settings.auditChannelId ? [button('audit.testButton', 'psedit', 'auditTest', '0', 'primary')] : [])] }, text(`🚧 **${t('panel.soon')}**`),
+          { kind: 'buttons', buttons: [button('panel.clearChannel', 'psedit', 'clearChannel'), ...(deps.audit && settings.auditChannelId ? [button('audit.testButton', 'psedit', 'auditTest', '0', 'primary')] : [])] }, text(`📡 ${t('warlog.settingsHint')}`),
         );
         break;
       case 'permissions':

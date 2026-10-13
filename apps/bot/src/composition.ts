@@ -87,6 +87,7 @@ import {
   type TimerUseCaseDeps,
 } from '@picket/timers';
 import { latestRetentionSchedule } from './retention-schedule';
+import { ConfigureWarLog, FoxholeApi, PostgresWarStore, PublishWarLog, WARLOG_ROOT, WarPoller, createWarLogSettingsPanel } from '@picket/warlog';
 
 /** Accès à l'API REST de Discord : seul le serveur d'interactions en a besoin. */
 export interface DiscordPorts {
@@ -133,6 +134,11 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
   const access = createGuildAccessPolicy(new ResolveAccess(permissions));
   const gate = createGuildGate(new GetSuspension(lifecycle, options.guildRetentionDays));
   const features = createFeatureGate(settings);
+  const warStore = new PostgresWarStore(db);
+  const warPanel = createWarLogSettingsPanel({ store: warStore,
+    configure: new ConfigureWarLog(warStore, options.discord?.guildChannels ?? { inspect: unavailable }, options.clock),
+    clock: options.clock, access, gate,
+  });
   const timerPanel = createTimerSettingsPanel({
     getSettings: new GetBoardSettings(timers.store), updateSettings: new UpdateBoardSettings(timers.deps),
     access, gate, features, clock: options.clock,
@@ -152,7 +158,7 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
   const status = statusCommand(new GetGuildStatus(settings), showPermissions);
   return {
     aliases: [...panel.aliases, { ...status, path: ['picket', 'permissions', 'show'] }],
-    entries: [status, panel.command, timerPanel.command,
+    entries: [status, panel.command, timerPanel.command, warPanel.command,
       ...todolistCommands(),
       ...timersCommands({
         createBoard: new CreateBoard(timers.deps),
@@ -165,6 +171,7 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
     ],
     families: [
       ...panel.families,
+      warPanel.family,
       timerPanel.family,
       todolistFamily({ create: new CreateTodolist(messaging), tick: new TickTodolistItem(messaging, new PostgresKeyedLock(db)),
         created: { record: (input) => new PostgresGuildAuditRepository(db).recordTodolist(input) },
@@ -212,7 +219,27 @@ function timerServices(db: Db, options: CompositionOptions, logger: Logger, sett
   return { store, maintenance, deps, features: { isEnabled: (guildId: Parameters<FeatureGate['isEnabled']>[0]) => features.isEnabled(guildId, TIMERS_FEATURE) } };
 }
 
-const ROOTS = [PICKET_ROOT, TODOLIST_ROOT, TIMERS_ROOT];
+const ROOTS = [PICKET_ROOT, TODOLIST_ROOT, TIMERS_ROOT, WARLOG_ROOT];
+
+/** One fenced collector and one paced distributor. HTTP requests never hold database transactions. */
+export function buildWarLogRunner(db: Db, logger: Logger, options: CompositionOptions & { readonly holder: string; readonly apiUrl: string; readonly pollIntervalMs: number; readonly version: string }): LeaderElector {
+  const store = new PostgresWarStore(db);
+  const guildLocale = new GetGuildLocale(new PostgresGuildSettingsRepository(db));
+  const timers = new PostgresTimerStore(db);
+  const publish = new PublishWarLog(store, (options.discord ?? offlineDiscordPorts).messaging, options.i18n, options.clock, logger,
+    guildId => guildLocale.execute(guildId), (guildId, war, start) => timers.resetForNewWar(guildId, war, start, options.clock.now()));
+  return new LeaderElector({ store: new PostgresLeaseStore(db), name: 'warlog-poller', holder: options.holder,
+    ttlMs: 30_000, renewEveryMs: 5_000, retryEveryMs: 5_000, clock: options.clock, logger,
+    onAcquired: async lease => {
+      if (!await store.recover(lease)) throw new Error('War-log lease unavailable');
+      const poller = new WarPoller(new FoxholeApi(options.apiUrl, options.version), store, lease, options.clock, logger, options.pollIntervalMs);
+      const stopPoll = startLeasedLoop({ tick: () => poller.tick(), intervalMs: options.pollIntervalMs, logger });
+      const stopPublish = startLeasedLoop({ tick: () => publish.tick(), intervalMs: 1_000, logger });
+      const stopHooks = startLeasedLoop({ tick: () => publish.hooks(), intervalMs: 10_000, logger });
+      return async () => { poller.stop(); await Promise.all([stopPoll(), stopPublish(), stopHooks()]); };
+    },
+  });
+}
 
 /** Seul endroit qui connaît toutes les commandes : le serveur, le CLI et les tests partagent ce registre. */
 export function buildCommandRegistry(db: Db, options: CompositionOptions): CommandRegistry {
@@ -318,7 +345,7 @@ export function buildPurgeJob(db: Db, logger: Logger, options: CompositionOption
 export function buildGatewayHandler(db: Db, logger: Logger, options: CompositionOptions): GatewayEventHandler {
   const lifecycle = new PostgresGuildLifecycleRepository(db);
   const removed = new HandleGuildRemoved(lifecycle, options.clock);
-  return createGuildEventHandler(
+  const guildHandler = createGuildEventHandler(
     {
       available: new HandleGuildAvailable(lifecycle),
       removed,
@@ -327,6 +354,11 @@ export function buildGatewayHandler(db: Db, logger: Logger, options: Composition
     },
     logger,
   );
+  const store = new PostgresWarStore(db);
+  return { handle: async event => {
+    if (event.type === 'channel_unusable') { await store.channelChanged(event.guildId, event.channelId); return; }
+    await guildHandler.handle(event);
+  } };
 }
 
 export function buildShardRunner(

@@ -19,6 +19,7 @@ describe('loadConfig', () => {
     expect(config.shardCount).toBe(1);
     expect(config.discord.restGlobalRps).toBe(20);
     expect(config.version).toBe('unknown');
+    expect(config.warlog).toEqual({ apiUrl: 'https://war-service-live.foxholeservices.com', pollIntervalMs: 15_000 });
   });
 
   it('accepts an immutable image reference and preserves it for bootstrap and migration logs', () => {

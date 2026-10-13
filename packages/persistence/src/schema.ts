@@ -143,6 +143,11 @@ export interface TimerScheduleTable {
 }
 
 export interface Schema {
+  warlog_subscriptions: WarLogSubscriptionsTable;
+  warlog_deliveries: WarLogDeliveriesTable;
+  warlog_hooks: WarLogHooksTable;
+  warlog_hook_jobs: WarLogHookJobsTable;
+  warlog_schedule: WarLogScheduleTable;
   guild_audit_delivery: GuildAuditDeliveryTable;
   guild_audit_schedule: GuildAuditScheduleTable;
   guild_settings: GuildSettingsTable;
@@ -161,6 +166,28 @@ export interface Schema {
   timer_alerts: TimerAlertsTable;
   timer_schedule: TimerScheduleTable;
 }
+
+export interface WarLogSubscriptionsTable {
+  guild_id: string;
+  perspective: Generated<'NONE' | 'WARDENS' | 'COLONIALS'>;
+  channel_id: Nullable<string>;
+  zones: ColumnType<string[], string | undefined, string>;
+  locale: Nullable<string>;
+  paused: Generated<boolean>;
+  confirmed_war: Nullable<number>;
+  enabled_at: Nullable<Date>;
+  revision: Generated<number>;
+  failure_reason: Nullable<string>;
+}
+export interface WarLogDeliveriesTable {
+  id: Generated<string>; guild_id: string; event_key: string; war_number: number; channel_id: string;
+  generation: string; revision: number; payload: ColumnType<unknown, string, string>; locale: Nullable<string>;
+  notice: Generated<boolean>; queued_at: Timestamp; next_attempt_at: Timestamp; attempts: Generated<number>;
+  claimed_until: Nullable<Date>; completed_at: Nullable<Date>; message_id: Nullable<string>; last_error: Nullable<string>;
+}
+export interface WarLogHooksTable { guild_id: string; war_number: number; board_id: string; completed_at: Timestamp }
+export interface WarLogHookJobsTable { guild_id: string; war_number: number; started_at: Timestamp; completed_at: Nullable<Date> }
+export interface WarLogScheduleTable { guild_id: string; wake_at: Nullable<Date>; last_served_at: Timestamp; hook_pending: Generated<boolean> }
 
 export interface GuildAuditDeliveryTable {
   id: Generated<string>;

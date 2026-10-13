@@ -4,7 +4,7 @@ export type AuditChannelFailure = 'unknown_channel' | 'missing_access' | 'missin
 export type AuditChannelAccess = { readonly kind: 'ready'; readonly locale: string | null }
   | { readonly kind: 'blocked'; readonly reason: AuditChannelFailure };
 export interface GuildChannels {
-  inspect(guildId: GuildId, channelId: ChannelId): Promise<AuditChannelAccess>;
+  inspect(guildId: GuildId, channelId: ChannelId, options?: { readonly textOnly: boolean }): Promise<AuditChannelAccess>;
 }
 
 /** Algorithme Discord : base, everyone, union des rôles, puis surcharge du membre. */

@@ -68,6 +68,12 @@
       "settings": {
         "description": "Abrir el panel privado de ajustes del servidor"
       }
+    },
+    "warlog": {
+      "description": "Registro de guerra",
+      "settings": {
+        "description": "Elige un canal y hasta tres zonas, confirma y activa."
+      }
     }
   },
   "discordPermissions": {
@@ -219,7 +225,7 @@
       "purgeInput": "Plazo en horas (0 = nunca)",
       "purgeConfirm": "¿Eliminar los temporizadores tachados o vencidos después de {{hours}} h? Los que ya hayan superado este plazo se eliminarán al aplicar el ajuste. Esta eliminación es permanente.",
       "war": "Nueva guerra — Próximamente",
-      "warHelp": "Los reinicios automáticos dependen del registro de guerra, que aún no está disponible. Actualmente no se realiza ningún reinicio al comenzar una nueva guerra.",
+      "warHelp": "Reinicia el tablero en cada guerra. Se conservan los timers creados después de su inicio.",
       "disableTitle": "¿Desactivar las alertas?",
       "disableHelp": "PICKET dejará de enviar nuevas alertas para este tablero. Los temporizadores seguirán activos y las alertas existentes podrán seguir confirmándose.",
       "everyoneHelp": "¿Añadir @everyone a los roles a los que notificar? Representa a todos los miembros del servidor.",
@@ -334,7 +340,7 @@
     "recovery": "Solo un administrador del servidor puede cancelar la eliminación. Los demás ajustes no están disponibles durante la suspensión.",
     "cancelDeletion": "Cancelar eliminación",
     "legacy": "Los comandos se han trasladado a este panel. No se ha aplicado ningún argumento de los comandos antiguos.",
-    "statusReserved": "Zona horaria: solo preconfiguración. Registro de guerra: próximamente.",
+    "statusReserved": "Zona horaria: solo preconfiguración.",
     "roleLabel": "Rol {{id}}"
   },
   "audit": {
@@ -381,5 +387,101 @@
     "open": "Abierto",
     "pageCount_one": "{{count}} página",
     "pageCount_other": "{{count}} páginas"
+  },
+  "warlog": {
+    "title": "Registro de guerra",
+    "help": "Elige un canal y hasta tres zonas, confirma y activa.",
+    "channel": "Canal",
+    "chooseChannel": "Elegir un canal de texto normal",
+    "chooseZones": "Zonas: {{selected}}/3 — pulsa para seleccionar o quitar.",
+    "confirm": "Confirmar y activar",
+    "renewHelp": "Confirma las zonas en cada nueva guerra. Los períodos desactivados no se repiten.",
+    "renew": "La guerra {{war}} ha comenzado. Confirma tus zonas en /warlog settings.",
+    "ended": "La guerra {{war}} terminó. Ganador: {{faction}}.",
+    "deliveryBlocked": "Publicación suspendida: canal inaccesible. Elige un canal válido y activa de nuevo.",
+    "settingsHint": "Configura el registro de guerra con /warlog settings.",
+    "results": {
+      "saved": "Guardado.",
+      "unchanged": "Sin cambios.",
+      "stale_war": "La guerra cambió. Revisa las zonas y confirma otra vez.",
+      "not_ready": "La guerra actual aún no está disponible. Inténtalo más tarde.",
+      "invalid": "Elige un canal válido y de una a tres zonas.",
+      "suspended": "Este servidor está suspendido.",
+      "channel_blocked": "Usa un canal de texto normal donde PICKET pueda ver, enviar mensajes e insertar enlaces.",
+      "channel_unavailable": "Discord no pudo verificar el canal. Inténtalo más tarde."
+    },
+    "zones": {
+      "west_islands": "Islas oeste",
+      "west_coast": "Costa oeste",
+      "center": "Centro",
+      "east_coast": "Costa este",
+      "east_islands": "Islas este"
+    },
+    "factions": {
+      "WARDENS": "Wardens",
+      "COLONIALS": "Colonials",
+      "NONE": "Neutrales"
+    },
+    "events": {
+      "appeared": "{{faction}} observaron la aparición de {{structure}} en {{location}}",
+      "disappeared": "{{faction}} observaron la desaparición de {{structure}} en {{location}}",
+      "scorched": "{{faction}} perdieron por un impacto {{structure}} en {{location}}",
+      "no_longer_scorched": "{{faction}} observaron la recuperación de {{structure}} en {{location}}",
+      "didnt_build": "{{faction}} no terminaron de construir {{structure}} en {{location}}",
+      "lost": "{{faction}} perdieron {{structure}} en {{location}}",
+      "building": "{{faction}} están construyendo {{structure}} en {{location}}",
+      "upgrading": "{{faction}} están mejorando {{structure}} en {{location}}",
+      "claimed": "{{faction}} capturaron {{structure}} en {{location}}",
+      "couldnt_upgrade": "{{faction}} no pudieron mejorar {{structure}} en {{location}}",
+      "upgraded": "{{faction}} mejoraron {{structure}} en {{location}}",
+      "built": "{{faction}} construyeron {{structure}} en {{location}}",
+      "launch_detected": "{{faction}} han instalado un sitio de lanzamiento en {{location}}",
+      "launch_destroyed": "{{faction}} han perdido su sitio de lanzamiento en {{location}}",
+      "launch_armed": "{{faction}} han armado su sitio de lanzamiento en {{location}}",
+      "launch_disarmed": "{{faction}} han desarmado su sitio de lanzamiento en {{location}}",
+      "rocket_targeting": "{{faction}} apuntan a {{location}} con un cohete",
+      "rocket_hit": "Un cohete lanzado por {{faction}} ha impactado en {{location}}",
+      "rocket_no_target": "{{faction}} ya no apuntan a {{location}}",
+      "rocket_forgotten": "El marcador de impacto de {{faction}} ha desaparecido en {{location}}",
+      "sc_built": "{{faction}} construyeron {{structure}} en {{location}}",
+      "sc_destroyed": "{{faction}} perdieron {{structure}} en {{location}}",
+      "ic_built": "{{faction}} construyeron {{structure}} en {{location}}",
+      "ic_destroyed": "{{faction}} perdieron {{structure}} en {{location}}",
+      "ws_built": "{{faction}} construyeron {{structure}} en {{location}}",
+      "ws_destroyed": "{{faction}} perdieron {{structure}} en {{location}}",
+      "sc_dried": "{{faction}} pueden haber terminado el secado de {{structure}} en {{location}}",
+      "ic_dried": "{{faction}} pueden haber terminado el secado de {{structure}} en {{location}}",
+      "ws_dried": "{{faction}} pueden haber terminado el secado de {{structure}} en {{location}}",
+      "war_ended": "La guerra {{war}} terminó. Ganador: {{faction}}."
+    },
+    "perspectiveHelp": "Facción de referencia: colores de las alertas. Esta elección se conserva entre guerras.",
+    "neutralPerspective": "Neutral",
+    "region": "Región",
+    "location": "Lugar",
+    "embedFooter": "Guerra {{war}} · {{relation}} · {{sentiment}}",
+    "relations": {
+      "friendly": "Aliado",
+      "hostile": "Enemigo",
+      "neutral": "Sin perspectiva"
+    },
+    "sentiments": {
+      "favorable": "Favorable",
+      "unfavorable": "Desfavorable",
+      "neutral": "Neutral"
+    },
+    "embedTitles": {
+      "sc_built": "Storm Cannon construido",
+      "sc_destroyed": "Storm Cannon destruido",
+      "launch_detected": "Sitio de lanzamiento detectado",
+      "launch_destroyed": "Sitio de lanzamiento destruido",
+      "launch_armed": "Sitio de lanzamiento armado",
+      "launch_disarmed": "Sitio de lanzamiento desarmado",
+      "rocket_targeting": "Objetivo nuclear detectado",
+      "rocket_hit": "Impacto nuclear",
+      "rocket_no_target": "Objetivo nuclear retirado",
+      "rocket_forgotten": "Marcador de impacto retirado",
+      "scorched": "Estructura incendiada",
+      "war_ended": "Guerra terminada"
+    }
   }
 }

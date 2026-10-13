@@ -18,6 +18,11 @@ export const GUILD_EXPORT_TABLES = {
   timer_events: ['id'],
   timer_alerts: ['asset_id', 'due_at', 'threshold_min'],
   timer_schedule: ['board_id'],
+  warlog_subscriptions: ['guild_id'],
+  warlog_deliveries: ['id'],
+  warlog_hooks: ['guild_id', 'war_number', 'board_id'],
+  warlog_hook_jobs: ['guild_id', 'war_number'],
+  warlog_schedule: ['guild_id'],
 } as const satisfies Partial<Record<keyof Schema, readonly string[]>>;
 
 const BATCH_SIZE = 100;

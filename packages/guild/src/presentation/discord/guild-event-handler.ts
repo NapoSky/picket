@@ -18,6 +18,7 @@ export function createGuildEventHandler(useCases: GuildEventUseCases, logger: Lo
   return {
     async handle(event: GatewayEvent): Promise<void> {
       switch (event.type) {
+        case 'channel_unusable': return;
         case 'ready': {
           const departed = await useCases.reconcile.execute({
             shardId: event.shardId,

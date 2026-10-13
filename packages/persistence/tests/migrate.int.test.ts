@@ -33,10 +33,12 @@ describe('migrate (integration)', () => {
       '007_timers_activity',
       '008_journal_retention',
       '009_audit_delivery',
+      '010_warlog',
+      '011_warlog_perspective',
     ]);
 
     const second = await run();
-    expect(second).toEqual({ applied: [], alreadyApplied: 9 });
+    expect(second).toEqual({ applied: [], alreadyApplied: 11 });
   });
 
   it('serialises concurrent runs with the advisory lock', async () => {
@@ -52,6 +54,8 @@ describe('migrate (integration)', () => {
       '007_timers_activity',
       '008_journal_retention',
       '009_audit_delivery',
+      '010_warlog',
+      '011_warlog_perspective',
     ]);
   });
 
@@ -65,7 +69,7 @@ describe('migrate (integration)', () => {
     await queryAsAdmin(database, `INSERT INTO timer_events (guild_id, board_id, actor_id, action, at)
       VALUES ($1, '00000000-0000-4000-8000-000000000001', 'system', 'expired', now() - interval '31 days'),
              ($1, '00000000-0000-4000-8000-000000000001', 'system', 'recent', now())`, [guild]);
-    expect((await run()).applied).toEqual(['008_journal_retention', '009_audit_delivery']);
+    expect((await run()).applied).toEqual(['008_journal_retention', '009_audit_delivery', '010_warlog', '011_warlog_perspective']);
     expect(await queryAsAdmin(database, 'SELECT action FROM guild_audit_log')).toEqual([{ action: 'recent' }]);
     expect(await queryAsAdmin(database, 'SELECT action FROM timer_events')).toEqual([{ action: 'recent' }]);
   });
@@ -75,6 +79,20 @@ describe('migrate (integration)', () => {
     await run(directory);
     await writeFile(join(directory, '001_a.sql'), 'CREATE TABLE a (id int, extra int);');
     await expect(run(directory)).rejects.toThrow(/modified after being applied/);
+  });
+  it('adds a neutral perspective to existing subscriptions without changing their configuration', async () => {
+    const previous = (await readdir(MIGRATIONS_DIR)).filter(file => file.endsWith('.sql') && file < '011_');
+    for (const file of previous) await writeFile(join(directory, file), await readFile(join(MIGRATIONS_DIR, file)));
+    await run(directory);
+    const guild = '700000000000000001';
+    await queryAsAdmin(database, 'INSERT INTO guild_registry(guild_id) VALUES($1)', [guild]);
+    await queryAsAdmin(database, `INSERT INTO warlog_subscriptions(guild_id, channel_id, zones, paused, confirmed_war)
+      VALUES($1, '600000000000000001', '["west_coast"]', false, 100)`, [guild]);
+    expect((await run()).applied).toEqual(['011_warlog_perspective']);
+    expect(await queryAsAdmin(database, 'SELECT perspective, channel_id, zones, paused, confirmed_war FROM warlog_subscriptions')).toEqual([
+      { perspective: 'NONE', channel_id: '600000000000000001', zones: ['west_coast'], paused: false, confirmed_war: 100 },
+    ]);
+    await expect(queryAsAdmin(database, "UPDATE warlog_subscriptions SET perspective = 'INVALID'")).rejects.toThrow(/check constraint/);
   });
 
   it('rolls back a failing migration entirely and does not record it', async () => {

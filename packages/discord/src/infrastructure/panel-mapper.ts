@@ -42,7 +42,7 @@ function component(view: PanelContent): APIComponentInContainer {
         options: view.options.map((choice) => ({ label: clip(choice.label, 100), value: choice.value, default: choice.selected ?? false })),
       });
     case 'roleSelect': return row({ type: ComponentType.RoleSelect, custom_id: view.customId, placeholder: clip(view.placeholder, 150), min_values: 1, max_values: 1 });
-    case 'channelSelect': return row({ type: ComponentType.ChannelSelect, custom_id: view.customId, placeholder: clip(view.placeholder, 150), min_values: 1, max_values: 1, channel_types: [ChannelType.GuildText, ChannelType.GuildAnnouncement] });
+    case 'channelSelect': return row({ type: ComponentType.ChannelSelect, custom_id: view.customId, placeholder: clip(view.placeholder, 150), min_values: 1, max_values: 1, channel_types: (view.channelKinds ?? ['text', 'announcement']).map(kind => kind === 'text' ? ChannelType.GuildText : ChannelType.GuildAnnouncement) });
   }
 }
 

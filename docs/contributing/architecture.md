@@ -15,6 +15,7 @@ packages/guild      servers: settings, permissions, lifecycle
 packages/game-data  regions and locations of the game, with the search behind the autocomplete
 packages/todolist   todo lists: grammar, layout, ticking (state lives in the Discord message)
 packages/timers     timer boards: state in the database, pure rendering, alerts, board upkeep
+packages/warlog     shared collector, public state, tenant subscriptions and paced deliveries
 packages/testing    helpers shared by the tests
 ```
 

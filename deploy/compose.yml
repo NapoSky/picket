@@ -6,6 +6,8 @@ x-picket-environment: &picket-environment
   NODE_ENV: production
   LOG_LEVEL: ${LOG_LEVEL:-info}
   PICKET_VERSION: ${PICKET_IMAGE:?set PICKET_IMAGE}
+  WAR_API_URL: ${WAR_API_URL:-https://war-service-live.foxholeservices.com}
+  WAR_LOG_POLL_INTERVAL: ${WAR_LOG_POLL_INTERVAL:-15}
   DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
   DISCORD_REST_GLOBAL_RPS: ${DISCORD_REST_GLOBAL_RPS:-20}
   DISCORD_APPLICATION_ID: ${DISCORD_APPLICATION_ID:?set DISCORD_APPLICATION_ID in .env}
@@ -96,7 +98,7 @@ services:
     <<: *hardening
     environment:
       <<: *picket-environment
-      ROLES: http-ingress,shard-runner,job-runner
+      ROLES: http-ingress,shard-runner,job-runner,warlog-poller
       # Allow Traefik to remove the replica (failed health check) before refusing connections.
       SHUTDOWN_DRAIN_MS: "15000"
     secrets:

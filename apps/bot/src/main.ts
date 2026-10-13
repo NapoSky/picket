@@ -7,10 +7,11 @@ import { createI18n } from '@picket/i18n';
 import { systemClock } from '@picket/kernel';
 import { createGuildLogDestination, createHealthServer, createLogger } from '@picket/observability';
 import { createDatabase, PostgresGuildApplicationLogs } from '@picket/persistence';
-import { buildJobRunner, buildPipeline, buildShardRunner } from './composition';
+import { PostgresDiscordBudget } from '@picket/coordination';
+import { buildJobRunner, buildPipeline, buildShardRunner, buildWarLogRunner } from './composition';
 
 const FORCE_EXIT_AFTER_MS = 30_000;
-const IMPLEMENTED_ROLES: ReadonlySet<Role> = new Set(['http-ingress', 'shard-runner', 'job-runner']);
+const IMPLEMENTED_ROLES: ReadonlySet<Role> = new Set(['http-ingress', 'shard-runner', 'job-runner', 'warlog-poller']);
 
 async function run(): Promise<void> {
   const config = loadConfig(process.env);
@@ -37,7 +38,7 @@ async function run(): Promise<void> {
   const guildLogs = new PostgresGuildApplicationLogs(database.db);
   const logDestination = createGuildLogDestination({ version: config.version, append: (entries) => guildLogs.append(entries) });
   logger = createLogger({ level: config.logLevel, service: 'picket', version: config.version, destination: logDestination.destination });
-  const rest = createDiscordBotRest(config.discord.botToken, { globalRequestsPerSecond: config.discord.restGlobalRps });
+  const rest = createDiscordBotRest(config.discord.botToken, { globalRequestsPerSecond: config.discord.restGlobalRps }, new PostgresDiscordBudget(database.db));
   const discord = {
     messaging: new DiscordRestMessaging(config.discord.botToken, {}, rest),
     replies: new DiscordRestInteractionReplies(),
@@ -81,11 +82,15 @@ async function run(): Promise<void> {
       })
     : null;
   const jobs = config.roles.includes('job-runner') ? buildJobRunner(database.db, logger, { ...composition, holder }) : null;
+  const warlog = config.roles.includes('warlog-poller') ? buildWarLogRunner(database.db, logger, { ...composition, holder,
+    apiUrl: config.warlog.apiUrl, pollIntervalMs: config.warlog.pollIntervalMs, version: config.version,
+  }) : null;
 
   await interactions?.listen({ host: '0.0.0.0', port: config.http.port });
   await new Promise<void>((resolve) => health.listen(config.http.healthPort, '0.0.0.0', resolve));
   shards?.start();
   jobs?.start();
+  warlog?.start();
   logger.info(
     { roles: config.roles, port: config.http.port, healthPort: config.http.healthPort, shardCount: config.shardCount, restGlobalRps: config.discord.restGlobalRps, databasePoolMax: config.database.poolMax },
     'picket started',
@@ -104,6 +109,7 @@ async function run(): Promise<void> {
     await shards?.stop();
     // Les passes périodiques s'achèvent avant la fermeture de la base : le bail est rendu à la réplique suivante.
     await jobs?.stop();
+    await warlog?.stop();
 
     // Laisse le reverse proxy retirer cette réplique (readiness KO) avant de refuser des connexions.
     draining = true;

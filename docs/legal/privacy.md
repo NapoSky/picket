@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Effective date: 5 October 2026.
+Effective date: 13 October 2026.
 
 This policy describes the data processed by the official PICKET instance (the Discord application "PICKET" and the site
 `docs.picket-foxhole.com`). It applies together with the [Terms of Service](./terms) and Discord's own
@@ -34,7 +34,11 @@ data in one. For anything sensitive, use a
 | Alerts sent for each timer | Never send the same alert twice | Same |
 | Identifier of each processed interaction and its server | Avoid handling the same command twice | 7 days |
 | Application logs: server, user, channel and message identifiers of each todo list or timer creation and click, never the list content nor the timer names | Operate, secure and debug the service | 30 days |
+| War-log subscription: channel, selected zones, reference faction, language, activation for a war and configuration audit | Publish requested public game events | While the bot is on the server, then the retention period |
+| War-log deliveries and optional timer-reset execution records | Control publication and avoid repeated actions | Same, with completed deliveries cleaned up during collection |
 | Database backups of the data above | Recover from a failure | 30 days at most |
+
+Public Foxhole game state and recorded events are shared across subscriptions and kept for the current and preceding observed wars. They contain game structures, coordinates, factions and timestamps, without Discord member identifiers. Server deletion does not erase this shared public game history.
 
 Discord sends PICKET the identifiers of the server, channel, user and roles involved in each command or button click.
 They are used to answer that interaction and to check permissions. Only the data listed above is kept.

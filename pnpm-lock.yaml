@@ -220,6 +220,9 @@ importers:
       '@picket/todolist':
         specifier: workspace:*
         version: link:../../packages/todolist
+      '@picket/warlog':
+        specifier: workspace:*
+        version: link:../../packages/warlog
 
   docs:
     devDependencies:
@@ -389,6 +392,31 @@ importers:
       '@picket/kernel':
         specifier: workspace:*
         version: link:../kernel
+
+  packages/warlog:
+    dependencies:
+      '@picket/coordination':
+        specifier: workspace:*
+        version: link:../coordination
+      '@picket/discord':
+        specifier: workspace:*
+        version: link:../discord
+      '@picket/game-data':
+        specifier: workspace:*
+        version: link:../game-data
+      '@picket/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@picket/kernel':
+        specifier: workspace:*
+        version: link:../kernel
+      '@picket/persistence':
+        specifier: workspace:*
+        version: link:../persistence
+    devDependencies:
+      '@picket/timers':
+        specifier: workspace:*
+        version: link:../timers
 
 packages:
 

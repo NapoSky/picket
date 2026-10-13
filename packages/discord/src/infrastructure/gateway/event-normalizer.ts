@@ -1,5 +1,5 @@
-import { GatewayDispatchEvents, type GatewayDispatchPayload } from 'discord-api-types/v10';
-import { GuildId, RoleId } from '@picket/kernel';
+import { ChannelType, GatewayDispatchEvents, type GatewayDispatchPayload } from 'discord-api-types/v10';
+import { ChannelId, GuildId, RoleId } from '@picket/kernel';
 import type { GatewayEvent } from '../../application/gateway-events';
 
 /** Retourne `null` pour tout ce qui n'intéresse pas l'application ou qui est mal formé. */
@@ -31,6 +31,13 @@ export function normalizeDispatch(
       const guildId = GuildId.parse(payload.d.guild_id);
       const roleId = RoleId.parse(payload.d.role_id);
       return guildId.ok && roleId.ok ? { type: 'role_deleted', guildId: guildId.value, roleId: roleId.value } : null;
+    }
+    case GatewayDispatchEvents.ChannelUpdate:
+    case GatewayDispatchEvents.ChannelDelete: {
+      if (payload.t === GatewayDispatchEvents.ChannelUpdate && payload.d.type === ChannelType.GuildText) return null;
+      const guildId = GuildId.parse('guild_id' in payload.d ? payload.d.guild_id : undefined);
+      const channelId = ChannelId.parse(payload.d.id);
+      return guildId.ok && channelId.ok ? { type: 'channel_unusable', guildId: guildId.value, channelId: channelId.value } : null;
     }
     default:
       return null;

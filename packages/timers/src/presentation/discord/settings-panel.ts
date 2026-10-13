@@ -88,7 +88,7 @@ export function createTimerSettingsPanel(deps: TimerSettingsPanelDependencies): 
         components.push(text(`### 🛡️ ${t('timers.panel.manage')}`),
           { kind: 'section', text: `👤 **${t('timers.panel.changes')}**\n${t(settings.restrictChanges ? 'timers.settings.changesRestricted' : 'timers.settings.changesEveryone')}\n${t('timers.panel.changesHelp')}`, button: settings.restrictChanges ? button('timers.panel.allowEveryone', 'guard', '0') : button('timers.panel.ownersOnly', 'guard', '1') },
           { kind: 'section', text: `🧹 **${t('timers.panel.purge')}**\n${purge}\n${t('timers.panel.purgeHelp')}`, button: button('timers.panel.edit', 'form', 'purge', 'primary') },
-          text(`🚧 **${t('timers.panel.war')}**\n${t('timers.panel.warHelp')}`));
+          { kind: 'section', text: `🔄 **${t('timers.panel.war')}**\n${t('timers.panel.warHelp')}`, button: button(settings.resetOnNewWar ? 'panel.disable' : 'panel.enable', 'war', settings.resetOnNewWar ? '0' : '1') });
         break;
       case 'off':
         components.push(text(`### ⏸️ ${t('timers.panel.disableTitle')}\n${t('timers.panel.disableHelp')}`), { kind: 'buttons', buttons: [button('panel.confirm', 'alrt', '0', 'danger'), button('panel.cancel', 'back', 'alerts')] });
@@ -164,10 +164,11 @@ export function createTimerSettingsPanel(deps: TimerSettingsPanelDependencies): 
       let patch: SettingsPatch | null = null;
       let page: Page = 'alerts';
       if (interaction.kind === 'component' && interaction.componentKind === 'button') {
-        if ((action === 'alrt' || action === 'quiet' || action === 'guard') && (argument === '0' || argument === '1')) {
+        if ((action === 'alrt' || action === 'quiet' || action === 'guard' || action === 'war') && (argument === '0' || argument === '1')) {
           if (action === 'alrt') patch = { alertsEnabled: argument === '1' };
           if (action === 'quiet') patch = { alertSilent: argument === '1' };
           if (action === 'guard') { patch = { restrictChanges: argument === '1' }; page = 'manage'; }
+          if (action === 'war') { patch = { resetOnNewWar: argument === '1' }; page = 'manage'; }
         } else if (action === 'clear') patch = { alertRole: { action: 'clear' } };
         else if (action === 'every') patch = { alertRole: { action: 'add', roleId: RoleId.assert(context.guildId.toString()) } };
         else if (action === 'purge' && /^\d{1,3}$/u.test(argument)) { patch = { purgeAfterHours: Number(argument) }; page = 'manage'; }

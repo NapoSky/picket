@@ -131,8 +131,8 @@ aussi confirmation : les timers barrés ou expirés qui dépassent déjà ce dé
 :::
 
 Les icônes de région et de ville sont celles de PICKET, et la limite est fixe à **50 timers actifs par tableau**.
-Le reset lors d'une nouvelle guerre est présenté **À venir**, sans bouton d'activation : il dépend du war-log,
-qui n'est pas encore disponible.
+Vous pouvez activer le **reset à chaque nouvelle guerre** dans la gestion du tableau. Il est désactivé par défaut.
+Le collecteur war-log le déclenche indépendamment des abonnements, en conservant les timers créés après le début de la guerre.
 
 Le panneau est réservé à la personne qui l'ouvre et expire après 15 minutes sans actualisation. Relancez simplement
 `/timers settings` pour en ouvrir un nouveau. Les droits sont revérifiés à chaque interaction. Lors de la transition,

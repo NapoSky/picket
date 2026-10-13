@@ -16,6 +16,7 @@
     { "path": "../../packages/discord" },
     { "path": "../../packages/guild" },
     { "path": "../../packages/timers" },
-    { "path": "../../packages/todolist" }
+    { "path": "../../packages/todolist" },
+    { "path": "../../packages/warlog" }
   ]
 }

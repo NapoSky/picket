@@ -11,8 +11,7 @@ must be done, what must be monitored, and what happened while you were away.
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-docs.picket--foxhole.com-informational)](https://docs.picket-foxhole.com)
 
-> **Status: v1.0, running in real conditions.** The foundation, the todo lists and the timers are done. The war log is
-> next. See [what is built](#what-is-built).
+> **Status: core features implemented.** The source includes the foundation, todo lists, timers and war log. See [what is built](#what-is-built).
 
 PICKET is faction-neutral (Wardens and Colonials alike), lightweight, and built for regiment-scale collaboration. It is a
 community project: it is **not** affiliated with, endorsed by or sponsored by Siege Camp.
@@ -29,7 +28,7 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 | **Data management** | Retention period after the bot is removed, scheduled deletion on demand, nothing kept longer than needed |
 | **Languages** | English, French, German, Spanish and Brazilian Portuguese; add one by dropping a JSON file in [`packages/i18n/locales`](packages/i18n/locales) |
 | **Operations** | Zero-downtime rolling updates, several identical replicas, signed requests only, secrets kept out of the repository and the logs |
-| War log | Planned |
+| **War log** | One shared collector; one-line events in a regular text channel; up to three of five zones per server; subscription renewal for each war; recovery without replay |
 
 ### Commands
 
@@ -40,6 +39,7 @@ Access roles are configured per server. Officers can also use member commands; s
 | Command | What it does |
 | --- | --- |
 | `/picket settings` | Opens the private server configuration panel; permission changes and data management are reserved for administrators |
+| `/warlog settings` | Chooses a text channel, up to three zones and activation for the current war |
 | `/timers create` | Creates the channel's timer board |
 | `/timers settings` | Opens the private timer configuration panel |
 | `/timers cleanup` | Removes struck timers |

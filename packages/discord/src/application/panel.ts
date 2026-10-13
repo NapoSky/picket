@@ -17,7 +17,8 @@ export interface PanelChoice {
 
 export type PanelSelect =
   | { readonly kind: 'stringSelect'; readonly customId: string; readonly placeholder: string; readonly options: readonly PanelChoice[] }
-  | { readonly kind: 'roleSelect' | 'channelSelect'; readonly customId: string; readonly placeholder: string };
+  | { readonly kind: 'roleSelect'; readonly customId: string; readonly placeholder: string }
+  | { readonly kind: 'channelSelect'; readonly customId: string; readonly placeholder: string; readonly channelKinds?: readonly ('text' | 'announcement')[] };
 
 export type PanelContent =
   | { readonly kind: 'text'; readonly text: string }

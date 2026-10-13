@@ -130,8 +130,8 @@ struck or expired timers already past that delay may be deleted immediately.
 :::
 
 Region and town icons use PICKET's icons, and the limit is fixed at **50 active timers per board**.
-Resetting for a new war is shown as **Coming soon**, without an activation button: it depends on the war-log,
-which is not available yet.
+You can enable **reset for each new war** in the board management section. It is off by default.
+The war-log collector triggers it independently of subscriptions, preserving timers created after the war began.
 
 The panel is reserved for the person who opens it and expires after 15 minutes without an update. Run
 `/timers settings` again to open a new one. Access is checked again for every interaction. During transition,

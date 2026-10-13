@@ -212,7 +212,7 @@ describe('private server settings panel', () => {
   });
   it('opens a prefilled timezone modal and returns invalid input to the same panel without a write', async () => {
     const env = setup(); const advanced = await env.click(control(await env.open(), 'view', 'advanced'));
-    expect(text(advanced)).toContain('no operational effect'); expect(text(advanced)).toContain('Coming soon');
+    expect(text(advanced)).toContain('no operational effect'); expect(text(advanced)).toContain('/warlog settings');
     const modal = await env.click(control(advanced, 'timezone'));
     expect(modal).toMatchObject({ kind: 'modal', inputs: [{ value: 'UTC', maxLength: 64 }] });
     if (modal?.kind !== 'modal') throw new Error('modal expected');

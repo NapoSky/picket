@@ -25,6 +25,20 @@ prévoient une réplique permanente et une seconde pendant la bascule. Pour plus
 déploiement et des outils ponctuels avant de choisir les plafonds ; ils restent locaux à chaque processus.
 Le CLI de publication des commandes utilise un budget REST distinct de 5 requêtes/s.
 
+## Journal de guerre
+
+Ajoutez `warlog-poller` à `ROLES` pour lancer le collecteur partagé. Compose l’inclut par défaut.
+Toutes les répliques peuvent le déclarer ; un seul détenteur du bail collecte et diffuse. Le bot coordonne également
+un budget REST authentifié de 40 requêtes/s via PostgreSQL ; la limite locale configurée continue de s’appliquer.
+
+| Variable | Défaut | Sens |
+| --- | --- | --- |
+| `WAR_API_URL` | `https://war-service-live.foxholeservices.com` | Racine HTTPS de l’API du shard Foxhole. |
+| `WAR_LOG_POLL_INTERVAL` | `15` | Secondes entre cycles de collecte (5 à 300). |
+
+Appliquez les migrations avant de redémarrer les répliques, puis déployez les commandes. Les abonnements sont désactivés
+par défaut ; les officiers utilisent `/warlog settings`. Une reprise reconstruit la référence publique sans rejeu historique.
+
 ## Sauvegardes Docker
 
 Ces paramètres appartiennent au `.env` de la stack, pas à la configuration applicative du bot :

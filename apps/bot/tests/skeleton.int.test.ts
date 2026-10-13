@@ -98,12 +98,12 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
     const confirm = await click(await click(permissions, 'view', 'member'), 'view', 'everyone'); await click(confirm, 'everyone');
     expect(await say({ path: status })).toContain('PICKET is up');
   });
-  it('saves settings from menus and modals, changes language immediately, and keeps war-log unavailable', async () => {
+  it('saves settings from menus and modals, changes language immediately, and links to war-log settings', async () => {
     const home = await say(admin); const language = await click(home, 'view', 'language');
     expect(JSON.stringify(await click(language, 'language', '0', { componentType: 3, values: ['fr'] }))).toContain('Modification enregistrée');
     expect(await say({ path: status })).toContain('PICKET est opérationnel');
     await click(language, 'language', '0', { componentType: 3, values: ['auto'] });
-    const advanced = await click(home, 'view', 'advanced'); expect(JSON.stringify(advanced)).toContain('Coming soon');
+    const advanced = await click(home, 'view', 'advanced'); expect(JSON.stringify(advanced)).toContain('/warlog settings');
     const modal = await click(advanced, 'timezone') as { custom_id: string };
     await say({ ...admin, customId: modal.custom_id, modal: true, fields: [{ type: 18, component: { type: 4, custom_id: 'timezone', value: 'europe/paris' } }] });
     const channel = '600000000000000009';
@@ -147,7 +147,7 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
   });
   it('publishes only two picket commands alongside unchanged feature commands', () => {
     const commands = buildCommandsPayload(buildCommandRegistry(database.handle.db, composition));
-    expect(commands.map((command) => command.name)).toEqual(['picket', 'timers', 'todolist']);
+    expect(commands.map((command) => command.name)).toEqual(['picket', 'timers', 'todolist', 'warlog']);
     expect(commands[0]?.options?.map((command) => [command.name, command.type])).toEqual([['settings', 1], ['status', 1]]);
     expect(commands[1]?.options?.map((command) => command.name)).toEqual(['add', 'cleanup', 'create', 'repair', 'settings', 'strike']);
   });

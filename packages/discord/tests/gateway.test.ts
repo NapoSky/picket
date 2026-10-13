@@ -58,6 +58,12 @@ describe('normalizeDispatch', () => {
     expect(normalizeDispatch(dispatch('MESSAGE_CREATE', { id: '700000000000000001' }), 0, 1)).toBeNull();
     expect(normalizeDispatch(dispatch('INTERACTION_CREATE', {}), 0, 1)).toBeNull();
   });
+  it('signals channel conversion and removal without polling Discord', () => {
+    const data = { id: '600000000000000001', guild_id: '700000000000000001', type: 5 };
+    expect(normalizeDispatch(dispatch('CHANNEL_UPDATE', data), 0, 1)).toEqual({ type: 'channel_unusable', guildId: data.guild_id, channelId: data.id });
+    expect(normalizeDispatch(dispatch('CHANNEL_UPDATE', { ...data, type: 0 }), 0, 1)).toBeNull();
+    expect(normalizeDispatch(dispatch('CHANNEL_DELETE', { ...data, type: 0 }), 0, 1)).toMatchObject({ type: 'channel_unusable' });
+  });
 });
 
 describe('SerialQueue', () => {

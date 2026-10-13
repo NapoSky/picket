@@ -25,6 +25,20 @@ permanent replica and a second during the switch. With multiple replicas, accoun
 tools before choosing the limits; each limit remains local to its process.
 The command registration CLI uses a separate REST budget of 5 requests/s.
 
+## War log
+
+Add `warlog-poller` to `ROLES` to run the shared collector. Compose includes it by default.
+All replicas may declare it; one lease holder collects and distributes. The bot also coordinates a 40 requests/s
+authenticated REST budget through PostgreSQL, with the configured local limit still applying.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `WAR_API_URL` | `https://war-service-live.foxholeservices.com` | HTTPS root of the Foxhole shard API. |
+| `WAR_LOG_POLL_INTERVAL` | `15` | Seconds between collection cycles (5 to 300). |
+
+Run migrations before restarting replicas, then deploy commands. Server subscriptions start disabled; officers use
+`/warlog settings`. Collector recovery resets the public baseline without replaying old events.
+
 ## Docker backups
 
 These settings belong to the stack’s `.env`, rather than the bot’s application configuration:

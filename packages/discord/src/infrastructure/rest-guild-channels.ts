@@ -11,11 +11,11 @@ export class DiscordRestGuildChannels implements GuildChannels {
   constructor(token: Secret, options: Partial<RESTOptions> = {}, rest?: REST) {
     this.#rest = rest ?? createDiscordBotRest(token, options);
   }
-  async inspect(guildId: GuildId, channelId: ChannelId): Promise<AuditChannelAccess> {
+  async inspect(guildId: GuildId, channelId: ChannelId, options?: { readonly textOnly: boolean }): Promise<AuditChannelAccess> {
     try {
       const channel = await this.#rest.get(Routes.channel(channelId)) as APIChannel;
       if (!('guild_id' in channel) || channel.guild_id !== guildId) return { kind: 'blocked', reason: 'wrong_guild' };
-      if (channel.type !== ChannelType.GuildText && channel.type !== ChannelType.GuildAnnouncement) return { kind: 'blocked', reason: 'unsupported_channel' };
+      if (channel.type !== ChannelType.GuildText && (options?.textOnly || channel.type !== ChannelType.GuildAnnouncement)) return { kind: 'blocked', reason: 'unsupported_channel' };
       this.#identity ??= (this.#rest.get(Routes.user('@me')) as Promise<APIUser>).then((user) => UserId.assert(user.id)).catch((error: unknown) => { this.#identity = undefined; throw error; });
       const userId = await this.#identity;
       const [member, roles, guild] = await Promise.all([

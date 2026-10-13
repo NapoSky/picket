@@ -192,6 +192,27 @@ export class PostgresTimerStore implements TimerStore {
     });
   }
 
+  /** Idempotent per board and war. Timers created after the war began survive a delayed hook. */
+  async resetForNewWar(guildId: GuildId, war: number, startedAt: Date, now: Date): Promise<void> {
+    for (const board of await this.boardsOfGuild(guildId)) {
+      if (board.archivedAt !== null || !board.settings.resetOnNewWar) continue;
+      await withTenant(this.#db, guildId, async trx => {
+        const eligible = await sql`SELECT 1 FROM guild_registry r JOIN guild_settings s USING(guild_id)
+          WHERE r.guild_id = ${guildId} AND r.inactive_since IS NULL AND (s.features->>'timers')::boolean`.execute(trx);
+        if (!eligible.rows.length) return;
+        const current = await trx.selectFrom('timer_boards').selectAll().where('id', '=', board.id).forUpdate().executeTakeFirst();
+        if (!current || current.archived_at !== null || !toBoard(current).settings.resetOnNewWar) return;
+        const marked = await sql`INSERT INTO warlog_hooks(guild_id, war_number, board_id)
+          VALUES(${guildId}, ${war}, ${board.id}) ON CONFLICT DO NOTHING RETURNING board_id`.execute(trx);
+        if (!marked.rows.length) return;
+        const removed = await trx.deleteFrom('timer_assets').where('board_id', '=', board.id).where('created_at', '<', startedAt).returning('id').execute();
+        await recordEvents(trx, guildId, board.id, [{ actor: 'system', action: 'reset_war', detail: { count: removed.length, warNumber: war } }]);
+        await trx.updateTable('timer_boards').set({ rev: sql<number>`rev + 1`, needs_sync: true }).where('id', '=', board.id).execute();
+        await wakeNow(trx, guildId, board.id, now);
+      });
+    }
+  }
+
   state(guildId: GuildId, boardId: string): Promise<BoardState | null> {
     return withTenant(this.#db, guildId, async (trx) => {
       const board = await trx.selectFrom('timer_boards').selectAll().where('id', '=', boardId).executeTakeFirst();

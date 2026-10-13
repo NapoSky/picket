@@ -23,6 +23,7 @@ export function auditMessage(event: AuditEvent, t: Translator['t']): MessageView
   const before = object(event.before), after = object(event.after), detail = object(event.detail);
   const value = (key: string, raw: unknown): string => {
     if (key === 'language') return raw === null ? t('status.languageAuto') : escape(raw);
+    if (key === 'perspective' && (raw === 'NONE' || raw === 'WARDENS' || raw === 'COLONIALS')) return t(`warlog.factions.${raw}`);
     if (key === 'auditChannelId' && snowflake(raw)) return `<#${raw}>`;
     if ((key === 'member' || key === 'officer') && Array.isArray(raw)) {
       const roles = raw.filter(snowflake);
@@ -31,7 +32,7 @@ export function auditMessage(event: AuditEvent, t: Translator['t']): MessageView
     if (raw === null || raw === undefined) return t('levels.none');
     return escape(raw);
   };
-  for (const key of ['language', 'timezone', 'auditChannelId', 'features', 'member', 'officer']) {
+  for (const key of ['language', 'timezone', 'auditChannelId', 'features', 'member', 'officer', 'channelId', 'zones', 'paused', 'confirmedWar', 'perspective']) {
     if (JSON.stringify(before[key]) === JSON.stringify(after[key])) continue;
     if ((key === 'member' || key === 'officer') && Array.isArray(before[key]) && Array.isArray(after[key])) {
       const oldRoles = before[key] as unknown[], newRoles = after[key] as unknown[];
@@ -41,7 +42,7 @@ export function auditMessage(event: AuditEvent, t: Translator['t']): MessageView
       if (removed.length) parts.push(`${level} : − ${value(key, removed)}`);
     } else if (key === 'features') {
       const previous = object(before.features), next = object(after.features);
-      for (const feature of ['timers', 'todolists'] as const) {
+      for (const feature of ['timers', 'todolists', 'warlog'] as const) {
         if (previous[feature] !== next[feature]) parts.push(`${t(`features.${feature}`)} : ${t(previous[feature] === true ? 'panel.enabled' : 'panel.disabled')} → ${t(next[feature] === true ? 'panel.enabled' : 'panel.disabled')}`);
       }
     } else parts.push(`${value(key, before[key])} → ${value(key, after[key])}`);

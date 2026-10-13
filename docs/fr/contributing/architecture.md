@@ -15,6 +15,7 @@ packages/guild      serveurs : réglages, permissions, cycle de vie
 packages/game-data  régions et lieux du jeu, et la recherche derrière l'autocomplétion
 packages/todolist   todolists : grammaire, rendu, cochage (l'état vit dans le message Discord)
 packages/timers     tableaux de timers : état en base, rendu pur, alertes, entretien des tableaux
+packages/warlog     collecteur partagé, état public, abonnements et livraisons par serveur
 packages/testing    outils partagés par les tests
 ```
 
