@@ -52,6 +52,35 @@ A click ticks a task or reduces its quantity by one. The message updates for eve
 for every click. When a page is finished, the person completing it receives a private confirmation. If a task is
 already done when you click, PICKET lets you know.
 
+![English todolist in Discord with Logi farming, Logistics transport and Base and facility upkeep categories, remaining quantities, completed diesel and maintenance-supply tasks, and letter buttons for open tasks.](/images/todolist-channel-example.png)
+
+*Illustration of a fictitious list in English, partway through the work. Two tasks are crossed out and no longer have
+buttons; the basic-materials quantity has fallen from five to four. Categories and the convoy reminder stay visible.*
+
+::: details Copy this logistics list
+
+Paste this into `/todolist create` to start with all eight tasks open:
+
+```text
+__**Logi farming**__
+A - Salvage runs (x3)
+A - Basic materials crates (x5)
+A - Diesel cans (x2)
+
+__**Logistics transport**__
+A - Deliver crates to Jade Cove (x3)
+A - Return empty trucks (x2)
+
+__**Base and facility upkeep**__
+A - Refill maintenance supplies
+A - Check facility power
+A - Refuel the facility
+
+Reminder: convoy departs at 20:00
+```
+
+:::
+
 Simultaneous clicks count: two people delivering one crate each can reduce the quantity by two. You do not need to
 wait for the other person to finish clicking.
 

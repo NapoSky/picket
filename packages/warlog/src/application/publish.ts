@@ -11,27 +11,26 @@ const FACTION_EMOJIS = {
   NONE: '⚪',
 } as const;
 
-export const WAR_LOG_COLORS = { favorable: 0x57f287, unfavorable: 0xed4245, neutral: 0x99aab5, WARDENS: 0x4b78a6, COLONIALS: 0x4a6a3e } as const;
+export const WAR_LOG_COLORS = { hostile: 0xed4245, neutral: 0x99aab5, WARDENS: 0x4b78a6, COLONIALS: 0x8aa07a } as const;
 const SPECIAL_EVENTS = {
-  sc_built: { icon: '🏗️', effect: 'gain' },
-  sc_destroyed: { icon: '💥', effect: 'loss' },
-  launch_detected: { icon: '🚀', effect: 'gain' },
-  launch_destroyed: { icon: '💥', effect: 'loss' },
-  launch_armed: { icon: '🚨', effect: 'gain' },
-  launch_disarmed: { icon: '🚀', effect: 'loss' },
-  rocket_targeting: { icon: '🎯', effect: 'gain' },
-  rocket_hit: { icon: '☢️', effect: 'gain' },
-  rocket_no_target: { icon: '🎯', effect: 'loss' },
-  // Removing an old impact marker says nothing about a new military outcome.
-  rocket_forgotten: { icon: '☢️', effect: 'neutral' },
+  sc_built: '🏗️',
+  sc_destroyed: '💥',
+  launch_detected: '🚀',
+  launch_destroyed: '💥',
+  launch_armed: '🚨',
+  launch_disarmed: '🚀',
+  rocket_targeting: '🎯',
+  rocket_hit: '☢️',
+  rocket_no_target: '🎯',
+  rocket_forgotten: '☢️',
   // Here faction is the owner of the damaged structure, not the launcher.
-  scorched: { icon: '🔥', effect: 'loss' },
+  scorched: '🔥',
 } as const;
 
-function perspectiveOf(event: WarEvent, perspective: Delivery['perspective'], effect: 'gain' | 'loss' | 'neutral') {
-  const relation = perspective === 'NONE' || event.faction === 'NONE' ? 'neutral' : event.faction === perspective ? 'friendly' : 'hostile';
-  const sentiment = relation === 'neutral' || effect === 'neutral' ? 'neutral' : (relation === 'friendly') === (effect === 'gain') ? 'favorable' : 'unfavorable';
-  return { relation, sentiment } as const;
+function perspectiveOf(event: WarEvent, perspective: Delivery['perspective']) {
+  if (perspective === 'NONE' || event.faction === 'NONE') return { relation: 'neutral', color: WAR_LOG_COLORS.neutral } as const;
+  if (event.faction === perspective) return { relation: 'friendly', color: WAR_LOG_COLORS[perspective] } as const;
+  return { relation: 'hostile', color: WAR_LOG_COLORS.hostile } as const;
 }
 
 const escape = (text: string): string => text.replace(/\s+/g, ' ').replace(/([\\`*_~|<>])/g, '\\$1').slice(0, 256);
@@ -40,11 +39,11 @@ export function warMessage(delivery: Delivery, i18n: I18n, guildLocale: string |
   const event = delivery.event;
   const base = { buttons: [], silent: true, nonce: `pw${delivery.id}` } as const;
   if (event.type === 'war_ended') {
-    const { relation, sentiment } = perspectiveOf(event, delivery.perspective, 'gain');
+    const { relation, color } = perspectiveOf(event, delivery.perspective);
     return { ...base, embeds: [{ title: t('warlog.embedTitles.war_ended'),
       description: `${FACTION_EMOJIS[event.faction]} ${t('warlog.ended', { war: event.war, faction: t(`warlog.factions.${event.faction}`) })}`,
-      color: event.faction === 'NONE' ? WAR_LOG_COLORS.neutral : WAR_LOG_COLORS[event.faction],
-      footer: t('warlog.embedFooter', { war: event.war, relation: t(`warlog.relations.${relation}`), sentiment: t(`warlog.sentiments.${sentiment}`) }),
+      color,
+      footer: t('warlog.embedFooter', { war: event.war, relation: t(`warlog.relations.${relation}`) }),
       timestamp: new Date(event.occurredAt).toISOString(),
     }] };
   }
@@ -61,12 +60,12 @@ export function warMessage(delivery: Delivery, i18n: I18n, guildLocale: string |
     });
     if (event.type in SPECIAL_EVENTS) {
       const type = event.type as keyof typeof SPECIAL_EVENTS;
-      const { icon, effect } = SPECIAL_EVENTS[type];
-      const { relation, sentiment } = perspectiveOf(event, delivery.perspective, effect);
+      const icon = SPECIAL_EVENTS[type];
+      const { relation, color } = perspectiveOf(event, delivery.perspective);
       return { ...base, embeds: [{ title: `${icon} ${t(`warlog.embedTitles.${type}`)}`, description: `${emoji} ${action}`,
-        color: WAR_LOG_COLORS[sentiment],
+        color,
         fields: [{ name: t('warlog.region'), value: region, inline: true }, { name: t('warlog.location'), value: escape(object.location), inline: true }],
-        footer: t('warlog.embedFooter', { war: event.war, relation: t(`warlog.relations.${relation}`), sentiment: t(`warlog.sentiments.${sentiment}`) }),
+        footer: t('warlog.embedFooter', { war: event.war, relation: t(`warlog.relations.${relation}`) }),
         timestamp: new Date(event.occurredAt).toISOString(),
       }] };
     }

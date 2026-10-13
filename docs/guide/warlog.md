@@ -1,89 +1,164 @@
 # War log
 
-PICKET watches Foxhole's public War API and posts changes in a regular text channel. Collection is shared across
-servers; each server chooses its own geographic coverage. The feature is **disabled by default**.
+Follow captures, losses and nuclear activity without leaving Discord. PICKET posts war events in your group's
+channel, covering the parts of the map you choose. Ordinary events are short messages; special alerts use colored
+cards so they are easy to spot.
 
-## Configure your subscription
+An officer configures **one subscription per server** with `/warlog settings`. It is **disabled by default** and
+receives new events once enabled, without replaying earlier changes.
 
-An officer runs `/warlog settings`. In the private panel:
+## Who can do what?
 
-1. Choose a **regular text channel** where PICKET can View Channel, Send Messages and Embed Links. Announcement
-   channels, threads, forums and voice channels are not accepted.
-2. Select **one to three zones**: West Islands, West Coast, Centre, East Coast or East Islands. These five zones
-   group the game's 53 known regions. Click a zone again to remove it.
-3. Choose the **reference faction**: Neutral (default), Colonials or Wardens. It controls special-alert colors without
-   filtering events by faction. This choice is kept between wars.
-4. Choose **Confirm and enable**. The current war must be available to enable the subscription.
+Reading the war log only requires access to its Discord channel. Configuration uses the **PICKET access levels**
+configured for your server, rather than your ranks in the game.
 
-One destination is supported per server. Selecting several zones sends their events into that same channel. The panel
-is restricted to its owner and expires after 15 minutes; reopen the command when necessary. Language follows the server
-setting, then the Discord server's language saved when choosing the channel, then English.
-
-Each ordinary event is a separate, silent, one-line message, including faction, game timestamp, region, structure and
-location. Structures under initial construction are omitted; upgrades and captures are published. Storm Cannons,
-Intelligence Centers and Weather Stations observed being built receive estimated concrete notifications after 48, 24
-and 24 hours. The text says the concrete **may have dried**, because the API does not reveal the true construction time.
-
-## Special alerts and colors
-
-These events use individual embeds with region, location, game time and perspective:
-
-| Event | Format |
+| Access | What you can do |
 | --- | --- |
-| Storm Cannon built or destroyed | Embed |
-| Launch site detected, armed, disarmed or destroyed | Embed |
-| Nuclear target detected or removed | Embed |
-| Nuclear impact or impact marker removed | Embed |
-| Scorched structure | One embed per structure |
-| War ended | Embed in the winner's faction color |
-| Captures, losses, upgrades, IC/WS and concrete drying | Text line |
+| **Anyone who can read the channel** | Follow the published events. No command or button is needed. |
+| **Officer** | Choose the channel, zones and reference faction; enable or pause the subscription. |
+| **Discord administrator** | Everything an officer can do, plus manage access roles and export or delete server data. |
 
-Green means **favorable** for the server; red means **unfavorable**. An allied launch site being armed is green; an enemy
-site being armed is red. Losing an allied Storm Cannon is red; destroying an enemy Storm Cannon is green. For scorched
-structures, faction identifies the previous owner, not the launcher. The footer states Allied / Enemy and Favorable /
-Unfavorable so the meaning does not depend on color alone.
+By default, administrators can configure the war log. An administrator can grant officer access in
+`/picket settings` → **Permissions**. See the [permissions guide](./permissions) for details.
 
-Neutral perspective or unknown event ownership produces gray alerts. Removing an old impact marker is always gray:
-it does not indicate a new military outcome. The war-end announcement uses the winner's faction color regardless of
-perspective. Impacts and scorched structures are not grouped: one event remains one message. Colonial and Warden emojis
-always identify the event's actual faction. All messages, including embeds, are silent.
+## Your first subscription
 
-## Change coverage or pause
+Suppose your group wants to follow the West Coast and Centre.
 
-Changing channel, zones or reference faction cancels pending messages for the old configuration. Removing the final zone also disables the
-subscription. Disabling and later re-enabling receives **new events only**, without replaying the disabled period.
-An API call already sent to Discord can still finish after a configuration change.
+1. **An officer runs `/warlog settings`**. The private panel can be opened from any channel on the server.
+2. **Choose the destination**: select a regular text channel, for example `#war-log`.
+3. **Choose your reference faction**: Neutral (default), Colonials or Wardens. Then select **West Coast** and **Centre**.
+4. Click **Confirm and enable**. New events from those zones will appear in `#war-log`.
 
-## Confirm for every new war
+The bot needs **View Channel**, **Send Messages** and **Embed Links** in the destination. Announcement channels,
+threads, forums and voice channels are not accepted. The current war must be available before activation.
 
-At the start of a new war, subscriptions become inactive. Previously subscribed servers receive one invitation in
-their old channel to open `/warlog settings`. The channel and zones stay prefilled: review or change them, then confirm
-and enable for the current war. There are no periodic reminders and no retroactive event replay.
-The reference faction is preserved and does not need to be selected again.
+## Following events in the channel
 
-A restart within the same war does not require confirmation again. A new war discovered after an outage still requires
-renewal. Optional timer-board resets are configured separately in `/timers settings` and do not depend on renewing the
-war-log subscription.
+### Reading the messages
 
-## Interruptions
+Each event produces **one silent message**, without a ping. A text line shows the faction's icon, event time,
+region, action, structure and location. Times are displayed by your Discord client.
 
-If collection fails, PICKET pauses the feed and retries. It reloads the complete public map as a new baseline and then
-publishes subsequent changes. Changes during the outage and pending messages from before recovery are not replayed.
-An incomplete map response never means that its structures disappeared.
+![English war-log messages in a Discord channel: capture lines, a blue allied Warden launch alert, a red enemy target alert and a red enemy Storm Cannon destruction alert.](/images/warlog-channel-example.png)
 
-The delivery target for an isolated detected event is two minutes under supported, healthy operation. It does not
-include time before the API exposes the change and cannot cover API outages, inaccessible channels or sustained
-overload. Delivery is paced to share Discord's allowance with timers and other bot operations.
+*Illustration using the bot's English messages, with Wardens as the server's reference faction. Events are fictitious;
+the layout may vary with your Discord client.*
 
-If a channel is removed, converted to an unsupported type, or rejects messages because of permissions, its subscription
-is paused. Choose a valid channel and enable again. `/warlog settings` remains available while the subscription is off.
+| Event | How it appears |
+| --- | --- |
+| Captures, losses, upgrades and ordinary structures, including Intelligence Centers and Weather Stations | A text line |
+| Storm Cannon built or destroyed | A colored card (embed) |
+| Launch site, nuclear target, impact or scorched structure | A colored card per event |
+| Estimated concrete drying | A text line |
+| War ended | A card based on the winner's faction and your reference |
 
-## Stored data
+Notifications for ordinary structures still under initial construction are omitted. Upgrades and completed
+construction events are published. An impact and scorched structures remain separate messages.
 
-Public game state and recorded events are retained for the current and preceding observed wars. Server data includes
-channel, zones, reference faction, language, activation for a war, delivery state and configuration audit entries. Server export and deletion
-in `/picket settings` include these records. Shared public game data is independent of a server's deletion; Discord
-messages are not automatically deleted. See [Privacy Policy](../legal/privacy).
+### Understanding the colors
 
-For game-data updates, compare active map names and icon types with the official War API documentation, update
-`packages/game-data/src/domain/war-catalog.ts`, increment `WAR_DATA_VERSION`, and run the catalogue and transition tests.
+**Allied Wardens are blue, allied Colonials are green, and enemies are always red.** Your reference faction determines
+which side is allied:
+
+| Reference faction | Warden event | Colonial event |
+| --- | --- | --- |
+| Wardens | Blue: allied | Red: enemy |
+| Colonials | Red: enemy | Green: allied |
+| Neutral | Gray | Gray |
+
+This rule applies to **every embed**, including destruction, disarming and impact marker removal. A destroyed Warden
+Storm Cannon stays blue for a Warden server; a destroyed Colonial Storm Cannon stays red.
+
+The footer also says **Allied / Enemy / Neutral**. Faction icons always identify the faction
+involved in the event. Choosing a reference faction does **not** filter out the other faction's events.
+
+With **Neutral** selected, or unknown event ownership, embeds are gray. For scorched structures, faction identifies
+the previous owner, not the launcher. For a war-end announcement, the event's faction is the winner.
+
+### Watching concrete dry
+
+When PICKET observes construction, it schedules an estimated drying notification:
+
+| Structure | Time after detection |
+| --- | --- |
+| Storm Cannon | 48 hours |
+| Intelligence Center | 24 hours |
+| Weather Station | 24 hours |
+
+The message says the concrete **may have dried**. Foxhole's public data does not provide the true construction time,
+so this is an estimate, rather than confirmation from the game. Destruction cancels the notification.
+
+## Adapting the subscription to your group
+
+### Choosing zones and changing settings
+
+An officer opens `/warlog settings`. Changes apply to the **whole server**. Several selected zones feed the same
+channel; click a selected zone again to remove it.
+
+::: details Available settings and defaults
+
+| Setting | Choices | Default |
+| --- | --- | --- |
+| Destination | One regular text channel. | None |
+| Zones | One to three of West Islands, West Coast, Centre, East Coast and East Islands. | None |
+| Reference faction | Neutral, Colonials or Wardens. | Neutral |
+| Subscription | Enabled or disabled; activation requires a channel and zones. | Disabled |
+
+:::
+
+Channel, zone and faction changes take effect immediately and cancel messages still waiting for the previous
+configuration. An already-started send can still arrive. Removing the final zone pauses the subscription.
+
+Click **Disable** to pause, then **Confirm and enable** to resume. PICKET sends **new events only** after resuming.
+The panel belongs to the person who opens it and expires after 15 minutes without an update; reopen the command
+when needed. Messages follow the server's language setting in `/picket settings`, with Discord's server language
+and English as fallbacks.
+
+### Starting the next war
+
+At each new war, PICKET pauses active subscriptions and posts **one invitation to renew** in their previous channel.
+Open `/warlog settings`, review or change the zones, then confirm and enable again.
+
+The **channel, zones and reference faction stay saved**. You do not need to choose your faction again. There are no
+periodic reminders or messages replayed from before renewal. A restart during the same war does not require renewal.
+
+Optional timer-board resets are configured separately in `/timers settings` → **Board management**. They are off
+by default and do not depend on renewing the war-log subscription. See the [timers guide](./timers).
+
+## Limits
+
+| Limit | Value |
+| --- | --- |
+| Destination channels per server | 1 |
+| Subscribed zones | 1 to 3 out of 5 |
+| Event grouping | None: one event per message |
+| Notifications | Always silent |
+| Catch-up after a pause or collection outage | None |
+
+Under normal operation, PICKET aims to deliver an isolated event within **two minutes of detecting it**. This does
+not include the time before Foxhole publishes the change. Outages, inaccessible channels or sustained overload can
+delay delivery.
+
+## If something goes wrong
+
+| Situation | What to do |
+| --- | --- |
+| You cannot open or change settings | Check your PICKET officer access and whether the server is suspended. |
+| The destination is refused | Choose a regular text channel and check the bot's View Channel, Send Messages and Embed Links permissions. |
+| The current war is unavailable | Try enabling again later. The channel, zones and faction can already be saved. |
+| No events appear | Check that the subscription is enabled for the current war and covers the zones you want. |
+| The channel was removed, converted or became inaccessible | Publication is paused. Restore permissions or choose a valid channel, then enable again. |
+| Events are delayed | Temporary Discord errors are retried; pending messages can arrive later. |
+| There is a gap after an outage or restart | PICKET refreshes its view of the map and resumes with subsequent changes. Missing events are not replayed. |
+| A new war started and messages stopped | Open `/warlog settings` and renew the subscription. Your reference faction is preserved. |
+
+## What PICKET stores
+
+PICKET saves the server's **channel, zones, reference faction, language and subscription state**, delivery information
+and configuration audit entries. An administrator can export these records or request their deletion in
+`/picket settings` → **Data**. Deleting the bot's data does not automatically delete Discord messages.
+
+Public game observations and recorded events are shared between servers and retained for the **current and preceding
+observed wars**. Deleting one server's data does not erase that shared game history. See the
+[Privacy Policy](../legal/privacy) for the general retention policy.

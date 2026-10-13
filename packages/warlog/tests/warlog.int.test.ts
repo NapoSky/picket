@@ -116,8 +116,8 @@ describe('war-log persistence and diffusion', () => {
     const publisher = new PublishWarLog(store, { send, fetch: jest.fn(), edit: jest.fn(), delete: jest.fn() }, createI18n(), { now: () => sentAt }, noopLogger, async () => 'fr', async () => {});
     await publisher.tick();
     expect(send).toHaveBeenCalledTimes(2);
-    expect(send.mock.calls.find(([id]) => id === channel)![1].embeds[0].color).toBe(WAR_LOG_COLORS.favorable);
-    expect(send.mock.calls.find(([id]) => id === otherChannel)![1].embeds[0].color).toBe(WAR_LOG_COLORS.unfavorable);
+    expect(send.mock.calls.find(([id]) => id === channel)![1].embeds[0].color).toBe(WAR_LOG_COLORS.WARDENS);
+    expect(send.mock.calls.find(([id]) => id === otherChannel)![1].embeds[0].color).toBe(WAR_LOG_COLORS.hostile);
     expect((await queryAsAdmin(database, 'SELECT * FROM warlog_deliveries WHERE completed_at IS NULL'))).toEqual([]);
   });
   it('fences a stale poller and preserves the last valid state', async () => {

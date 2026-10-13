@@ -458,15 +458,10 @@
     "neutralPerspective": "Neutral",
     "region": "Region",
     "location": "Location",
-    "embedFooter": "War {{war}} · {{relation}} · {{sentiment}}",
+    "embedFooter": "War {{war}} · {{relation}}",
     "relations": {
       "friendly": "Allied",
       "hostile": "Enemy",
-      "neutral": "No perspective"
-    },
-    "sentiments": {
-      "favorable": "Favorable",
-      "unfavorable": "Unfavorable",
       "neutral": "Neutral"
     },
     "embedTitles": {

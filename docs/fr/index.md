@@ -36,8 +36,8 @@ landing:
         text: Niveaux membre et officier par serveur, gérés avec les rôles que vous avez déjà.
         link: /fr/guide/permissions
       - name: War-log
-        text: Un historique de ce qui s'est passé pendant votre absence.
-        soon: Prochainement
+        text: Les événements de guerre dans votre salon, pour une à trois zones, avec des alertes adaptées à votre faction.
+        link: /fr/guide/warlog
   steps:
     title: Opérationnel en trois étapes
     items:
@@ -64,7 +64,7 @@ landing:
     text: Apprenez à utiliser PICKET, hébergez votre propre instance ou consultez les conditions qui s'appliquent.
     cards:
       - title: Guide d'utilisation
-        text: Commandes, timers, todolists et permissions.
+        text: Commandes, timers, todolists, war-log et permissions.
         link: /fr/guide/getting-started
       - title: Auto-hébergement
         text: Installer et configurer votre propre instance.

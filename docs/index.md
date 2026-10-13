@@ -36,8 +36,8 @@ landing:
         text: Member and officer levels per server, managed with roles you already have.
         link: /guide/permissions
       - name: War log
-        text: A history of what happened while you were away.
-        soon: Next
+        text: War events in your channel, with up to three selected zones and alerts adapted to your faction.
+        link: /guide/warlog
   steps:
     title: Up and running in three steps
     items:
@@ -64,7 +64,7 @@ landing:
     text: Learn how to use PICKET, run your own instance, or read the terms that apply.
     cards:
       - title: User guide
-        text: Commands, timers, todo lists and permissions.
+        text: Commands, timers, todo lists, war log and permissions.
         link: /guide/getting-started
       - title: Self-hosting
         text: Install and configure your own instance.

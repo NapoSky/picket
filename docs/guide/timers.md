@@ -40,14 +40,12 @@ out a missing permission when you create the board.
 ### Reading the board
 
 Timers are grouped by region and town. Each resource shows its name, code where applicable, deadline or elapsed time,
-and owner. For example:
+and owner.
 
-```text
-[region] Allod's Bight
-[town] Mercy's Wail
-Asset                Code      Timer
-📦 🇦・North depot    123456    in 2 days・@Jules
-```
+![English timer board in Discord with three stockpiles, one ship and one facility, grouped under Mercy's Wail and Rumhold, with codes, deadlines, owners and letter buttons.](/images/timers-channel-example.png)
+
+*Illustration using the bot's English layout. The board contains three stockpiles, a ship and a facility. Names,
+owners, codes and deadlines are fictitious; the layout and relative times may vary with your Discord client.*
 
 The letter **🇦** identifies the timer's button. Letters start again at A on each message: use the button underneath
 the message containing your resource. The first message shows when the board was updated. An expired timer stays

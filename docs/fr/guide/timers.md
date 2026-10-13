@@ -41,14 +41,12 @@ Le bot doit pouvoir **Voir le salon**, **Envoyer des messages** (ou **Envoyer de
 ### Lire le tableau
 
 Les timers sont regroupés par région et par ville. Pour chaque ressource, le tableau affiche son nom, son code quand
-elle en a un, son échéance ou le temps écoulé, puis son responsable. Par exemple :
+elle en a un, son échéance ou le temps écoulé, puis son responsable.
 
-```text
-[région] Allod's Bight
-[ville] Mercy's Wail
-Asset                Code      Timer
-📦 🇦・Dépôt nord     123456    dans 2 jours・@Jules
-```
+![Tableau de timers en anglais dans Discord avec trois stockpiles, un navire et une facility, regroupés sous Mercy's Wail et Rumhold, avec codes, échéances, responsables et boutons à lettres.](/images/timers-channel-example.png)
+
+*Illustration avec le rendu du bot en anglais. Le tableau contient trois stockpiles, un navire et une facility. Les noms,
+responsables, codes et échéances sont fictifs ; la disposition et les délais affichés peuvent varier selon votre client Discord.*
 
 La lettre **🇦** permet de retrouver le bouton du timer. Les lettres recommencent à A sur chaque message : utilisez
 le bouton sous le message qui contient votre ressource. Le premier message indique l'heure de mise à jour du tableau.

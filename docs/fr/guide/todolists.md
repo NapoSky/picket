@@ -53,6 +53,35 @@ Un clic coche une tâche ou retire une unité de sa quantité. Le message se met
 de confirmation privé à chaque clic. À la fin d'une page, la personne qui termine reçoit une confirmation privée.
 Si une tâche est déjà terminée lorsque vous cliquez, PICKET vous le signale.
 
+![Todolist en anglais dans Discord avec les catégories Logi farming, Logistics transport et Base and facility upkeep, des quantités restantes, les tâches diesel et maintenance supplies terminées et des boutons à lettres pour les tâches ouvertes.](/images/todolist-channel-example.png)
+
+*Illustration d'une liste fictive en anglais, en cours de réalisation. Deux tâches sont barrées et n'ont plus de bouton ;
+la quantité de caisses de basic materials est passée de cinq à quatre. Les catégories et le rappel du convoi restent visibles.*
+
+::: details Copier cet exemple logistique
+
+Collez ce texte dans `/todolist create` pour démarrer avec les huit tâches à faire :
+
+```text
+__**Logi farming**__
+A - Salvage runs (x3)
+A - Basic materials crates (x5)
+A - Diesel cans (x2)
+
+__**Logistics transport**__
+A - Deliver crates to Jade Cove (x3)
+A - Return empty trucks (x2)
+
+__**Base and facility upkeep**__
+A - Refill maintenance supplies
+A - Check facility power
+A - Refuel the facility
+
+Reminder: convoy departs at 20:00
+```
+
+:::
+
 Les clics simultanés sont pris en compte : deux personnes qui livrent une caisse chacune peuvent retirer deux unités.
 Vous n'avez pas besoin d'attendre que l'autre personne ait fini de cliquer.
 
