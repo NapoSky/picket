@@ -6,6 +6,7 @@ import { createTestDatabase, queryAsAdmin, type TestDatabase } from '@picket/tes
 import {
   createDashboardServer,
   PostgresStatsStore,
+  DashboardDiscordError,
   type DashboardIdentityProvider,
   type OAuthGuild,
   type DurableVoiceBuffer,
@@ -177,6 +178,46 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
       await queryAsAdmin(database, 'SELECT guild_id FROM guild_settings WHERE guild_id=$1', [OTHER]),
     ).toEqual([]);
   });
+  it('refreshes a newly enabled server before any voice activity has been recorded', async () => {
+    await queryAsAdmin(database, 'TRUNCATE stats_users,stats_channels,stats_voice_events,stats_voice_segments,stats_voice_presence CASCADE');
+    await queryAsAdmin(database, "UPDATE guild_settings SET timezone='Europe/Paris' WHERE guild_id=$1", [A]);
+    await store.configure(A, U, { enabled: false });
+    await store.configure(A, U, { enabled: true });
+    for (const days of [1, 7, 60]) {
+      const response = await get(`/api/activity?guild=${A}&mode=overview&days=${days}`);
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ seconds: 0, activeUsers: 0, sessions: 0, inVoice: 0, users: [] });
+    }
+    expect((await get(`/api/privacy?guild=${A}`)).statusCode).toBe(200);
+  });
+  it('logs safe dependency diagnostics without exposing SQL, OAuth tokens or request parameters', async () => {
+    const log = jest.spyOn(noopLogger, 'error');
+    const message = 'SELECT private_member_name FROM secret_table; sensitive-oauth-token';
+    jest.spyOn(store, 'report').mockRejectedValueOnce(Object.assign(new Error(message), { code: '42702' }));
+    const response = await get(`/api/activity?guild=${A}&mode=overview`);
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({ error: 'unavailable' });
+    expect(response.headers['x-request-id']).toEqual(expect.any(String));
+    expect(log).toHaveBeenLastCalledWith(expect.objectContaining({
+      method: 'GET', route: '/api/activity', code: '42702', requestId: response.headers['x-request-id'],
+    }), 'dashboard dependency unavailable');
+    expect(JSON.stringify(log.mock.calls)).not.toContain(message);
+    expect(JSON.stringify(log.mock.calls)).not.toContain(A);
+    jest.spyOn(identity, 'memberRoles').mockRejectedValueOnce(new DashboardDiscordError('membership', 429));
+    expect((await get(`/api/privacy?guild=${A}`)).statusCode).toBe(503);
+    expect(log).toHaveBeenLastCalledWith(expect.objectContaining({
+      route: '/api/privacy', dependency: 'discord', operation: 'membership', upstreamStatus: 429,
+    }), 'dashboard dependency unavailable');
+  });
+  it.each([[401, 401], [403, 403], [404, 403], [429, 503], [500, 503]])(
+    'returns the appropriate status when Discord membership responds with %i', async (upstream, expected) => {
+      team = true;
+      // Team access to aggregates never grants membership or bypasses privacy checks.
+      expect((await get(`/api/activity?guild=${A}&mode=overview`)).statusCode).toBe(200);
+      jest.spyOn(identity, 'memberRoles').mockRejectedValueOnce(new DashboardDiscordError('membership', upstream));
+      expect((await get(`/api/privacy?guild=${A}`)).statusCode).toBe(expected);
+    },
+  );
   it('shares only current instance counts with members while preserving tenant settings isolation', async () => {
     expect((await app.inject('/api/instance')).statusCode).toBe(401);
     const overview = (await get('/api/instance')).json();

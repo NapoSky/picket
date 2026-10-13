@@ -108,6 +108,7 @@ const translations = {
     helperRetention:
       'All statistical history covers a maximum of 60 days. “No observed activity” does not mean “never active”.',
     privacyTitle: 'Your data, your choice',
+    privacyUnavailable: 'Your privacy preferences could not be loaded. These actions are temporarily unavailable. Use Refresh to try again.',
     privacyHelp:
       'Manage tracking for your account in the selected server. Erasure also removes your contribution from the statistics.',
     optOut: 'Exclude me from future tracking',
@@ -282,6 +283,7 @@ const translations = {
     helperRetention:
       'L’historique statistique couvre au maximum 60 jours. « Aucune activité observée » ne signifie pas « jamais actif ».',
     privacyTitle: 'Vos données, votre choix',
+    privacyUnavailable: 'Vos préférences de confidentialité n’ont pas pu être chargées. Ces actions sont temporairement indisponibles. Utilisez Actualiser pour réessayer.',
     privacyHelp:
       'Gérez le suivi de votre compte sur le serveur sélectionné. L’effacement retire également votre contribution des statistiques.',
     optOut: 'M’exclure des prochaines collectes',
@@ -865,6 +867,9 @@ async function load() {
   $('segments-body').replaceChildren();
   notice('');
   setHeading();
+  for (const id of ['opt-out', 'save-privacy', 'erase']) $(id).disabled = true;
+  $('opt-out').checked = false;
+  $('privacy-status').hidden = true;
   try {
     if (page === 'picket') {
       instanceReport = null;
@@ -883,8 +888,20 @@ async function load() {
       $('guild').value !== 'all' &&
       guilds.find((g) => g.id === $('guild').value)?.isMember !== false
     ) {
-      const privacy = await (await api(`/api/privacy?guild=${$('guild').value}`)).json();
-      if (ticket === generation) $('opt-out').checked = privacy.optedOut;
+      try {
+        const privacy = await (await api(`/api/privacy?guild=${$('guild').value}`)).json();
+        if (ticket === generation) {
+          $('opt-out').checked = privacy.optedOut;
+          for (const id of ['opt-out', 'save-privacy', 'erase']) $(id).disabled = false;
+        }
+      } catch (error) {
+        if (error.status === 401) throw error;
+        if (ticket === generation) {
+          $('privacy-status').textContent = t('privacyUnavailable');
+          $('privacy-status').hidden = false;
+          $('privacy-card').open = true;
+        }
+      }
     }
     if (page === 'admin') {
       const state = await (await api('/api/admin/status')).json();

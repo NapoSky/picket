@@ -8,7 +8,7 @@ import { sql, type Db } from '@picket/persistence';
 import { exportActivity } from '../application/activity-export';
 import { parsePeriod, type StatsScope } from '../domain/model';
 import type { DurableVoiceBuffer } from '../application/store';
-import type { DashboardIdentityProvider } from './dashboard-discord';
+import { DashboardDiscordError, type DashboardIdentityProvider } from './dashboard-discord';
 import { PostgresStatsStore } from './postgres-stats-store';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -192,13 +192,33 @@ export function createDashboardServer(options: DashboardOptions) {
     if (attempts.size > 20_000 || window.count > 90)
       return reply.code(429).header('Retry-After', '60').send({ error: 'rate_limited' });
   });
-  app.setErrorHandler((error, _request, reply) => {
+  app.setErrorHandler((error, request, reply) => {
     const failure = error as { statusCode?: number; message?: string };
     if (failure.message === 'stats_snapshot_pending')
       return reply.code(503).header('Retry-After','60').send({ error:'stats_snapshot_pending' });
     const status =
       failure.statusCode && failure.statusCode >= 400 && failure.statusCode < 500 ? failure.statusCode : 503;
-    if (status === 503) options.logger.error({}, 'dashboard dependency unavailable');
+    if (status === 503 || error instanceof DashboardDiscordError) {
+      // Never serialize the error: SQL, Discord request objects and query strings
+      // can contain personal data or credentials. These codes are enough to diagnose.
+      const code = (error as { code?: unknown }).code;
+      const fields = {
+        requestId: request.id,
+        method: request.method,
+        route: request.routeOptions.url,
+        errorType: error instanceof Error && /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(error.name) ? error.name : 'Error',
+        ...(typeof code === 'string' && /^(?:[0-9A-Z]{5}|E[A-Z_]{1,40})$/.test(code) ? { code } : {}),
+        ...(error instanceof DashboardDiscordError ? {
+          dependency: 'discord', operation: error.operation,
+          upstreamStatus: error.upstreamStatus, upstreamFailure: error.upstreamFailure,
+        } : {}),
+        ...(typeof (error as { status?: unknown }).status === 'number'
+          ? { upstreamStatus: (error as { status: number }).status } : {}),
+      };
+      if (status === 503) options.logger.error(fields, 'dashboard dependency unavailable');
+      else options.logger.warn(fields, 'dashboard Discord authorization denied');
+      reply.header('X-Request-Id', request.id);
+    }
     return reply.code(status).send({ error: status === 503 ? 'unavailable' : failure.message });
   });
 

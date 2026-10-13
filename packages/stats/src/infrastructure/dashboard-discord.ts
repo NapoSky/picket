@@ -25,6 +25,21 @@ export interface DashboardIdentityProvider {
 
 const id = (value: unknown): value is string => typeof value === 'string' && /^\d{15,25}$/.test(value);
 
+/** Deliberately excludes request URLs, bearer tokens and response bodies. */
+export class DashboardDiscordError extends Error {
+  readonly statusCode: number | undefined;
+  constructor(
+    readonly operation: 'user' | 'guilds' | 'membership',
+    readonly upstreamStatus?: number,
+    readonly upstreamFailure?: 'timeout' | 'network',
+  ) {
+    super('Discord identity unavailable');
+    this.name = 'DashboardDiscordError';
+    this.statusCode = upstreamStatus === 401 ? 401
+      : operation === 'membership' && (upstreamStatus === 403 || upstreamStatus === 404) ? 403 : undefined;
+  }
+}
+
 export class DashboardDiscord implements DashboardIdentityProvider {
   readonly #guildCache = new Map<string, { at: number; guilds: readonly OAuthGuild[] }>();
   #team: { at: number; ids: Set<string> } | null = null;
@@ -38,11 +53,18 @@ export class DashboardDiscord implements DashboardIdentityProvider {
   ) {}
 
   private async request(path: string, token: string): Promise<unknown> {
-    const response = await this.fetcher(`https://discord.com/api/v10${path}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(8_000),
-    });
-    if (!response.ok) throw new Error('Discord identity unavailable');
+    const operation = path.endsWith('/member') ? 'membership' : path.startsWith('/users/@me/guilds') ? 'guilds' : 'user';
+    let response: Response;
+    try {
+      response = await this.fetcher(`https://discord.com/api/v10${path}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(8_000),
+      });
+    } catch (error) {
+      throw new DashboardDiscordError(operation, undefined,
+        error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name) ? 'timeout' : 'network');
+    }
+    if (!response.ok) throw new DashboardDiscordError(operation, response.status);
     return response.json();
   }
 
