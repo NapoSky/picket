@@ -288,13 +288,26 @@ export function createDashboardServer(options: DashboardOptions) {
     const active = new Set(await options.store.guildIds());
     const deployed = global ? new Set(await options.store.allGuildIds()) : active;
     const items = [];
+    let botNames: ReadonlyMap<string, string> | undefined;
     for (const guildId of global ? deployed : memberships.map((g) => g.id).filter((id) => deployed.has(id))) {
       const settings = await options.store.settings(guildId);
       const membership = memberships.find((g) => g.id === guildId);
       const level = global ? 'instance_admin' : (await access(current, guildId, false, membership)).level;
+      if (global && !membership && !settings.nameKnown && botNames === undefined) {
+        try {
+          botNames = new Map((await options.identity.guildNames()).map(guild => [guild.id, guild.name]));
+        } catch {
+          botNames = new Map();
+          options.logger.warn({}, 'Discord guild names unavailable; using retained metadata');
+        }
+      }
+      const discordName = membership?.name ?? botNames?.get(guildId);
+      if (discordName && (!settings.nameKnown || discordName !== settings.name))
+        await options.store.rememberGuildName(guildId, discordName);
       items.push({
         id: guildId,
-        name: membership?.name ?? settings.name,
+        name: discordName ?? settings.name,
+        nameKnown: !!discordName || settings.nameKnown,
         level,
         enabled: settings.enabled,
         isMember: membership !== undefined && active.has(guildId),

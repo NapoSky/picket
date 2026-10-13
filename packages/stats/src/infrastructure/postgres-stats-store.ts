@@ -145,7 +145,17 @@ export class PostgresStatsStore {
           guild_name: string;
         }>`SELECT guild_name FROM stats_settings WHERE guild_id=${guildId}`.execute(trx)
       ).rows[0];
-      return { ...config, name: row?.guild_name || guildId };
+      return { ...config, name: row?.guild_name || guildId, nameKnown: !!row?.guild_name };
+    });
+  }
+
+  /** Preserve trusted Discord names independently of collection and future bot departures. */
+  async rememberGuildName(guildId: string, name: string): Promise<void> {
+    if (!name.trim()) return;
+    await withTenant(this.db, GuildId.assert(guildId), async (trx) => {
+      await sql`INSERT INTO stats_settings(guild_id,guild_name) VALUES(${guildId},${name})
+        ON CONFLICT(guild_id) DO UPDATE SET guild_name=EXCLUDED.guild_name
+        WHERE stats_settings.guild_name IS DISTINCT FROM EXCLUDED.guild_name`.execute(trx);
     });
   }
 

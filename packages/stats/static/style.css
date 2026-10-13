@@ -462,6 +462,23 @@ main:has(> .welcome:not([hidden])) {
 .guild-field {
   min-width: 250px;
 }
+.guild-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.guild-status {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--muted);
+  background: var(--raised);
+}
+#guild option.inactive-server,
+#guild.has-inactive-selection {
+  color: var(--muted);
+}
 .filters > button {
   margin-left: auto;
 }

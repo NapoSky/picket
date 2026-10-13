@@ -141,6 +141,17 @@ membres des rôles ciblés. Additionner les effectifs quotidiens ne donne pas l'
 les effectifs des serveurs ne donne pas le nombre de personnes uniques de l'instance. Les filtres période et salon,
 la fenêtre de 60 jours et l'effacement s'appliquent à toutes ces vues.
 
+Les administrateurs d’instance peuvent aussi sélectionner les serveurs inactifs dont les données sont encore
+conservées. Ils apparaissent après les serveurs actifs, en gris avec la mention **Inactif**, et restent sélectionnables
+jusqu’à l’effacement. PICKET conserve leur dernier nom Discord connu ; les noms manquants d’anciens enregistrements
+sont récupérés lorsque Discord les fournit encore. Si le nom n’a jamais été enregistré et n’est plus accessible,
+le sélecteur affiche explicitement **Serveur inconnu** avec son ID. Désactiver la collecte vocale seule ne rend pas
+le serveur inactif.
+
+![Vue d’ensemble PICKET en anglais : Reserve Company conserve son nom, avec le badge Inactive, une sélection grisée et un message sur l’historique conservé.](/images/stats-inactive-en.png)
+
+*Données fictives illustrant un serveur inactif conservé ; cet accès nécessite les droits d’administrateur d’instance.*
+
 ## Adapter le suivi à votre groupe
 
 ### Choisir les personnes et les salons

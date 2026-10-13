@@ -142,6 +142,11 @@ const translations = {
     loading: 'Loading activity…',
     paused:
       'Voice tracking is disabled for this server. Existing history remains available until it expires.',
+    inactiveServer: 'Inactive',
+    activeServerGroup: 'Active servers',
+    inactiveServerGroup: 'Inactive servers',
+    unknownServer: 'Unknown server',
+    inactiveHelp: 'PICKET is inactive on this server. Its retained history remains available until expiry or erasure.',
     gap: 'Some presence segments include a collection interruption. Unobserved time has been excluded.',
     late: 'Collection has not been confirmed recently. The figures may be delayed.',
     peopleTitle: 'Recorded activity',
@@ -311,6 +316,11 @@ const translations = {
     loading: 'Chargement de l’activité…',
     paused:
       'La collecte vocale est désactivée pour ce serveur. L’historique reste disponible jusqu’à son expiration.',
+    inactiveServer: 'Inactif',
+    activeServerGroup: 'Serveurs actifs',
+    inactiveServerGroup: 'Serveurs inactifs',
+    unknownServer: 'Serveur inconnu',
+    inactiveHelp: 'PICKET est inactif sur ce serveur. L’historique conservé reste consultable jusqu’à son expiration ou son effacement.',
     gap: 'Certains segments de présence comprennent une interruption de collecte. Le temps non observé a été exclu.',
     late: 'La collecte n’a pas été confirmée récemment. Les chiffres peuvent être en retard.',
     peopleTitle: 'Activité enregistrée',
@@ -374,6 +384,31 @@ function notice(message, error = false) {
   $('notice').hidden = !message;
   $('notice').classList.toggle('error', error);
 }
+function renderGuildOptions() {
+  const select = $('guild');
+  const previous = select.value;
+  const includeAll = !!select.querySelector('option[value="all"]');
+  const options = (items) => items.map(guild => {
+    const name = guild.nameKnown === false ? `${t('unknownServer')} (${guild.id})` : guild.name;
+    const option = new Option(guild.inactive ? `${name} — ${t('inactiveServer')}` : name, guild.id);
+    option.classList.toggle('inactive-server', !!guild.inactive);
+    return option;
+  });
+  const active = guilds.filter(guild => !guild.inactive);
+  const inactive = guilds.filter(guild => guild.inactive);
+  if (inactive.length) {
+    select.replaceChildren();
+    for (const [items, key] of [[active, 'activeServerGroup'], [inactive, 'inactiveServerGroup']]) {
+      if (!items.length) continue;
+      const group = document.createElement('optgroup');
+      group.label = t(key);
+      group.append(...options(items));
+      select.append(group);
+    }
+  } else select.replaceChildren(...options(active));
+  if (includeAll) select.prepend(new Option(t('allServers'), 'all'));
+  if ([...select.options].some(option => option.value === previous)) select.value = previous;
+}
 function translate() {
   document.documentElement.lang = language;
   document.querySelectorAll('[data-i18n]').forEach((node) => (node.textContent = t(node.dataset.i18n)));
@@ -386,6 +421,7 @@ function translate() {
   document.documentElement.dataset.theme = theme;
   document.title = `PICKET · ${current ? t(page) : t('signIn')}`;
   if (current) {
+    renderGuildOptions();
     setHeading();
     if (page === 'picket' && instanceReport) renderInstance(instanceReport);
     else if (report) render(report);
@@ -451,6 +487,9 @@ function setHeading() {
   $('segments-card').hidden = page === 'overview';
   $('privacy-card').hidden = page === 'admin' || $('guild').value === 'all';
   const selected = guilds.find((g) => g.id === $('guild').value);
+  $('guild').classList.toggle('has-inactive-selection', !!selected?.inactive);
+  $('guild-status').hidden = !selected?.inactive;
+  text('guild-status', t('inactiveServer'));
   if (selected?.isMember === false) $('privacy-card').hidden = true;
   const privileged = ['officer', 'admin', 'instance_admin'].includes(selected?.level);
   $('access-field').hidden = page !== 'activity' || !privileged;
@@ -803,7 +842,8 @@ function render(data) {
   $('truncated').hidden = !data.truncated;
   const selected = guilds.find((g) => g.id === $('guild').value);
   const warnings = [];
-  if (selected && !selected.enabled) warnings.push(t('paused'));
+  if (selected?.inactive) warnings.push(t('inactiveHelp'));
+  else if (selected && !selected.enabled) warnings.push(t('paused'));
   if (data.interruptedSegments > 0) warnings.push(t('gap'));
   if (!data.snapshotAt && data.updatedAt && Date.now() - Date.parse(data.updatedAt) > 180000 && selected?.enabled)
     warnings.push(t('late'));
@@ -891,7 +931,7 @@ function choosePage(next) {
     current.administrator &&
     !Array.from($('guild').options).some((o) => o.value === 'all')
   ) {
-    $('guild').add(new Option(t('allServers'), 'all'), 0);
+    $('guild').prepend(new Option(t('allServers'), 'all'));
     $('guild').value = 'all';
   } else if (next !== 'admin') {
     const all = $('guild').querySelector('option[value="all"]');
@@ -1023,8 +1063,9 @@ translate();
 try {
   current = await (await api('/api/session')).json();
   const data = await (await api('/api/guilds')).json();
-  guilds = data.guilds;
-  $('guild').replaceChildren(...guilds.map((g) => new Option(g.name, g.id)));
+  guilds = data.guilds.sort((a, b) => Number(!!a.inactive) - Number(!!b.inactive)
+    || Number(a.nameKnown === false) - Number(b.nameKnown === false) || a.name.localeCompare(b.name, language));
+  renderGuildOptions();
   $('welcome').hidden = true;
   $('workspace').hidden = false;
   $('logout').hidden = false;

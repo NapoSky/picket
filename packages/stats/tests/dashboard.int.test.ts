@@ -27,11 +27,13 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
     csrf: string;
   let team = false,
     roles: readonly string[] = [R],
+    botGuildNames: readonly Pick<OAuthGuild, 'id' | 'name'>[] = [],
     memberships: readonly OAuthGuild[] = [guild(A), guild(B), guild(OTHER)];
   const identity: DashboardIdentityProvider = {
     exchange: jest.fn(async () => ({ token: 'sensitive-oauth-token', expiresIn: 3600 })),
     user: async () => ({ id: U, name: 'Alice' }),
     guilds: jest.fn(async () => memberships),
+    guildNames: jest.fn(async () => botGuildNames),
     memberRoles: async () => roles,
     teamMember: async () => team,
   };
@@ -51,6 +53,7 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
     team = false;
     roles = [R];
     memberships = [guild(A), guild(B), guild(OTHER)];
+    botGuildNames = [];
     await queryAsAdmin(
       database,
       'TRUNCATE stats_web_sessions,stats_oauth_states,stats_settings,stats_privacy,stats_users,stats_channels,stats_voice_events,stats_voice_segments,stats_voice_presence,guild_permission_roles,guild_settings,guild_registry CASCADE',
@@ -292,6 +295,8 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
     expect((await app.inject({ url: '/api/session', headers: { cookie: `__Host-picket_session=${'f'.repeat(64)}` } })).statusCode).toBe(401);
   });
   it('keeps retained inactive guild history available exclusively to instance administrators', async () => {
+    await store.rememberGuildName(B, 'Reserve Depot');
+    memberships = [guild(A)];
     await queryAsAdmin(
       database,
       "UPDATE guild_registry SET inactive_since=now(),inactive_reason='left' WHERE guild_id=$1",
@@ -300,7 +305,48 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
     expect((await get(`/api/activity?guild=${B}`)).statusCode).toBe(403);
     team = true;
     expect((await get(`/api/activity?guild=${B}`)).statusCode).toBe(200);
-    const guilds = (await get('/api/guilds')).json<{ guilds: { id: string; inactive: boolean }[] }>().guilds;
-    expect(guilds.find((g) => g.id === B)?.inactive).toBe(true);
+    const guilds = (await get('/api/guilds')).json<{ guilds: { id: string; name: string; nameKnown: boolean; inactive: boolean }[] }>().guilds;
+    expect(guilds.find((g) => g.id === B)).toMatchObject({ name: 'Reserve Depot', nameKnown: true, inactive: true });
+    expect(identity.guildNames).not.toHaveBeenCalled();
+  });
+  it('recovers names outside the administrator membership and preserves them after a departure', async () => {
+    team = true;
+    memberships = [guild(A)];
+    botGuildNames = [{ id: B, name: 'Allied Watchpost' }];
+    const first = (await get('/api/guilds')).json().guilds;
+    expect(first.find((g: { id: string }) => g.id === B)).toMatchObject({ name: 'Allied Watchpost', nameKnown: true, inactive: false });
+    expect(await store.settings(B)).toMatchObject({ name: 'Allied Watchpost', nameKnown: true });
+    await queryAsAdmin(database, "UPDATE guild_registry SET inactive_since=now(),inactive_reason='left' WHERE guild_id=$1", [B]);
+    botGuildNames = [];
+    const retained = (await get('/api/guilds')).json().guilds;
+    expect(retained.find((g: { id: string }) => g.id === B)).toMatchObject({ name: 'Allied Watchpost', nameKnown: true, inactive: true });
+    expect(identity.guildNames).toHaveBeenCalledTimes(1);
+  });
+  it('saves OAuth names without enabling collection or changing AFK and exclusion settings', async () => {
+    await store.metadata(A, 'Old name', C);
+    await store.configure(A, U, { enabled: false, excludedChannels: [C] });
+    memberships = [{ ...guild(A), name: 'Renamed Regiment' }];
+    expect((await get('/api/guilds')).statusCode).toBe(200);
+    expect(await store.settings(A)).toMatchObject({ name: 'Renamed Regiment', nameKnown: true, enabled: false, afkChannelId: C, excludedChannels: [C] });
+    expect(identity.guildNames).not.toHaveBeenCalled();
+    await store.rememberGuildName(A, '');
+    expect((await store.settings(A)).name).toBe('Renamed Regiment');
+  });
+  it('distinguishes unavailable old names from inactivity and does not expose other servers to members', async () => {
+    memberships = [guild(A)];
+    const memberGuilds = (await get('/api/guilds')).json().guilds;
+    expect(memberGuilds.map((g: { id: string }) => g.id)).toEqual([A]);
+    expect(identity.guildNames).not.toHaveBeenCalled();
+    team = true;
+    const unknown = (await get('/api/guilds')).json().guilds.find((g: { id: string }) => g.id === B);
+    expect(unknown).toMatchObject({ name: B, nameKnown: false, inactive: false });
+  });
+  it('keeps the guild list usable when Discord name recovery fails', async () => {
+    team = true;
+    memberships = [guild(A)];
+    jest.mocked(identity.guildNames).mockRejectedValueOnce(new Error('Discord unavailable'));
+    const response = await get('/api/guilds');
+    expect(response.statusCode).toBe(200);
+    expect(response.json().guilds.find((g: { id: string }) => g.id === B)).toMatchObject({ name: B, nameKnown: false });
   });
 });

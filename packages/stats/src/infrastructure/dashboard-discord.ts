@@ -18,6 +18,7 @@ export interface DashboardIdentityProvider {
   exchange(code: string): Promise<OAuthToken>;
   user(token: string): Promise<OAuthUser>;
   guilds(token: string, fresh?: boolean): Promise<readonly OAuthGuild[]>;
+  guildNames(): Promise<readonly Pick<OAuthGuild, 'id' | 'name'>[]>;
   memberRoles(token: string, guildId: string): Promise<readonly string[]>;
   teamMember(userId: string, fresh?: boolean): Promise<boolean>;
 }
@@ -27,6 +28,7 @@ const id = (value: unknown): value is string => typeof value === 'string' && /^\
 export class DashboardDiscord implements DashboardIdentityProvider {
   readonly #guildCache = new Map<string, { at: number; guilds: readonly OAuthGuild[] }>();
   #team: { at: number; ids: Set<string> } | null = null;
+  #botGuilds: { at: number; guilds: readonly Pick<OAuthGuild, 'id' | 'name'>[] } | null = null;
   constructor(
     readonly applicationId: string,
     readonly clientSecret: string,
@@ -114,6 +116,28 @@ export class DashboardDiscord implements DashboardIdentityProvider {
       after = last.id;
     }
     throw new Error('Discord guild pagination limit reached');
+  }
+
+  /** Names for the bot's servers, including those the signed-in administrator has not joined. */
+  async guildNames(): Promise<readonly Pick<OAuthGuild, 'id' | 'name'>[]> {
+    if (this.#botGuilds && Date.now() - this.#botGuilds.at < 120_000) return this.#botGuilds.guilds;
+    const guilds: Pick<OAuthGuild, 'id' | 'name'>[] = [];
+    let after = '';
+    for (let page = 0; page < 10; page++) {
+      const query = new URLSearchParams({ limit: '200', ...(after ? { after } : {}) });
+      const data = await this.rest.get('/users/@me/guilds', { query });
+      if (!Array.isArray(data) || !data.every(guild => id(guild?.id) && typeof guild.name === 'string' && guild.name.trim()))
+        throw new Error('Invalid Discord guild names');
+      guilds.push(...data.map(guild => ({ id: guild.id as string, name: guild.name as string })));
+      if (data.length < 200) {
+        this.#botGuilds = { at: Date.now(), guilds };
+        return guilds;
+      }
+      const next = data.at(-1)!.id as string;
+      if (after && BigInt(next) <= BigInt(after)) throw new Error('Invalid Discord guild pagination');
+      after = next;
+    }
+    throw new Error('Discord guild names pagination limit reached');
   }
 
   async memberRoles(token: string, guildId: string): Promise<readonly string[]> {

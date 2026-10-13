@@ -20,6 +20,7 @@ export function createDevelopmentIdentity(db: Db, store: PostgresStatsStore, rol
       return { id, name: (await store.settings(id)).name, owner: false,
         permissions: role === 'officer' && !config?.officer.length ? '8' : '0' };
     })),
+    guildNames: async () => [],
     memberRoles: async (_token, guild) => {
       const config = await permissions.loadExisting(GuildId.assert(guild));
       return [...(config?.member ?? []), ...(role === 'officer' ? config?.officer ?? [] : [])];

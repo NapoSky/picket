@@ -135,6 +135,16 @@ once even when they used several servers that day. Hover over a chart, or focus 
 **Activity by server** also lists voice hours and distinct active people across the whole selected period.
 An officer sees those metrics for their selected regiment in **Regiment activity**, within their existing server permissions.
 These counts describe people with recorded voice activity, rather than the full membership of the target roles.
+
+Instance administrators can also select retained inactive servers. They appear after active servers, in grey with an
+**Inactive** label, and remain selectable until their data is erased. PICKET keeps their last known Discord name;
+names missing from older records are recovered when Discord still provides them. If a name was never saved and is
+no longer accessible, the selector explicitly displays **Unknown server** with its ID. Disabling voice tracking alone
+does not mark a server inactive.
+
+![PICKET Overview in English: Reserve Company retains its name, with an Inactive badge, a grey server selection and a retained-history notice.](/images/stats-inactive-en.png)
+
+*Fictitious data illustrating a retained inactive server; instance administrator access is required.*
 Daily people counts cannot be added to obtain the period's distinct people count, and server counts cannot be added
 to obtain unique people across the instance. Period and channel filters, the 60-day window and erasure apply to all these views.
 
