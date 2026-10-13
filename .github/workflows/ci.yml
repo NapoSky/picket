@@ -108,19 +108,3 @@ jobs:
         with:
           name: sbom
           path: sbom.spdx.json
-
-  docs:
-    name: Documentation build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - run: corepack enable
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm docs:build

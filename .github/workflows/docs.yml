@@ -5,7 +5,10 @@ on:
     branches: [main]
     paths:
       - docs/**
-      - packages/i18n/locales/**
+      - .github/workflows/docs.yml
+  pull_request:
+    paths:
+      - docs/**
       - .github/workflows/docs.yml
   workflow_dispatch:
 
@@ -13,8 +16,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && github.ref || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -31,16 +34,19 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: actions/configure-pages@v6
+        if: github.event_name != 'pull_request'
         id: pages
       - name: Build
         env:
           DOCS_BASE: ${{ steps.pages.outputs.base_path }}/
         run: pnpm docs:build
       - uses: actions/upload-pages-artifact@v5
+        if: github.event_name != 'pull_request'
         with:
           path: docs/.vitepress/dist
 
   deploy:
+    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     permissions:
