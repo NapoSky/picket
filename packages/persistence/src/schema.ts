@@ -143,6 +143,13 @@ export interface TimerScheduleTable {
 }
 
 export interface Schema {
+  stats_settings:StatsSettingsTable;
+  stats_privacy:StatsPrivacyTable;
+  stats_users:StatsUsersTable;
+  stats_channels:StatsChannelsTable;
+  stats_voice_events:StatsVoiceEventsTable;
+  stats_voice_segments:StatsVoiceSegmentsTable;
+  stats_voice_presence:StatsVoicePresenceTable;
   warlog_subscriptions: WarLogSubscriptionsTable;
   warlog_deliveries: WarLogDeliveriesTable;
   warlog_hooks: WarLogHooksTable;
@@ -166,6 +173,14 @@ export interface Schema {
   timer_alerts: TimerAlertsTable;
   timer_schedule: TimerScheduleTable;
 }
+
+export interface StatsSettingsTable {guild_id:string;excluded_channels:ColumnType<string[],string|undefined,string>;afk_channel_id:Nullable<string>;guild_name:Generated<string>;changed_at:Timestamp;enabled_at:Timestamp|null;observed_through:Nullable<Date>;interrupted_at:Nullable<Date>}
+export interface StatsPrivacyTable {guild_id:string;user_id:string;opted_out:Generated<boolean>;erased_before:Timestamp}
+export interface StatsUsersTable {guild_id:string;user_id:string;name:string;last_seen_at:Timestamp}
+export interface StatsChannelsTable {guild_id:string;channel_id:string;name:string;last_seen_at:Timestamp}
+export interface StatsVoiceEventsTable {event_key:string;guild_id:string;user_id:string;channel_id:Nullable<string>;previous_channel_id:Nullable<string>;at:Timestamp;kind:string;quality:string}
+export interface StatsVoiceSegmentsTable {id:string;guild_id:string;user_id:string;channel_id:string;shard_id:number;started_at:Timestamp;ended_at:Nullable<Date>;confirmed_through:Timestamp;current_roles:ColumnType<string[],string|undefined,string>;end_reason:Nullable<string>;quality:string}
+export interface StatsVoicePresenceTable {guild_id:string;user_id:string;channel_id:string;roles:ColumnType<string[],string,string>;shard_id:number;seen_at:Timestamp}
 
 export interface WarLogSubscriptionsTable {
   guild_id: string;

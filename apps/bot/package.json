@@ -8,6 +8,7 @@
     "cli": "node dist/cli.js"
   },
   "dependencies": {
+    "@picket/stats": "workspace:*",
     "@picket/config": "workspace:*",
     "@picket/coordination": "workspace:*",
     "@picket/discord": "workspace:*",

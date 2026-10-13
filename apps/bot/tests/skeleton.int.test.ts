@@ -3,6 +3,10 @@ import { ChannelId, GuildId, Secret, noopLogger, systemClock } from '@picket/ker
 import { PostgresLeaseStore } from '@picket/coordination';
 import { PostgresWarStore, type WarObject } from '@picket/warlog';
 import { createDatabase } from '@picket/persistence';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { DiskVoiceBuffer, PostgresStatsStore } from '@picket/stats';
 import {
   InMemoryInteractionReplies,
   InMemoryMessaging,
@@ -12,7 +16,7 @@ import {
   testI18n,
   type TestDatabase,
 } from '@picket/testing';
-import { buildAuditPublisher, buildCommandRegistry, buildPipeline, buildPurgeJob } from '../src/composition';
+import { buildAuditPublisher, buildCommandRegistry, buildPipeline, buildPurgeJob, type CompositionOptions } from '../src/composition';
 
 const GUILD = '700000000000000001';
 const OFFICER_ROLE = '400000000000000011';
@@ -32,18 +36,19 @@ const composition = {
 
 describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies', () => {
   let database: TestDatabase;
+  let serverOptions: CompositionOptions = composition;
   const keys = createTestKeys();
   let counter = 0;
   const caller = '500000000000000001';
   beforeAll(async () => { database = await createTestDatabase(); });
   afterAll(async () => { await database.drop(); });
-  beforeEach(() => { businessNow = new Date('2026-10-05T12:00:00Z'); });
+  beforeEach(() => { businessNow = new Date('2026-10-05T12:00:00Z'); serverOptions = composition; });
   interface RequestOptions {
     permissions?: string; roles?: string[]; guildId?: string; locale?: string;
     path?: object[]; customId?: string; componentType?: number; values?: string[];
     resolved?: object; modal?: boolean; fields?: object[];
   }
-  const server = () => createInteractionServer({ publicKey: keys.publicKeyHex, pipeline: buildPipeline(database.handle.db, noopLogger, composition), replies, logger: noopLogger, clock: systemClock });
+  const server = () => createInteractionServer({ publicKey: keys.publicKeyHex, pipeline: buildPipeline(database.handle.db, noopLogger, serverOptions), replies, logger: noopLogger, clock: systemClock });
   const payload = (options: RequestOptions, id?: string) => ({
     id: id ?? `91000000000${String(10_000 + counter++)}`, application_id: '800000000000000001', token: 'interaction-token', version: 1,
     type: options.customId ? options.modal ? 5 : 3 : 2,
@@ -178,9 +183,9 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
   });
   it('publishes only two picket commands alongside unchanged feature commands', () => {
     const commands = buildCommandsPayload(buildCommandRegistry(database.handle.db, composition));
-    expect(commands.map((command) => command.name)).toEqual(['picket', 'timers', 'todolist', 'warlog']);
+    expect(commands.map((command) => command.name)).toEqual(['picket', 'stats', 'timers', 'todolist', 'warlog']);
     expect(commands[0]?.options?.map((command) => [command.name, command.type])).toEqual([['settings', 1], ['status', 1]]);
-    expect(commands[1]?.options?.map((command) => command.name)).toEqual(['add', 'cleanup', 'create', 'repair', 'settings', 'strike']);
+    expect(commands.find(command=>command.name==='timers')?.options?.map((command) => command.name)).toEqual(['add', 'cleanup', 'create', 'repair', 'settings', 'strike']);
   });
   it('downloads a complete tenant export privately during suspension and denies non-administrators', async () => {
     const guildId = '700000000000000088';
@@ -196,9 +201,30 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
     expect(contents.guildId).toBe(guildId);
     expect(contents.data.guild_registry).toEqual([expect.objectContaining({ guild_id: guildId, inactive_reason: 'requested' })]);
     expect(contents.data.guild_audit_log).toEqual([expect.objectContaining({ actor_id: caller, action: 'guild.deletion_requested' })]);
-    for (const records of Object.values(contents.data) as { guild_id: string }[][]) expect(records.every((row) => row.guild_id === guildId)).toBe(true);
+    for (const [name, records] of Object.entries(contents.data) as [string, { guild_id: string }[]][])
+      if (!['stats_members', 'stats_summary'].includes(name)) expect(records.every((row) => row.guild_id === guildId)).toBe(true);
     expect(await say({ guildId, path: status })).toContain('scheduled for deletion');
     await click(recovery, 'cancel', '0', options);
+  });
+  it('includes retained stats and pending voice facts in the signed picket settings data download', async () => {
+    const guildId = '700000000000000098', directory = await mkdtemp(join(tmpdir(), 'picket-settings-stats-'));
+    const buffer = new DiskVoiceBuffer(directory);
+    serverOptions = { ...composition, stats: { store: new PostgresStatsStore(database.handle.db), buffer, dashboardUrl: null } };
+    try {
+      const options = { ...admin, guildId }, home = await say(options), panel = await click(home, 'view', 'data', options);
+      await queryAsAdmin(database, `INSERT INTO stats_voice_events(event_key,guild_id,user_id,at,kind,quality)
+        VALUES('recent',$1,$2,now(),'join','observed'),('expired',$1,$2,now()-interval '61 days','join','observed')`, [guildId, caller]);
+      await buffer.append({ key: 'pending', guildId, userId: caller, channelId: '600000000000000001', channelName: 'Voice',
+        name: 'Synthetic member', roles: [OFFICER_ROLE], bot: false, shardId: 0, quality: 'observed', at: new Date().toISOString() });
+      const exported = await click(panel, 'export', '0', options);
+      if (typeof exported !== 'object' || !('file' in exported)) throw new Error('Expected private stats data download');
+      const data = JSON.parse(new TextDecoder().decode(exported.file.bytes)).data;
+      for (const key of ['stats_voice_events', 'stats_voice_segments', 'stats_voice_pending', 'stats_voice_presence']) expect(data).not.toHaveProperty(key);
+      expect(data.stats_members).toEqual([expect.objectContaining({ userId: caller, username: 'Synthetic member', totalSeconds: 0, pendingEvents: 1 })]);
+      expect(data.stats_summary).toEqual([{ retentionDays: 60, members: 1, totalSeconds: 0, pendingEvents: 1 }]);
+      expect((await buffer.status()).count).toBe(1);
+      expect(JSON.stringify(await click(panel, 'export', '0', { ...options, permissions: '0' }))).toContain('required level: admin');
+    } finally { await rm(directory, { recursive: true, force: true }); }
   });
 });
 

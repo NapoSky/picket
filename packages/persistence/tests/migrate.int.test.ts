@@ -35,10 +35,13 @@ describe('migrate (integration)', () => {
       '009_audit_delivery',
       '010_warlog',
       '011_warlog_perspective',
+      '012_stats',
+      '013_instance_overview',
+      '014_stats_admin_snapshot',
     ]);
 
     const second = await run();
-    expect(second).toEqual({ applied: [], alreadyApplied: 11 });
+    expect(second).toEqual({ applied: [], alreadyApplied: 14 });
   });
 
   it('serialises concurrent runs with the advisory lock', async () => {
@@ -56,6 +59,9 @@ describe('migrate (integration)', () => {
       '009_audit_delivery',
       '010_warlog',
       '011_warlog_perspective',
+      '012_stats',
+      '013_instance_overview',
+      '014_stats_admin_snapshot',
     ]);
   });
 
@@ -69,7 +75,7 @@ describe('migrate (integration)', () => {
     await queryAsAdmin(database, `INSERT INTO timer_events (guild_id, board_id, actor_id, action, at)
       VALUES ($1, '00000000-0000-4000-8000-000000000001', 'system', 'expired', now() - interval '31 days'),
              ($1, '00000000-0000-4000-8000-000000000001', 'system', 'recent', now())`, [guild]);
-    expect((await run()).applied).toEqual(['008_journal_retention', '009_audit_delivery', '010_warlog', '011_warlog_perspective']);
+    expect((await run()).applied).toEqual(['008_journal_retention', '009_audit_delivery', '010_warlog', '011_warlog_perspective', '012_stats', '013_instance_overview', '014_stats_admin_snapshot']);
     expect(await queryAsAdmin(database, 'SELECT action FROM guild_audit_log')).toEqual([{ action: 'recent' }]);
     expect(await queryAsAdmin(database, 'SELECT action FROM timer_events')).toEqual([{ action: 'recent' }]);
   });
@@ -88,7 +94,7 @@ describe('migrate (integration)', () => {
     await queryAsAdmin(database, 'INSERT INTO guild_registry(guild_id) VALUES($1)', [guild]);
     await queryAsAdmin(database, `INSERT INTO warlog_subscriptions(guild_id, channel_id, zones, paused, confirmed_war)
       VALUES($1, '600000000000000001', '["west_coast"]', false, 100)`, [guild]);
-    expect((await run()).applied).toEqual(['011_warlog_perspective']);
+    expect((await run()).applied).toEqual(['011_warlog_perspective', '012_stats', '013_instance_overview', '014_stats_admin_snapshot']);
     expect(await queryAsAdmin(database, 'SELECT perspective, channel_id, zones, paused, confirmed_war FROM warlog_subscriptions')).toEqual([
       { perspective: 'NONE', channel_id: '600000000000000001', zones: ['west_coast'], paused: false, confirmed_war: 100 },
     ]);

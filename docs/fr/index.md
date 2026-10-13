@@ -38,11 +38,14 @@ landing:
       - name: War-log
         text: Les événements de guerre dans votre salon, pour une à trois zones, avec des alertes adaptées à votre faction.
         link: /fr/guide/warlog
+      - name: Statistiques vocales
+        text: Consultez les présences sur 60 jours, avec vues personnelles et officiers dans le dashboard connecté à Discord.
+        link: /fr/guide/stats
   steps:
     title: Opérationnel en trois étapes
     items:
       - title: Invitez le bot
-        text: Ajoutez PICKET avec les scopes bot et applications.commands. Il ne demande que l'intent Guilds, non privilégié.
+        text: Ajoutez PICKET avec les scopes bot et applications.commands. Le filtrage vocal utilise Server Members Intent ; présence et contenu des messages restent désactivés.
       - title: Choisissez vos officiers
         text: Ouvrez /picket settings pour choisir la langue, les modules et les rôles autorisés.
       - title: Publiez votre premier tableau
@@ -64,7 +67,7 @@ landing:
     text: Apprenez à utiliser PICKET, hébergez votre propre instance ou consultez les conditions qui s'appliquent.
     cards:
       - title: Guide d'utilisation
-        text: Commandes, timers, todolists, war-log et permissions.
+        text: Commandes, timers, todolists, war-log, statistiques vocales et permissions.
         link: /fr/guide/getting-started
       - title: Auto-hébergement
         text: Installer et configurer votre propre instance.

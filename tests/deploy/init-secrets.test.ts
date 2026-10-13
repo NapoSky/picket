@@ -46,11 +46,17 @@ describe('secrets initialization', () => {
     expect(result.stdout).toContain('PRIVATE KEY');
     expect(result.stdout).toContain('vault');
     expect(result.stdout).not.toContain('synthetic-private-identity');
+    expect(await readFile(secret('discord_bot_token'), 'utf8')).toBe('');
+    expect(await readFile(secret('discord_client_secret'), 'utf8')).toBe('');
+    expect((await stat(secret('discord_client_secret'))).mode & 0o777).toBe(0o644);
+    expect(result.stdout).toContain('OAuth2 client secret');
     expect((await readdir(join(deploy, 'secrets'))).filter((name) => name.startsWith('.backup-keys.'))).toEqual([]);
   });
 
   it('preserves all credentials and keys on repeated initialization, including after the private key is moved away', async () => {
     await run();
+    await writeFile(secret('discord_bot_token'), 'existing-bot-token');
+    await writeFile(secret('discord_client_secret'), 'existing-oauth-credential');
     const names = (await readdir(join(deploy, 'secrets'))).filter((name) => !name.startsWith('.'));
     const original = await Promise.all(names.map((name) => readFile(secret(name), 'utf8')));
     const calls = await readFile(env.TEST_KEYGEN_CALLS!, 'utf8');

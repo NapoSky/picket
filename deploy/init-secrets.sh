@@ -84,6 +84,13 @@ if [ ! -s secrets/discord_bot_token ]; then
   echo "ACTION REQUIRED: paste the bot token into deploy/secrets/discord_bot_token"
 fi
 
+# OAuth2 credential of the SAME Discord application; Discord issues it, we cannot generate it.
+# Leave the placeholder empty when DASHBOARD_HOST is unset.
+if [ ! -s secrets/discord_client_secret ]; then
+  : > secrets/discord_client_secret
+  echo "OPTIONAL DASHBOARD: paste the application's OAuth2 client secret into deploy/secrets/discord_client_secret before setting DASHBOARD_HOST"
+fi
+
 # Cloudflare API token (Zone > DNS > Edit, restricted to your zone): Traefik uses it for certificates (DNS-01 challenge).
 if [ ! -s secrets/cloudflare_dns_token ]; then
   : > secrets/cloudflare_dns_token
@@ -92,5 +99,5 @@ fi
 
 # Readable by the container user; the parent directory (700) protects access on the host.
 chmod 644 secrets/postgres_password secrets/picket_migrator_password secrets/picket_app_password \
-  secrets/database_migrator_url secrets/database_url secrets/discord_bot_token \
+  secrets/database_migrator_url secrets/database_url secrets/discord_bot_token secrets/discord_client_secret \
   secrets/cloudflare_dns_token secrets/backup_recipients

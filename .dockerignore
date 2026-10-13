@@ -17,3 +17,8 @@ draft
 !.env.example
 
 **/__pycache__
+
+# Personal voice history must never enter image layers or build caches.
+/data
+**/voice-buffer
+**/*.evt

@@ -41,8 +41,8 @@ function component(view: PanelContent): APIComponentInContainer {
         min_values: 1, max_values: 1,
         options: view.options.map((choice) => ({ label: clip(choice.label, 100), value: choice.value, default: choice.selected ?? false })),
       });
-    case 'roleSelect': return row({ type: ComponentType.RoleSelect, custom_id: view.customId, placeholder: clip(view.placeholder, 150), min_values: 1, max_values: 1 });
-    case 'channelSelect': return row({ type: ComponentType.ChannelSelect, custom_id: view.customId, placeholder: clip(view.placeholder, 150), min_values: 1, max_values: 1, channel_types: (view.channelKinds ?? ['text', 'announcement']).map(kind => kind === 'text' ? ChannelType.GuildText : ChannelType.GuildAnnouncement) });
+    case 'roleSelect': return row({ type: ComponentType.RoleSelect, custom_id: view.customId, placeholder: clip(view.placeholder, 150), min_values: 1, max_values: view.maxValues ?? 1 });
+    case 'channelSelect': return row({ type: ComponentType.ChannelSelect, custom_id: view.customId, placeholder: clip(view.placeholder, 150), min_values: 1, max_values: view.maxValues ?? 1, channel_types: (view.channelKinds ?? ['text', 'announcement']).map(kind => ({text:ChannelType.GuildText,announcement:ChannelType.GuildAnnouncement,voice:ChannelType.GuildVoice,stage:ChannelType.GuildStageVoice})[kind]) });
   }
 }
 

@@ -1,6 +1,7 @@
 {
   "files": [],
   "references": [
+    { "path": "packages/stats" },
     { "path": "packages/kernel" },
     { "path": "packages/config" },
     { "path": "packages/observability" },
@@ -12,6 +13,7 @@
     { "path": "packages/todolist" },
     { "path": "packages/timers" },
     { "path": "packages/warlog" },
-    { "path": "apps/bot" }
+    { "path": "apps/bot" },
+    { "path": "apps/stats" }
   ]
 }

@@ -11,7 +11,7 @@ must be done, what must be monitored, and what happened while you were away.
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-docs.picket--foxhole.com-informational)](https://docs.picket-foxhole.com)
 
-> **Status: core features implemented.** The source includes the foundation, todo lists, timers and war log. See [what is built](#what-is-built).
+> **Status: core features implemented.** The source includes the foundation, todo lists, timers, war log and opt-in voice statistics. See [what is built](#what-is-built).
 
 PICKET is faction-neutral (Wardens and Colonials alike), lightweight, and built for regiment-scale collaboration. It is a
 community project: it is **not** affiliated with, endorsed by or sponsored by Siege Camp.
@@ -28,6 +28,7 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 | **Data management** | Retention period after the bot is removed, scheduled deletion on demand, nothing kept longer than needed |
 | **Languages** | English, French, German, Spanish and Brazilian Portuguese; add one by dropping a JSON file in [`packages/i18n/locales`](packages/i18n/locales) |
 | **Operations** | Zero-downtime rolling updates, several identical replicas, signed requests only, secrets kept out of the repository and the logs |
+| **Voice statistics** | Opt-in role-filtered presence, 60-day history, own-data erasure and custom EN/FR dashboards with Discord OAuth and Team administration |
 | **War log** | One shared collector; one-line events in a regular text channel; up to three of five zones per server; subscription renewal for each war; recovery without replay |
 
 ### Commands
@@ -39,6 +40,8 @@ Access roles are configured per server. Officers can also use member commands; s
 | Command | What it does |
 | --- | --- |
 | `/picket settings` | Opens the private server configuration panel; permission changes and data management are reserved for administrators |
+| `/stats settings` | Select target member roles, excluded voice channels and explicit activation |
+| `/stats status` / `/stats export` | Check collection settings or export authorized guild statistics |
 | `/warlog settings` | Chooses a text channel, up to three zones and activation for the current war |
 | `/timers create` | Creates the channel's timer board |
 | `/timers settings` | Opens the private timer configuration panel |
@@ -49,10 +52,14 @@ Access roles are configured per server. Officers can also use member commands; s
 
 | Command | What it does |
 | --- | --- |
+| `/stats link` / `/stats privacy` | Open the dashboard, opt out or erase your voice statistics |
 | `/picket status` | Shows server settings, configured access roles and your access level |
 | `/todolist create` | Opens a form and posts a todo list in the channel |
 | `/timers add` | Adds a timer: choose its type and place, then fill in a form |
 | `/timers strike` | Strikes a timer |
+
+The official voice statistics dashboard is **[stats.picket-foxhole.com](https://stats.picket-foxhole.com)**.
+Sign in with Discord; see the [voice statistics guide](https://docs.picket-foxhole.com/guide/stats) for setup and privacy.
 
 The full guide is in the [documentation](https://docs.picket-foxhole.com). By using the official instance you accept its
 [Terms of Service](https://docs.picket-foxhole.com/legal/terms) and
@@ -72,7 +79,7 @@ board with `/timers create`.
 
 Discord's installation link requests the configured scopes and permissions automatically. PICKET needs **View Channel**,
 **Send Messages**, **Embed Links** and **Read Message History** where you use it, plus **Send Messages in Threads** for
-threads. It requests no privileged intent and reads its own messages to update your lists and boards.
+threads. It requests Server Members Intent to track role eligibility during voice presence; Presence and Message Content intents remain disabled. It reads its own messages to update your lists and boards.
 
 Need help or want to share feedback? Join the **[PICKET support Discord](https://discord.gg/EUnVfq5EYs)**.
 

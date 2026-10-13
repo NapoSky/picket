@@ -15,16 +15,16 @@ RUN mkdir /out \
  && for dir in apps/* packages/*; do \
       mkdir -p "/out/$dir"; \
       cp "$dir/package.json" "/out/$dir/"; \
-      for sub in dist migrations locales; do \
+      for sub in dist migrations locales static; do \
         if [ -d "$dir/$sub" ]; then cp -r "$dir/$sub" "/out/$dir/"; fi; \
       done; \
     done
 
-# Install production dependencies for the bot only (without testcontainers or test tools).
+# Install production dependencies for both process entry points (without dev/test tools).
 FROM base AS production-dependencies
 COPY --from=build /out ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install --prod --frozen-lockfile --filter "@picket/bot..."
+    pnpm install --prod --frozen-lockfile --filter "@picket/bot..." --filter "@picket/stats-server..."
 # i18next declares TypeScript as an optional peer: pnpm still installs it (native compiler with Go CVEs).
 RUN rm -rf node_modules/.pnpm/typescript@* node_modules/.pnpm/@typescript+*
 
@@ -37,6 +37,7 @@ WORKDIR /app
 # npm is not used at runtime and bundles its own vulnerable dependencies.
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=production-dependencies --chown=node:node /app ./
+RUN mkdir -p /app/data/voice-buffer && chown -R node:node /app/data && chmod 700 /app/data/voice-buffer
 USER node
-EXPOSE 8080
+EXPOSE 8080 8082
 CMD ["node", "apps/bot/dist/main.js"]

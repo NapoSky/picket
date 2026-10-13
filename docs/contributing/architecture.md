@@ -4,7 +4,8 @@ PICKET is a modular monolith in a pnpm workspace: one image, several identical r
 source of truth.
 
 ```text
-apps/bot            composition root: HTTP server, Gateway runner, command line
+apps/bot            bot composition: interactions, Gateway, jobs and CLI
+apps/stats          isolated dashboard HTTP process and bounded SQL pool
 packages/kernel     identifiers, Result, Clock, Logger, Secret
 packages/config     environment validation
 packages/i18n       translations, locale resolution, catalog checks
@@ -94,3 +95,44 @@ Every button or menu has a unique `custom_id` within the message, including butt
 Families separate navigation, officer settings, administrator permissions, deletion and cancellation. Only read navigation and cancellation are available during suspension. Identifiers carry the owner, guild and expiry; no collectors or session storage are needed. Access is checked again before deferred work and use cases update current state transactionally.
 
 The registry accepts unpublished transition aliases. Deploy all replicas before `deploy-commands`: old paths open the panel without applying arguments. Remove aliases in a later release. Roll back code and command definitions together; the database schema is unchanged. Monitor access denials, expired components and Discord delivery errors in existing logs.
+
+## Voice statistics
+
+`packages/stats` owns timestamped voice facts, channel presence segments, disk recovery, privacy and the optional Fastify dashboard. Collection shares Gateway shards; only target roles produce history. SQL transaction contexts enforce self/guild/global stats access through RLS without a BYPASSRLS account. Global context is authorized only after Discord Team verification. OAuth sessions are shared in PostgreSQL and encrypted with the application client secret. The buildless frontend uses existing PICKET assets, external JS/CSS, EN/FR text and SVG charts; no new UI framework or BI service is needed. The production HTTP runtime is composed in `apps/stats`, a separate Node.js process/container. Its read traffic has one bounded pool; it runs no collector or bot jobs. The bot and HTTP service share PostgreSQL and the disk buffer for privacy/erasure, with independent health and rolling updates. Member/guild reports derive aggregates from retained segments. Global admin reports read the private materialized models from migration `014_stats_admin_snapshot`; all access goes through functions that require the trusted global context. The application cannot SELECT their backing rows directly.
+
+The shared PICKET overview exposes current active-guild totals and enabled-feature counts to authenticated dashboard users. Migration `013_instance_overview` provides a parameterless SQL function returning only aggregates, with a fixed search path and execution granted to the application role. Its migration-owner read policy leaves application tenant isolation intact. No guild identifiers, names or settings are returned, and no historical aggregate is stored. Voice access remains self/guild/Team scoped.
+
+### Reproducible voice workload
+
+`pnpm stats:test:load` creates 300 guilds, 50 distinct tracked people per guild, 60 days and eight closed
+segments per person/day: **7,200,000 segments**, mixing reconnects, moves and two channels. It reconciles member and
+instance totals, daily server series, distinct active people, hourly durations and peak presence. The response includes
+the first member page and recent presences, as in the admin dashboard. It also runs twenty primary-pool checkpoints
+concurrently, with pools of four main and two dashboard connections. The regular integration run uses a smaller
+300-guild / 10-person / two-segment fixture. `STATS_LOAD_PEOPLE` (1–200) and `STATS_LOAD_SEGMENTS` (1–48) override the
+load profile without changing collection limits. Synthetic retained facts measure report cost and checkpoint contention,
+not full Gateway collection throughput; raw events and other tables are excluded from the reported segments size.
+Measurements are written to the system temporary directory as `picket-stats-benchmark.json`.
+
+The extended run measures approximately **2.0 s p95 per guild**, **48.5 s for the global computation from
+segments**, and **9.1 s for the materialized admin report** (maximum of three reads). Initial refresh takes
+**179 s**, and the following CONCURRENTLY refresh **195 s**. An admin read during that second refresh takes
+**9.2 s**; primary confirmations actually launched during refresh remain at **53 ms p95**. Segments and indexes
+occupy **3,128 MB**, with an additional **1,095 MB** for views and their indexes. These measurements depend on
+hardware and cache; they do not guarantee production latency. The test bounds post-refresh admin reads to
+15 seconds and reports background computation separately from dashboard reads.
+
+Global SQL statements have a 30-second timeout; guild and personal statements retain 10 seconds, with a one-second
+lock timeout. Daily reads split only overlapping days and first combine repeated segments per person/day before
+computing distinct people across guilds. UTC hourly reads use one-hour bins; other zones preserve fifteen-minute bins
+for daylight-saving and offset changes. Member/guild aggregates are derived at read time. Admin daily contributions retain member/guild/channel identities and exact boundaries for clipping; hourly totals and concurrency peaks are materialized separately. Distinct people are deduplicated across days and guilds. Initial population uses REFRESH; subsequent rebuilds use CONCURRENTLY in one REPEATABLE READ transaction, guarded by an advisory lock. The job-runner checks `STATS_ADMIN_REFRESH_CRON` (default `0 0,12 * * *`) each minute in `TZ` (default Europe/Paris), catches up missed schedules and retries failed builds. The existing daily retention remains at 03:00, now in that same instance zone. Erasure/purge increments a revision transactionally; global reads fail closed until a matching snapshot is published. A concurrent erasure aborts publication rather than resurrecting old contributions. Reads enforce the current exact 60-day cutoff independently of snapshot age. The daily retention job also invalidates the snapshot. Backups exclude materialized data and state; the worker bootstraps them after restore.
+
+Server data downloads export Stats settings, privacy preferences, `stats_members` summaries and a `stats_summary`
+overview over 60 days. Pending disk facts are captured before the SQL snapshot, deduplicated against committed event
+keys and reduced to per-member counts; their durations are not credited before processing. Raw events, segments,
+connected-state rows and journal entries are omitted. Guild purges erase the disk journal and tracking markers before
+SQL deletion; failed external erasure leaves the registry entry for retry. The CLI uses the same purge path and shared
+volume. Authorization comes from Discord identity and guild permissions, combined with current PICKET role mappings
+in PostgreSQL; forged query privileges cannot broaden access. The owning Application Team retains its agreed global scope.
+
+`pnpm stats:dev` uses Vite for local preview and browser reloads, with the real dashboard and isolated fictitious data on loopback by default (`--host` / `--port` are native Vite options); `pnpm stats:dev:live admin --host` starts the dedicated HTTP process against real local PostgreSQL with a simulated Discord identity, using `.env.example` defaults and `.env.dev` overrides. Preparation reuses `compose.dev.yml` and applies migrations. The production entry point rejects simulation; `pnpm stats:dev:oauth` exercises real OAuth. Run the bot separately. `pnpm stats:test` and `pnpm stats:test:int` select the feature tests explicitly. See `SELF_HOSTING.md`, the stats development section, for setup. Web and Discord exports share the same flat JSON-array/CSV contract; global exports additionally identify each guild.

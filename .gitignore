@@ -18,3 +18,6 @@ docs/.vitepress/.temp/
 draft/
 
 __pycache__/
+
+# Persistent local vocal statistics buffer (contains personal activity).
+/data/

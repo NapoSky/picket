@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stream a complete database dump directly into public-key encryption.
+# Stream a database dump (excluding short-lived statistics history) directly into public-key encryption.
 # No plaintext archive is stored; the backup container receives no private decryption key.
 set -euo pipefail
 umask 077
@@ -36,8 +36,14 @@ trap 'rm -rf -- "$work"' EXIT
 archive="$work/picket.dump.age"
 
 # pipefail detects failures of pg_dump, encryption, the write AND hashing.
+# Statistical history is excluded so backups cannot extend the rolling 60-day limit.
+# Schema, configuration and privacy preferences are retained; stats start fresh on restore.
 # postgres is deliberately used: app and migrator roles cannot bypass FORCE RLS.
 pg_dump --username=postgres --dbname="${PGDATABASE:-picket}" --format=custom \
+  --exclude-table-data='public.stats_voice_*' \
+  --exclude-table-data='public.stats_admin_*' \
+  --exclude-table-data=public.stats_users --exclude-table-data=public.stats_channels \
+  --exclude-table-data=public.stats_web_sessions --exclude-table-data=public.stats_oauth_states \
   | age --encrypt --recipients-file "$BACKUP_RECIPIENTS_FILE" \
   | tee "$archive" \
   | sha256sum > "$work/stream.sha256"

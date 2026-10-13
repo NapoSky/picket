@@ -26,8 +26,7 @@ PICKET tourne comme une seule image de conteneur en plusieurs réplicas identiqu
 ## 1. Créer l'application Discord
 
 Dans le [Developer Portal](https://discord.com/developers/applications), créez une application et notez son
-**Application ID** et sa **Public Key**. Créez le bot et copiez son token. N'activez aucun intent privilégié : PICKET n'en
-a pas besoin.
+**Application ID** et sa **Public Key**. Créez le bot et copiez son token. **Activez Server Members Intent** pour suivre précisément les rôles pendant une présence vocale. Laissez **Presence Intent** et **Message Content Intent** désactivés. Le code demande `GUILDS`, `GUILD_MEMBERS` et `GUILD_VOICE_STATES` (masque 131). Aucun accès audio ni connexion vocale du bot n’est requis. Voir [les intents Discord](https://docs.discord.com/developers/events/gateway#gateway-intents).
 
 ## 2. Préparer l'hôte
 
@@ -43,6 +42,11 @@ cp .env.example .env              # puis éditez-le : image, nom d’hôte, iden
 Le dossier `secrets/` n'est jamais versionné. Les secrets nécessaires au fonctionnement arrivent dans les conteneurs
 sous forme de fichiers (variables `*_FILE`), pas de variables d'environnement. La clé privée de sauvegarde n’est montée
 dans aucun service.
+
+Le script crée également le fichier vide `secrets/discord_client_secret`. Pour activer le dashboard stats,
+collez-y le secret OAuth2 de la **même application Discord** et renseignez `DASHBOARD_HOST` dans ce `.env` ;
+voir [la configuration des statistiques vocales](./configuration#statistiques-vocales-et-dashboard). Laissez le fichier
+vide si le dashboard est désactivé. Le token du bot et le secret OAuth ne sont pas générés localement : Discord les fournit.
 
 ## 3. Préparer les sauvegardes
 

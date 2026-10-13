@@ -243,7 +243,8 @@
   "features": {
     "timers": "Timer",
     "todolists": "Aufgabenlisten",
-    "warlog": "Kriegsprotokoll"
+    "warlog": "Kriegsprotokoll",
+    "stats": "Voice statistics"
   },
   "settings": {
     "invalidOption": "Ungültiger Wert.",
@@ -271,7 +272,7 @@
   },
   "data": {
     "export": "Daten exportieren",
-    "exportHelp": "Lade eine JSON-Datei mit den für diesen Server gespeicherten Daten herunter: Einstellungen, zugelassene Rollen, Audit-Einträge, Übersichten und Timer, Verlauf, Warnungen, technische Kennungen und Anwendungsprotokolle. Audit-Einträge, Verlauf und Anwendungsprotokolle werden 30 Tage aufbewahrt. Aufgabenlisten bleiben in Discord.",
+    "exportHelp": "Lade Servereinstellungen, Berechtigungen, Protokolle, Boards und Timer sowie Stats-Einstellungen, Datenschutzpräferenzen und Mitgliederzusammenfassungen über 60 Tage als JSON herunter. Ausstehende Sprachdaten werden je Mitglied gezählt; rohe Sprachereignisse und einzelne Segmente sind nicht enthalten. Protokolle und Timerverlauf werden 30 Tage aufbewahrt. Aufgabenlisten bleiben in Discord.",
     "exportReady": "📥 Hier sind die Daten deines Servers. Diese Datei ist nur für dich sichtbar. Sie enthält Discord-Kennungen: Bewahre sie vertraulich auf. Es wurden keine Einstellungen geändert.",
     "exportTooLarge": "Der vollständige Export überschreitet das Upload-Limit von {{limitMb}} MB. Es wurde keine unvollständige Datei gesendet. Wende dich an den PICKET-Betreiber, um deine Daten zu erhalten.",
     "cancelled": "Die geplante Löschung wurde abgebrochen. PICKET ist wieder aktiv.",
@@ -498,5 +499,43 @@
     },
     "zoneContents": "Regionen der Zonen anzeigen",
     "backToSettings": "Zurück zu den Einstellungen"
+  },
+  "stats": {
+    "title": "Voice statistics",
+    "help": "Track eligible voice presence. Configure the shared member roles before enabling.",
+    "roles": "Target member roles",
+    "sharedRoles": "These roles are shared with /picket settings. Changing them also changes member access to PICKET.",
+    "invalidRoles": "Statistics cannot be enabled with no member roles or with @everyone. Ask an administrator to select specific roles.",
+    "chooseRoles": "Choose the member roles (replaces the current list)",
+    "adminRoles": "Only a server administrator can change the shared member roles.",
+    "exclusions": "Excluded channels",
+    "none": "None",
+    "afk": "Bots and the server AFK channel are always excluded.",
+    "chooseChannels": "Choose excluded voice channels",
+    "clearChannels": "Clear exclusions",
+    "dashboard": "Open the dashboard",
+    "noDashboard": "The dashboard is not configured for this instance. Contact its operator.",
+    "retention": "All statistical history is retained for 60 days.",
+    "privacyTitle": "Your voice data",
+    "privacyHelp": "Manage your own tracking in this server. Erasure removes your recorded contribution.",
+    "optedOut": "Future tracking is disabled for you.",
+    "tracked": "Tracking follows the member roles and channel filters.",
+    "eraseHelp": "Permanently erase your statistics and pending records in this server? This cannot be undone.",
+    "erase": "Erase my statistics",
+    "erased": "Your statistics have been erased.",
+    "optIn": "Allow future tracking",
+    "optOut": "Exclude me from tracking",
+    "exportTooLarge": "Too many people for this export. Reduce the period or use the dashboard filters.",
+    "exportReady": "Your voice statistics export is ready.",
+    "commands": {
+      "root": "Voice statistics and privacy",
+      "settings": "Configure voice statistics",
+      "link": "Open your statistics dashboard",
+      "privacy": "Manage your own voice data",
+      "status": "Show voice collection status",
+      "export": "Export your server voice statistics",
+      "days": "Number of days, up to 60",
+      "format": "Export file format"
+    }
   }
 }

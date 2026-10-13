@@ -4,8 +4,12 @@ name: picket
 
 x-picket-environment: &picket-environment
   NODE_ENV: production
+  TZ: ${TZ:-Europe/Paris}
+  STATS_ADMIN_REFRESH_CRON: ${STATS_ADMIN_REFRESH_CRON:-0 0,12 * * *}
   LOG_LEVEL: ${LOG_LEVEL:-info}
   PICKET_VERSION: ${PICKET_IMAGE:?set PICKET_IMAGE}
+  # Traefik removes a draining replica before its HTTP listener closes.
+  SHUTDOWN_DRAIN_MS: "15000"
   WAR_API_URL: ${WAR_API_URL:-https://war-service-live.foxholeservices.com}
   WAR_LOG_POLL_INTERVAL: ${WAR_LOG_POLL_INTERVAL:-15}
   DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
@@ -16,6 +20,9 @@ x-picket-environment: &picket-environment
   DATABASE_URL_FILE: /run/secrets/database_url
   GUILD_RETENTION_DAYS: ${GUILD_RETENTION_DAYS:-30}
   SHARD_COUNT: ${SHARD_COUNT:-1}
+  STATS_BUFFER_PATH: /app/data/voice-buffer
+  STATS_BUFFER_MAX_MIB: ${STATS_BUFFER_MAX_MIB:-128}
+  DASHBOARD_URL: "${DASHBOARD_HOST:+https://}${DASHBOARD_HOST:-}"
 
 x-hardening: &hardening
   read_only: true
@@ -38,7 +45,7 @@ services:
     ports:
       - "443:443"
     environment:
-      TZ: Europe/Paris
+      TZ: ${TZ:-Europe/Paris}
       CF_DNS_API_TOKEN_FILE: /run/secrets/cloudflare_dns_token
     command:
       - --global.checkNewVersion=false
@@ -99,19 +106,19 @@ services:
     environment:
       <<: *picket-environment
       ROLES: http-ingress,shard-runner,job-runner,warlog-poller
-      # Allow Traefik to remove the replica (failed health check) before refusing connections.
-      SHUTDOWN_DRAIN_MS: "15000"
     secrets:
       - discord_bot_token
       - database_url
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - voice-buffer:/app/data/voice-buffer
     stop_grace_period: 45s
     networks:
       - internal
       - edge
-    healthcheck:
+    healthcheck: &picket-healthcheck
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/readyz"]
       interval: 5s
       timeout: 3s
@@ -120,11 +127,47 @@ services:
     labels:
       traefik.enable: "true"
       traefik.docker.network: picket_edge
-      # Only Discord interactions are exposed. Health and metrics remain internal.
+      # Only Discord interactions are exposed on the bot. Health and metrics remain internal.
       traefik.http.routers.picket.rule: Host(`${PICKET_HOST:?set PICKET_HOST}`) && Path(`/interactions`) && Method(`POST`)
+      traefik.http.routers.picket.service: picket
       traefik.http.routers.picket.entrypoints: https
       traefik.http.routers.picket.tls.certresolver: certbot
       traefik.http.services.picket.loadbalancer.server.port: "8080"
+
+  # Dedicated HTTP process and event loop. Collection remains in the bot.
+  # With no DASHBOARD_HOST, only the internal health endpoint runs (no SQL pool).
+  picket-stats:
+    image: ${PICKET_IMAGE:?set PICKET_IMAGE}
+    init: true
+    restart: unless-stopped
+    <<: *hardening
+    command: ["node", "apps/stats/dist/main.js"]
+    environment:
+      <<: *picket-environment
+      DASHBOARD_POOL_MAX: ${DASHBOARD_POOL_MAX:-2}
+      DISCORD_CLIENT_SECRET_FILE: /run/secrets/discord_client_secret
+    secrets:
+      - discord_bot_token
+      - discord_client_secret
+      - database_url
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - voice-buffer:/app/data/voice-buffer
+    stop_grace_period: 45s
+    networks:
+      - internal
+      - edge
+    healthcheck: *picket-healthcheck
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: picket_edge
+      traefik.http.routers.picket-dashboard.rule: Host(`${DASHBOARD_HOST:-dashboard-disabled.invalid}`)
+      traefik.http.routers.picket-dashboard.service: picket-dashboard
+      traefik.http.routers.picket-dashboard.entrypoints: https
+      traefik.http.routers.picket-dashboard.tls.certresolver: "${DASHBOARD_HOST:+certbot}"
+      traefik.http.services.picket-dashboard.loadbalancer.server.port: "8082"
 
   # One-off tasks: `docker compose run --rm migrate`.
   # Backup tools stay in their own image. Store only an age PUBLIC recipient on this host.
@@ -204,7 +247,7 @@ services:
       - edge
 
   # Permanently delete data for guilds past their retention period.
-  # Also runs nightly around 03:00 (Europe/Paris) in the job-runner; exits with code 1 if any guild purge fails.
+  # Also runs nightly around 03:00 in TZ in the job-runner; exits with code 1 if any guild purge fails.
   purge:
     image: ${PICKET_IMAGE:?set PICKET_IMAGE}
     profiles: [tools]
@@ -213,6 +256,8 @@ services:
     command: ["node", "apps/bot/dist/cli.js", "purge"]
     environment:
       <<: *picket-environment
+    volumes:
+      - voice-buffer:/app/data/voice-buffer
     secrets:
       - discord_bot_token
       - database_url
@@ -233,6 +278,7 @@ networks:
 volumes:
   pgdata:
   traefik-acme:
+  voice-buffer:
 
 secrets:
   backup_recipients:
@@ -249,5 +295,7 @@ secrets:
     file: ./secrets/database_migrator_url
   discord_bot_token:
     file: ./secrets/discord_bot_token
+  discord_client_secret:
+    file: ./secrets/discord_client_secret
   cloudflare_dns_token:
     file: ./secrets/cloudflare_dns_token

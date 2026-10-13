@@ -25,8 +25,7 @@ contains everything needed for a Docker Compose host, Traefik included.
 ## 1. Create the Discord application
 
 In the [Developer Portal](https://discord.com/developers/applications), create an application and note its
-**Application ID** and **Public Key**. Create the bot and copy its token. Do not enable any privileged intent: PICKET
-does not need them.
+**Application ID** and **Public Key**. Create the bot and copy its token. **Enable Server Members Intent** for precise voice-role filtering. Leave **Presence Intent** and **Message Content Intent** disabled. The code requests `GUILDS`, `GUILD_MEMBERS` and `GUILD_VOICE_STATES` (mask 131). No voice connection or audio permission is required. See [Discord intents](https://docs.discord.com/developers/events/gateway#gateway-intents).
 
 ## 2. Prepare the host
 
@@ -41,6 +40,11 @@ cp .env.example .env              # then edit it: image, host name, Discord iden
 
 The `secrets/` directory is never committed. Required runtime secrets reach the containers as files (`*_FILE`
 variables), not as environment variables. The private backup identity is not mounted into any service.
+
+The script also creates the empty `secrets/discord_client_secret` placeholder. To enable the stats dashboard,
+paste the OAuth2 client secret of the **same Discord application** into it and set `DASHBOARD_HOST` in this `.env`;
+see [Voice statistics configuration](./configuration#voice-statistics-and-dashboard). Keep the file empty if the
+dashboard is disabled. Neither the bot token nor the OAuth credential is generated locally; obtain both from Discord.
 
 ## 3. Prepare backups
 

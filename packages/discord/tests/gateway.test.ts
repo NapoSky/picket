@@ -41,8 +41,8 @@ describe('normalizeDispatch', () => {
     });
   });
 
-  it('ignores GUILD_DELETE caused by an outage (unavailable: true)', () => {
-    expect(normalizeDispatch(dispatch('GUILD_DELETE', { id: '700000000000000001', unavailable: true }), 0, 1)).toBeNull();
+  it('marks voice unavailable during a guild outage without reporting removal', () => {
+    expect(normalizeDispatch(dispatch('GUILD_DELETE', { id: '700000000000000001', unavailable: true }), 0, 1)).toEqual({type:'guild_voice_unavailable',guildId:'700000000000000001'});
   });
 
   it('maps GUILD_ROLE_DELETE', () => {
@@ -60,7 +60,7 @@ describe('normalizeDispatch', () => {
   });
   it('signals channel conversion and removal without polling Discord', () => {
     const data = { id: '600000000000000001', guild_id: '700000000000000001', type: 5 };
-    expect(normalizeDispatch(dispatch('CHANNEL_UPDATE', data), 0, 1)).toEqual({ type: 'channel_unusable', guildId: data.guild_id, channelId: data.id });
+    expect(normalizeDispatch(dispatch('CHANNEL_UPDATE', data), 0, 1)).toEqual({ type: 'channel_unusable', guildId: data.guild_id, channelId: data.id,deleted:false });
     expect(normalizeDispatch(dispatch('CHANNEL_UPDATE', { ...data, type: 0 }), 0, 1)).toBeNull();
     expect(normalizeDispatch(dispatch('CHANNEL_DELETE', { ...data, type: 0 }), 0, 1)).toMatchObject({ type: 'channel_unusable' });
   });

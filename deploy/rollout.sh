@@ -23,11 +23,12 @@ if ! flock -n 9; then
   exit 1
 fi
 
-docker compose pull picket
+docker compose pull picket picket-stats
 docker compose build backup
 docker compose up -d --wait postgres traefik
 ./backup.sh pre-migration
 docker compose run --rm migrate
 docker rollout -f compose.yml picket
+docker rollout -f compose.yml picket-stats
 docker compose up -d backup
 docker compose run --rm deploy-commands

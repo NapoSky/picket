@@ -18,6 +18,13 @@ tableaux. Ajoutez un rôle officier pour déléguer la configuration. La modific
 données restent réservées aux administrateurs. Utilisez `/picket status` pour vérifier le bot et votre niveau d’accès.
 Consultez [Permissions](./permissions) pour les détails.
 
+
+## Ouvrir le dashboard de statistiques
+
+Rendez-vous sur **[stats.picket-foxhole.com](https://stats.picket-foxhole.com)** et connectez-vous avec Discord, ou
+lancez `/stats link`. La collecte est désactivée par défaut : un administrateur doit choisir des rôles membres précis
+avant activation. Voir [Statistiques vocales](./stats) pour les premiers réglages, les accès et la confidentialité.
+
 ## Langues
 
 PICKET propose **l’anglais, le français, l’allemand, l’espagnol et le portugais du Brésil**. Conservez **Automatique**

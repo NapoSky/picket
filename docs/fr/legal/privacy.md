@@ -36,6 +36,11 @@ donnée personnelle. Pour tout sujet sensible, utilisez un
 | Journaux de l'application : identifiants de serveur, d'utilisateur, de canal et de message pour chaque création et chaque clic de todolist ou de timer, jamais le contenu de la liste ni les noms de timers | Exploiter, sécuriser et dépanner le service | 30 jours |
 | Abonnement au war-log : canal, zones choisies, faction de référence, langue, activation pour une guerre et audits de configuration | Publier les événements publics du jeu demandés | Tant que le bot est sur le serveur, puis la période de rétention |
 | Livraisons du war-log et suivi des resets facultatifs des timers | Contrôler la publication et éviter les actions répétées | Idem, avec nettoyage des livraisons terminées pendant la collecte |
+| Événements vocaux éligibles et segments de présence : identifiants serveur/utilisateur/salon et horodatages | Produire les statistiques activées dans le serveur | 60 jours glissants maximum |
+| Pseudos des participants vocaux et noms des salons | Rendre les rapports lisibles | Au plus 60 jours depuis leur dernière activité observée |
+| État temporaire des humains connectés en vocal, rôles compris | Gérer l’éligibilité et la reprise Gateway sans annuaire complet | Jusqu’à déconnexion, exclusion ou expiration ; au plus 60 jours |
+| Préférences de refus du suivi et bornes d’effacement | Respecter les oppositions et empêcher un rejeu tardif de restaurer les données effacées | Réglages jusqu’à suppression de la guilde |
+| Identité du dashboard et tokens OAuth chiffrés | Authentifier via Discord et vérifier l’appartenance | Expiration de session, huit heures maximum ; état OAuth dix minutes |
 | Sauvegardes de la base contenant les données ci-dessus | Se rétablir après une panne | 30 jours au plus |
 
 L’état public de Foxhole et les événements enregistrés sont partagés entre les abonnements et conservés pour la guerre courante et la précédente observée. Ils contiennent structures, coordonnées, factions et horodatages du jeu, sans identifiants de membres Discord. La suppression d’un serveur n’efface pas cet historique public partagé.
@@ -54,7 +59,7 @@ que saisis : il est demandé aux membres de n'y mettre aucune donnée personnell
 - Le contenu des messages. PICKET ne demande pas l'intent de contenu des messages et ne lit aucun message sur lequel on ne
   lui a pas demandé d'agir.
 - Les messages privés : les commandes ne fonctionnent que dans un serveur, et PICKET n'envoie jamais de message privé.
-- Les pseudos, avatars, adresses e-mail, adresses IP des membres, ni aucune autre donnée de profil.
+- Les avatars, adresses e-mail et annuaire complet des membres. Les pseudos des participants suivis et utilisateurs du dashboard sont traités comme décrit ci-dessus. Les IP de connexion servent temporairement à limiter les requêtes ; elles ne sont pas stockées dans les statistiques.
 - Aucune donnée de personnes de moins de 13 ans : PICKET ne leur est pas destiné et Discord ne les autorise pas.
 
 ## Finalités et base légale
@@ -63,8 +68,8 @@ Les données servent uniquement à fournir les fonctionnalités demandées, à s
 suppression ci-dessous. Elles sont traitées sur la base de l'intérêt légitime des administrateurs de serveur qui ont choisi
 d'ajouter le bot et de l'opérateur à l'exploiter en sécurité (RGPD, article 6, paragraphe 1, point f).
 
-PICKET ne vend, ne loue ni ne concède de licence sur les données, n'affiche aucune publicité, ne profile pas les
-utilisateurs, n'utilise pas les données pour entraîner des modèles d'apprentissage automatique et ne contacte pas les
+PICKET ne vend, ne loue ni ne concède de licence sur les données, n'affiche aucune publicité, ne prend pas de décision automatisée sur les
+membres, n'utilise pas les données pour entraîner des modèles d'apprentissage automatique et ne contacte pas les
 utilisateurs en dehors de Discord.
 
 ## Destinataires
@@ -89,12 +94,18 @@ européenne.
 - L'effacement supprime tout ce qui est lié au serveur, journal d'audit compris. Il est irréversible. Les sauvegardes
   réalisées avant l'effacement disparaissent sous 30 jours.
 
+La collecte vocale est désactivée par défaut et limitée aux rôles membres explicitement sélectionnés. Les administrateurs du serveur doivent informer leurs membres avant activation. `/stats privacy` et le dashboard permettent de refuser la collecte future ou d’effacer l’historique vocal, sa contribution dérivée et les événements disque en attente. Le dashboard permet l’effacement de vos données dans toute l’instance après votre départ d’un serveur. La vue générale est agrégée ; vos données individuelles sont accessibles à vous et aux officiers/administrateurs du serveur. Les membres ayant accepté l’invitation de la Team propriétaire du bot disposent de l’accès d’instance.
+
+La vue globale PICKET partage avec les utilisateurs connectés uniquement les nombres agrégés de serveurs actifs et de fonctionnalités activées. Elle ne révèle aucun nom, identifiant ou réglage individuel de serveur et ne conserve aucun historique supplémentaire.
+
+Les rapports excluent tout historique au-delà des 60 jours glissants. Le nettoyage physique est périodique et peut être retardé par une panne ; les opérateurs doivent surveiller et rétablir les jobs de purge. La même fenêtre s’applique aux événements en attente sur disque. Les instantanés admin sont actualisés périodiquement. Une demande d’effacement invalide immédiatement les résultats concernés : ils restent inaccessibles pendant leur reconstruction. Leur nettoyage physique suit le rafraîchissement, y compris après la purge quotidienne. L’historique statistique, les instantanés et les sessions du dashboard sont exclus des sauvegardes standard ; les restaurer ne rétablit pas les activités effacées. Les exports téléchargés sont contrôlés par leur destinataire, soumis à ses obligations de rétention.
+
 ## Vos droits
 
 Le RGPD vous permet de demander l'accès aux données vous concernant, leur rectification ou leur effacement, de vous opposer
-à leur traitement, d'en demander la limitation ou la portabilité. En pratique, la seule donnée vous concernant est votre
-identifiant d'utilisateur Discord dans le journal d'audit et dans les journaux de l'application des serveurs où vous êtes
-actif. Pour exercer un droit, contactez le responsable (voir plus haut) : il peut vous être demandé de prouver que
+à leur traitement, d'en demander la limitation ou la portabilité. Votre
+identifiant d'utilisateur Discord apparaît dans le journal d'audit et dans les journaux de l'application des serveurs où vous êtes
+actif ; l’historique vocal éligible et l’identité du dashboard sont également traités comme indiqué ci-dessus. Pour exercer un droit, contactez le responsable (voir plus haut) : il peut vous être demandé de prouver que
 l'identifiant est le vôtre. Une demande d'effacement est traitée en anonymisant votre identifiant dans les entrées
 restantes. En cas de désaccord, vous pouvez saisir la CNIL ([cnil.fr](https://www.cnil.fr)).
 

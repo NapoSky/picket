@@ -89,7 +89,7 @@ export function toIncomingInteraction(
   let componentKind: IncomingInteraction['componentKind'] = null;
   let selectedValues: string[] = [];
   const resolvedRoles: Record<string, { name: string }> = {};
-  const resolvedChannels: Record<string, { kind: 'text' | 'announcement' | 'other' }> = {};
+  const resolvedChannels: Record<string, { kind: 'text' | 'announcement' | 'voice' | 'stage' | 'other' }> = {};
 
   switch (payload.type) {
     case InteractionType.ApplicationCommand:
@@ -111,7 +111,7 @@ export function toIncomingInteraction(
           if (RoleId.parse(id).ok && role.id === id) resolvedRoles[id] = { name: role.name };
         }
         for (const [id, channel] of Object.entries('channels' in resolved ? resolved.channels ?? {} : {})) {
-          if (ChannelId.parse(id).ok && channel.id === id) resolvedChannels[id] = { kind: channel.type === 0 ? 'text' : channel.type === 5 ? 'announcement' : 'other' };
+          if (ChannelId.parse(id).ok && channel.id === id) resolvedChannels[id] = { kind: channel.type === 0 ? 'text' : channel.type === 5 ? 'announcement' : channel.type===2 ? 'voice' : channel.type===13 ? 'stage' : 'other' };
         }
       }
       const messageId = MessageId.parse(payload.message?.id);

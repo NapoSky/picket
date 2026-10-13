@@ -29,7 +29,7 @@ const landing = computed(() => frontmatter.value['landing'] as LandingData | und
     <section class="picket-section">
       <h2>{{ landing.modules.title }}</h2>
       <p class="picket-lead">{{ landing.modules.subtitle }}</p>
-      <div class="picket-grid picket-grid-4">
+      <div class="picket-grid picket-modules">
         <component
           :is="m.link ? 'a' : 'div'"
           v-for="m in landing.modules.items"

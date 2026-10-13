@@ -13,7 +13,7 @@ const t = {
     contributing: 'Contributing',
     legal: 'Legal',
     sections: {
-      guide: ['Getting started', 'Commands', 'Todo lists', 'Timers', 'Permissions', 'War log'],
+      guide: ['Getting started', 'Commands', 'Todo lists', 'Timers', 'Permissions', 'War log', 'Voice statistics'],
       selfHosting: ['Installation', 'Configuration'],
       contributing: ['Translating', 'Architecture'],
       legal: ['Terms of Service', 'Privacy Policy'],
@@ -25,7 +25,7 @@ const t = {
     contributing: 'Contribuer',
     legal: 'Mentions légales',
     sections: {
-      guide: ['Prise en main', 'Commandes', 'Todolists', 'Timers', 'Permissions', 'Journal de guerre'],
+      guide: ['Prise en main', 'Commandes', 'Todolists', 'Timers', 'Permissions', 'Journal de guerre', 'Statistiques vocales'],
       selfHosting: ['Installation', 'Configuration'],
       contributing: ['Traduire', 'Architecture'],
       legal: ["Conditions d'utilisation", 'Politique de confidentialité'],
@@ -46,6 +46,7 @@ function sidebar(lang: Lang): DefaultTheme.Sidebar {
         { text: s.sections.guide[3], link: `${prefix}/guide/timers` },
         { text: s.sections.guide[4], link: `${prefix}/guide/permissions` },
         { text: s.sections.guide[5], link: `${prefix}/guide/warlog` },
+        { text: s.sections.guide[6], link: `${prefix}/guide/stats` },
       ],
     },
     {

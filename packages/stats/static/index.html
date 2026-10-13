@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="description" content="PICKET — your regiment's voice activity, clearly and securely." />
+    <title>PICKET · Activity</title>
+    <link rel="icon" href="/logo.png" />
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="PICKET home"
+        ><img src="/logo.png" alt="" width="44" height="44" /><span
+          >PICKET<small data-i18n="watchpost">REGIMENT WATCHPOST</small></span
+        ></a
+      >
+      <div class="preferences">
+        <label class="sr-only" for="language" data-i18n="language">Language</label
+        ><select id="language">
+          <option value="en">EN</option>
+          <option value="fr">FR</option></select
+        ><label class="sr-only" for="theme" data-i18n="theme">Theme</label
+        ><select id="theme">
+          <option value="system" data-i18n="system">System</option>
+          <option value="dark" data-i18n="dark">Dark</option>
+          <option value="light" data-i18n="light">Light</option></select
+        ><button id="erase-all" class="quiet" hidden data-i18n="eraseAll">Erase all my data</button
+        ><button id="logout" class="quiet" hidden data-i18n="logout">Sign out</button>
+      </div>
+    </header>
+    <main id="main" tabindex="-1">
+      <section id="welcome" class="welcome" aria-labelledby="login-title">
+        <img class="welcome-art" src="/banner.jpg" alt="" width="1600" height="640" />
+        <div class="welcome-copy">
+          <span class="eyebrow" data-i18n="voiceOnly">VOICE ACTIVITY · 60 DAYS</span>
+          <h1 id="login-title" data-i18n="welcomeTitle">Sign in to PICKET</h1>
+          <p data-i18n="welcomeText">
+            Access your voice activity and your regiment’s dashboards.
+          </p>
+          <a class="primary login" href="/auth/discord">
+            <span data-i18n="login">SSO Discord</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-5-5 5 5-5 5" /></svg>
+          </a>
+          <p class="fine" data-i18n="loginHelp">
+            You’ll be redirected to Discord to sign in.
+          </p>
+          <p class="login-access" data-i18n="loginAccess">Your permissions determine which dashboards you can access.</p>
+          <nav class="login-links" aria-label="PICKET resources" data-i18n-label="loginResources">
+            <a href="https://docs.picket-foxhole.com/" data-doc-path="/" data-i18n="documentation">Documentation</a>
+            <a href="https://docs.picket-foxhole.com/legal/privacy" data-doc-path="/legal/privacy" data-i18n="privacyPolicy">Privacy Policy</a>
+            <a href="https://docs.picket-foxhole.com/legal/terms" data-doc-path="/legal/terms" data-i18n="termsOfService">Terms of Service</a>
+          </nav>
+        </div>
+      </section>
+      <div id="workspace" class="workspace" hidden>
+        <aside class="sidebar">
+          <div class="sidebar-caption" data-i18n="workspace">WORKSPACE</div>
+          <nav aria-label="Dashboard">
+            <button data-page="overview" class="nav-item active">
+              <span aria-hidden="true">▦</span><span data-i18n="overview">Overview</span></button
+            ><button data-page="activity" class="nav-item">
+              <span aria-hidden="true">▥</span><span data-i18n="activity">Voice activity</span></button
+            ><button data-page="admin" class="nav-item" id="admin-nav" hidden>
+              <span aria-hidden="true">◇</span><span data-i18n="admin">Administration</span>
+            </button>
+          </nav>
+          <div class="sidebar-bottom">
+            <span class="online-dot" aria-hidden="true"></span
+            ><span data-i18n="retention">60-day retention</span
+            ><small data-i18n="presenceNote">Presence, not speaking time.</small>
+          </div>
+        </aside>
+        <section class="content">
+          <div class="page-header">
+            <div>
+              <div class="eyebrow" id="greeting"></div>
+              <h1 id="page-title"></h1>
+              <p id="page-description" class="muted"></p>
+            </div>
+            <span id="scope-badge" class="badge"></span>
+          </div>
+          <div id="overview-tabs" class="overview-tabs" role="tablist" aria-label="Overview" data-i18n-label="overview" hidden>
+            <button id="overview-tab-server" type="button" role="tab" data-overview-page="overview" aria-controls="voice-content" aria-selected="true" tabindex="0" data-i18n="server">Server</button>
+            <button id="overview-tab-picket" type="button" role="tab" data-overview-page="picket" aria-controls="instance-overview" aria-selected="false" tabindex="-1">PICKET</button>
+          </div>
+          <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+          <section id="instance-overview" role="tabpanel" aria-labelledby="overview-tab-picket" tabindex="0" hidden>
+            <div class="instance-toolbar">
+              <span id="instance-updated" class="muted" role="status" aria-live="polite"></span>
+              <button id="instance-refresh" class="secondary" data-i18n="refresh">Refresh</button>
+            </div>
+            <article class="card instance-total metric">
+              <span data-i18n="activeServers">Active Discord servers</span>
+              <strong id="instance-total">—</strong>
+              <small data-i18n="activeServersHelp">Servers currently registered as active on this instance</small>
+            </article>
+            <div id="instance-features" class="metrics"></div>
+            <article class="card">
+              <div class="card-heading">
+                <div><h2 data-i18n="featureAdoption">Feature adoption</h2>
+                  <p data-i18n="featureAdoptionHelp">Share of active servers with each feature enabled</p></div>
+              </div>
+              <div id="instance-adoption" class="channel-bars"></div>
+            </article>
+            <details class="card help instance-help">
+              <summary data-i18n="instanceHelperTitle">How these figures are counted</summary>
+              <p data-i18n="instanceHelper">These are current settings, not usage counts. Servers where PICKET has left or been suspended are excluded. A server can enable several features, so feature counts overlap. Voice tracking can be disabled while the server remains active.</p>
+            </details>
+          </section>
+          <div id="voice-content">
+            <div class="filters">
+              <div class="field guild-field">
+                <label for="guild" data-i18n="server">Server</label
+                ><select id="guild"></select>
+              </div>
+              <div class="field">
+                <label for="period" data-i18n="period">Period</label
+                ><select id="period">
+                  <option value="1" data-i18n="last1">Last 24 hours</option>
+                  <option value="7" selected data-i18n="last7">Last 7 days</option>
+                  <option value="14" data-i18n="last14">Last 14 days</option>
+                  <option value="30" data-i18n="last30">Last 30 days</option>
+                  <option value="60" data-i18n="last60">Last 60 days</option>
+                </select>
+              </div>
+              <div class="field" id="access-field" hidden>
+                <label for="access" data-i18n="view">View</label
+                ><select id="access">
+                  <option value="personal" data-i18n="myData">My activity</option>
+                  <option value="guild" data-i18n="regimentData">Regiment activity</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="channel" data-i18n="channel">Channel</label
+                ><select id="channel">
+                  <option value="" data-i18n="allChannels">All channels</option>
+                </select>
+              </div>
+              <button id="refresh" class="secondary" data-i18n="refresh">Refresh</button>
+            </div>
+            <div class="freshness">
+              <span id="updated" role="status" aria-live="polite"></span><span id="timezone"></span>
+            </div>
+            <div id="empty" class="empty" hidden>
+              <span aria-hidden="true">◌</span>
+              <h2 data-i18n="emptyTitle">Nothing to show yet</h2>
+              <p data-i18n="emptyText">
+                There is no recorded voice presence for this period. Try a longer period or another server.
+              </p>
+            </div>
+            <div id="metrics" class="metrics">
+              <article class="metric">
+                <span data-i18n="voiceHours">Voice hours</span><strong id="metric-hours">—</strong
+                ><small data-i18n="voiceHoursHelp">Combined time in eligible channels</small>
+              </article>
+              <article class="metric">
+                <span data-i18n="activePeople">Active people</span><strong id="metric-users">—</strong
+                ><small id="metric-users-help" data-i18n="activePeopleHelp">Unique people in this period</small>
+              </article>
+              <article class="metric">
+                <span data-i18n="presences">Presence segments</span><strong id="metric-sessions">—</strong
+                ><small data-i18n="presencesHelp">A new segment for each channel change</small>
+              </article>
+              <article class="metric">
+                <span id="metric-live-title" data-i18n="inVoice">Currently in voice</span><strong id="metric-live">—</strong
+                ><small id="metric-live-help" data-i18n="inVoiceHelp">Last confirmed connected people</small>
+              </article>
+            </div>
+            <div class="chart-grid">
+              <article class="card">
+                <div class="card-heading">
+                  <div>
+                    <h2 id="daily-title" data-i18n="dailyTitle">Activity over time</h2>
+                    <p id="daily-help" data-i18n="dailyHelp">Total voice presence by day</p>
+                  </div>
+                  <span class="legend"><i></i><span data-i18n="hours">Hours</span></span>
+                </div>
+                <div id="daily-chart" class="chart" role="img"></div>
+              </article>
+              <article class="card">
+                <div class="card-heading">
+                  <div>
+                    <h2 data-i18n="channelsTitle">Where people gather</h2>
+                    <p data-i18n="channelsHelp">Voice time by channel</p>
+                  </div>
+                </div>
+                <div id="channels-chart" class="channel-bars"></div>
+              </article>
+            </div>
+            <div class="chart-grid">
+            <article class="card">
+              <div class="card-heading">
+                <div>
+                  <h2 data-i18n="peopleDailyTitle">Active people over time</h2>
+                  <p id="people-daily-help" data-i18n="peopleDailyHelp">Distinct people with voice activity each day</p>
+                </div>
+              </div>
+              <div id="people-daily-chart" class="chart" role="img"></div>
+            </article>
+            <article class="card hourly-card">
+              <div class="card-heading">
+                <div>
+                  <h2 data-i18n="hourlyTitle">When people gather</h2>
+                  <p data-i18n="hourlyHelp">Voice hours by local hour of day</p>
+                </div>
+                <span id="peak" class="legend"></span>
+              </div>
+              <div id="hourly-chart" class="chart" role="img"></div>
+            </article>
+            </div>
+            <article id="server-summary" class="card" hidden>
+              <div class="card-heading">
+                <div><h2 data-i18n="serverSummaryTitle">Activity by server</h2>
+                  <p data-i18n="serverSummaryHelp">People and voice activity across the selected period</p></div>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead><tr><th data-i18n="server">Server</th><th data-i18n="activePeople">Active people</th>
+                    <th data-i18n="voiceHours">Voice hours</th><th data-i18n="presences">Presence segments</th>
+                    <th id="server-summary-live" data-i18n="inVoice">Currently in voice</th></tr></thead>
+                  <tbody id="server-summary-body"></tbody>
+                </table>
+              </div>
+            </article>
+            <article id="people-card" class="card" hidden>
+              <div class="card-heading">
+                <div>
+                  <h2 id="people-title"></h2>
+                  <p id="people-description"></p>
+                </div>
+                <div class="exports">
+                  <button id="export-csv" class="secondary" data-i18n="exportCSV">Export CSV</button
+                  ><button id="export-json" class="quiet" data-i18n="exportJSON">JSON</button>
+                </div>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-i18n="person">Person</th>
+                      <th data-i18n="server">Server</th>
+                      <th data-i18n="voiceTime">Voice time</th>
+                      <th data-i18n="presences">Presence segments</th>
+                      <th data-i18n="lastPresence">Last observed presence</th>
+                    </tr>
+                  </thead>
+                  <tbody id="people-body"></tbody>
+                </table>
+              </div>
+              <div class="pagination">
+                <button id="previous" class="secondary" data-i18n="previous" disabled>Previous</button
+                ><span id="page-number"></span
+                ><button id="next" class="secondary" data-i18n="next" disabled>Next</button>
+              </div>
+              <p id="truncated" class="fine" hidden data-i18n="truncated">
+                Showing the first 1,000 people. Choose a narrower period to export.
+              </p>
+            </article>
+            <article id="segments-card" class="card" hidden>
+              <div class="card-heading">
+                <div>
+                  <h2 data-i18n="recentTitle">Recent presences</h2>
+                  <p data-i18n="recentHelp">Latest 100 observed segments in this period</p>
+                </div>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-i18n="person">Person</th>
+                      <th data-i18n="channel">Channel</th>
+                      <th data-i18n="joined">Joined</th>
+                      <th data-i18n="left">Left / confirmed until</th>
+                      <th data-i18n="voiceTime">Voice time</th>
+                      <th data-i18n="quality">Observation</th>
+                    </tr>
+                  </thead>
+                  <tbody id="segments-body"></tbody>
+                </table>
+              </div>
+            </article>
+            <article id="admin-card" class="card" hidden>
+              <div class="card-heading">
+                <div>
+                  <h2 data-i18n="collectionTitle">Collection health</h2>
+                  <p data-i18n="collectionHelp">Persistent buffer awaiting database recovery</p>
+                </div>
+              </div>
+              <div id="buffer-status" class="buffer-status"></div>
+            </article>
+            <div class="bottom-grid">
+              <details class="card help">
+                <summary data-i18n="helperTitle">How to read these statistics</summary>
+                <p data-i18n="helperPresence">
+                  Voice time measures presence in a channel. It does not measure speaking time or prove that
+                  someone is playing.
+                </p>
+                <p data-i18n="helperFilters">
+                  Bots, the AFK channel, excluded channels and people outside the selected member roles are not
+                  included.
+                </p>
+                <p data-i18n="helperGaps">
+                  Collection interruptions are marked. Unobserved time is not automatically credited.
+                </p>
+                <p data-i18n="helperRetention">
+                  All statistical history covers a maximum of 60 days. “No observed activity” does not mean
+                  “never active”.
+                </p>
+              </details>
+              <details id="privacy-card" class="card help">
+                <summary data-i18n="privacyTitle">Your data, your choice</summary>
+                <p data-i18n="privacyHelp">
+                  Manage tracking for your account in the selected server. Erasure also removes your
+                  contribution from the statistics.
+                </p>
+                <label class="check"
+                  ><input id="opt-out" type="checkbox" /><span data-i18n="optOut"
+                    >Exclude me from future tracking</span
+                  ></label
+                ><button id="save-privacy" class="secondary" data-i18n="savePrivacy">Save preference</button
+                ><button id="erase" class="danger" data-i18n="erase">Erase my statistics</button>
+              </details>
+            </div>
+          </div>
+          <footer>
+            <span>PICKET</span><span data-i18n="footer">Your regiment. In sync.</span
+            ><a
+              href="https://docs.picket-foxhole.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-i18n="documentation"
+              >Documentation</a
+            >
+          </footer>
+        </section>
+      </div>
+    </main>
+    <dialog id="erase-dialog">
+      <h2 data-i18n="eraseTitle">Erase your statistics?</h2>
+      <p id="erase-description" data-i18n="eraseHelp">
+        This removes your recorded activity in the selected server, including pending records. It cannot be
+        undone.
+      </p>
+      <label for="erase-confirm" data-i18n="eraseConfirm">Type DELETE to confirm</label
+      ><input id="erase-confirm" autocomplete="off" />
+      <div class="dialog-actions">
+        <button id="erase-cancel" class="secondary" data-i18n="cancel">Cancel</button
+        ><button id="erase-submit" class="danger" disabled data-i18n="erase">Erase my statistics</button>
+      </div>
+    </dialog>
+  </body>
+</html>

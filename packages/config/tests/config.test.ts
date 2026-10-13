@@ -1,4 +1,4 @@
-import { ConfigError, loadConfig, loadMigrationConfig, loggingConfig, type Env } from '@picket/config';
+import { ConfigError, loadConfig, loadDashboardConfig, loadMigrationConfig, loggingConfig, type Env } from '@picket/config';
 
 const valid: Env = {
   DISCORD_APPLICATION_ID: '123456789012345678',
@@ -8,6 +8,28 @@ const valid: Env = {
 };
 
 describe('loadConfig', () => {
+  it('allows the bot to publish a dashboard link without mounting OAuth credentials', () => {
+    const config = loadConfig({ ...valid, DASHBOARD_URL: 'https://stats.example.org' });
+    expect(config.dashboard.origin).toBe('https://stats.example.org');
+    expect(config.dashboard.clientSecret).toBeNull();
+  });
+  it('accepts the main Compose empty dashboard and secret placeholder', () => {
+    const config = loadConfig({ ...valid, DASHBOARD_URL: '', DISCORD_CLIENT_SECRET_FILE: '/run/secrets/oauth' }, { readFile: () => '' });
+    expect(config.dashboard.origin).toBeNull();
+    expect(config.dashboard.clientSecret).toBeNull();
+  });
+
+  it('requires the actual OAuth credential when the dashboard is enabled', () => {
+    const env = { ...valid, DASHBOARD_URL: 'https://stats.example.org', DISCORD_CLIENT_SECRET_FILE: '/run/secrets/oauth' };
+    expect(() => loadDashboardConfig(env, { readFile: () => '' })).toThrow(/DISCORD_CLIENT_SECRET/);
+    const config = loadDashboardConfig(env, { readFile: () => 'oauth-credential\n' });
+    expect(config.dashboard.origin).toBe('https://stats.example.org');
+    expect(config.dashboard.clientSecret?.reveal()).toBe('oauth-credential');
+    expect(config.discord.applicationId).toBe(valid.DISCORD_APPLICATION_ID);
+    expect(JSON.stringify(config)).not.toContain('oauth-credential');
+    expect(() => loadDashboardConfig({ ...env, DISCORD_CLIENT_SECRET: 'duplicate' }, { readFile: () => 'oauth-credential' })).toThrow(/mutually exclusive/);
+  });
+
   it('applies documented defaults', () => {
     const config = loadConfig(valid);
     expect(config.env).toBe('production');
@@ -110,6 +132,21 @@ describe('loadConfig', () => {
     expect(JSON.stringify(config)).not.toContain('pw-secret');
     expect(JSON.stringify(config)).not.toContain('bot-token-value');
     expect(config.database.url.reveal()).toBe(valid['DATABASE_URL']);
+  });
+});
+
+describe('dedicated dashboard configuration', () => {
+  it('needs no interaction public key or Gateway roles and uses only the dashboard pool budget', () => {
+    const { DISCORD_PUBLIC_KEY: _unused, ...env } = valid;
+    const config = loadDashboardConfig({ ...env, DASHBOARD_URL: 'https://stats.example.org', DISCORD_CLIENT_SECRET: 'oauth-secret', DATABASE_POOL_MAX: '40', DASHBOARD_POOL_MAX: '2', ROLES: 'unused-by-http' });
+    expect(config.database.poolMax).toBe(2);
+    expect(config.discord.restGlobalRps).toBe(5);
+    expect(config.dashboard.origin).toBe('https://stats.example.org');
+  });
+  it('keeps the HTTP service disabled with an empty host and OAuth placeholder', () => {
+    const config = loadDashboardConfig({ ...valid, DASHBOARD_URL: '', DISCORD_CLIENT_SECRET: '' });
+    expect(config.dashboard.origin).toBeNull();
+    expect(config.dashboard.clientSecret).toBeNull();
   });
 });
 

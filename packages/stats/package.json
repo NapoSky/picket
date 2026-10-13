@@ -1,0 +1,27 @@
+{
+    "name": "@picket/stats",
+    "version": "0.0.0",
+    "private": true,
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "@picket/source": "./src/index.ts",
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "static"
+    ],
+    "dependencies": {
+        "@picket/kernel": "workspace:*",
+        "@picket/persistence": "workspace:*",
+        "@picket/coordination": "workspace:*",
+        "@picket/discord": "workspace:*",
+        "@picket/guild": "workspace:*",
+        "@picket/i18n": "workspace:*",
+        "fastify": "^5.12.5"
+    }
+}

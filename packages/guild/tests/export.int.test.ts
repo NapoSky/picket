@@ -1,4 +1,4 @@
-import { ExportGuildData, GUILD_EXPORT_TABLES, MAX_GUILD_EXPORT_BYTES, PostgresGuildDataExportRepository } from '@picket/guild';
+import { ExportGuildData, GUILD_EXPORT_TABLES, GUILD_EXPORT_INTERNAL_TABLES, MAX_GUILD_EXPORT_BYTES, PostgresGuildDataExportRepository } from '@picket/guild';
 import { GuildId } from '@picket/kernel';
 import { withTenant } from '@picket/persistence';
 import { createTestDatabase, queryAsAdmin, type TestDatabase } from '@picket/testing';
@@ -41,7 +41,8 @@ describe('guild data export (PostgreSQL integration)', () => {
 
   it('exports all current guild tables and columns, including future settings, but no other server or global secrets', async () => {
     const current = await queryAsAdmin<{ table_name: string }>(database, "SELECT table_name FROM information_schema.columns WHERE table_schema = 'public' AND column_name = 'guild_id' ORDER BY table_name");
-    expect(Object.keys(GUILD_EXPORT_TABLES).sort()).toEqual(current.map((row) => row.table_name));
+    const exportedTables = current.map((row) => row.table_name).filter((table) => !(GUILD_EXPORT_INTERNAL_TABLES as readonly string[]).includes(table));
+    expect(Object.keys(GUILD_EXPORT_TABLES).sort()).toEqual(exportedTables);
     const result = await new ExportGuildData(repository, clock).execute(GUILD_A);
     if (result.kind !== 'exported') throw new Error('Expected complete export');
     const json = new TextDecoder().decode(result.bytes);
@@ -49,7 +50,8 @@ describe('guild data export (PostgreSQL integration)', () => {
     expect(json).not.toContain('SECRET-DO-NOT-EXPORT');
     const exported = JSON.parse(json);
     expect(exported.guildId).toBe(GUILD_A);
-    expect(Object.keys(exported.data).sort()).toEqual(current.map((row) => row.table_name));
+    expect(Object.keys(exported.data).sort()).toEqual([...exportedTables, 'stats_members', 'stats_summary'].sort());
+    for (const table of GUILD_EXPORT_INTERNAL_TABLES) expect(exported.data).not.toHaveProperty(table);
     for (const table of Object.keys(GUILD_EXPORT_TABLES)) {
       const expected = await queryAsAdmin(database, `SELECT * FROM ${table} WHERE guild_id = $1`, [GUILD_A]);
       expect(exported.data[table]).toEqual(JSON.parse(JSON.stringify(expected)));

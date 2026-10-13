@@ -54,7 +54,7 @@ import {
 } from '@picket/guild';
 import type { I18n } from '@picket/i18n';
 import { noopLogger, type Clock, type Logger, type Secret } from '@picket/kernel';
-import { createAppState, purgeExpiredJournals, type Db } from '@picket/persistence';
+import { createAppState, purgeExpiredJournals, withTenant, type Db } from '@picket/persistence';
 import {
   CreateTodolist,
   TODOLIST_ROOT,
@@ -87,7 +87,9 @@ import {
   type TimerUseCaseDeps,
 } from '@picket/timers';
 import { latestRetentionSchedule } from './retention-schedule';
+import { buildStatsRefreshJob } from './stats-schedule';
 import { ConfigureWarLog, FoxholeApi, PostgresWarStore, PublishWarLog, WARLOG_ROOT, WarPoller, createWarLogSettingsPanel } from '@picket/warlog';
+import { createStatsPanel,DiskVoiceBuffer,PostgresStatsStore,STATS_ROOT,VoiceCollector,type DurableVoiceBuffer } from '@picket/stats';
 
 /** Accès à l'API REST de Discord : seul le serveur d'interactions en a besoin. */
 export interface DiscordPorts {
@@ -108,11 +110,14 @@ export const offlineDiscordPorts: DiscordPorts = {
 };
 
 export interface CompositionOptions {
+  readonly timeZone?: string;
+  readonly statsAdminRefreshCron?: string;
   readonly clock: Clock;
   readonly guildRetentionDays: number;
   readonly i18n: I18n;
   readonly discord?: DiscordPorts;
   readonly flushGuildLogs?: () => Promise<void>;
+  readonly stats?: {readonly store:PostgresStatsStore;readonly buffer:DurableVoiceBuffer;readonly collector?:VoiceCollector;readonly dashboardUrl:string|null};
 }
 
 interface FeatureModule {
@@ -146,12 +151,16 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
     ...(options.discord?.guildRoles ? { guildRoles: options.discord.guildRoles } : {}),
   });
   const showPermissions = new ShowPermissions(permissions);
+  const statsStore=options.stats?.store ?? new PostgresStatsStore(db,()=>options.clock.now());
+  const statsBuffer=options.stats?.buffer ?? new DiskVoiceBuffer('./data/voice-buffer');
+  const statsPanel=createStatsPanel({store:statsStore,buffer:statsBuffer,access,gate,clock:options.clock,dashboardUrl:options.stats?.dashboardUrl ?? null});
   const panel = createSettingsPanel({
     settings: new GetGuildSettings(settings), update: new UpdateGuildSettings(settings, options.i18n.locales),
     permissions: showPermissions, updatePermissions: new UpdatePermissions(permissions), access: new ResolveAccess(permissions),
     suspension: new GetSuspension(lifecycle, options.guildRetentionDays),
     request: new RequestGuildDeletion(lifecycle, options.clock, options.guildRetentionDays), cancel: new CancelGuildDeletion(lifecycle),
-    exportData: new ExportGuildData(new PostgresGuildDataExportRepository(db, options.flushGuildLogs), options.clock),
+    exportData: new ExportGuildData(new PostgresGuildDataExportRepository(db, options.flushGuildLogs,
+      options.stats?.buffer.exportGuild ? { pendingVoice: (guildId, maxBytes) => options.stats!.buffer.exportGuild!(guildId, maxBytes) } : {}), options.clock),
     clock: options.clock, i18n: options.i18n,
     guildRoles: options.discord?.guildRoles ?? { names: async () => ({}) },
     audit: buildAuditPublisher(db, logger, options),
@@ -159,11 +168,12 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
       open: warPanel.open,
       disable: async (guildId, actorId) => `warlog.results.${await configureWarLog.execute(guildId, actorId, { kind: 'disable' })}`,
     },
+    stats:{open:statsPanel.open,disable:async(guildId,actorId)=>{await statsStore.configure(guildId,actorId,{enabled:false});return 'panel.saved';}},
   });
   const status = statusCommand(new GetGuildStatus(settings), showPermissions);
   return {
     aliases: [...panel.aliases, { ...status, path: ['picket', 'permissions', 'show'] }],
-    entries: [status, panel.command, timerPanel.command, warPanel.command,
+    entries: [status, panel.command, timerPanel.command, warPanel.command,...statsPanel.entries,
       ...todolistCommands(),
       ...timersCommands({
         createBoard: new CreateBoard(timers.deps),
@@ -176,6 +186,7 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
     ],
     families: [
       ...panel.families,
+      ...statsPanel.families,
       warPanel.family,
       timerPanel.family,
       todolistFamily({ create: new CreateTodolist(messaging), tick: new TickTodolistItem(messaging, new PostgresKeyedLock(db)),
@@ -224,7 +235,7 @@ function timerServices(db: Db, options: CompositionOptions, logger: Logger, sett
   return { store, maintenance, deps, features: { isEnabled: (guildId: Parameters<FeatureGate['isEnabled']>[0]) => features.isEnabled(guildId, TIMERS_FEATURE) } };
 }
 
-const ROOTS = [PICKET_ROOT, TODOLIST_ROOT, TIMERS_ROOT, WARLOG_ROOT];
+const ROOTS = [PICKET_ROOT, TODOLIST_ROOT, TIMERS_ROOT, WARLOG_ROOT,STATS_ROOT];
 
 /** One fenced collector and one paced distributor. HTTP requests never hold database transactions. */
 export function buildWarLogRunner(db: Db, logger: Logger, options: CompositionOptions & { readonly holder: string; readonly apiUrl: string; readonly pollIntervalMs: number; readonly version: string }): LeaderElector {
@@ -294,7 +305,13 @@ export function buildJobRunner(
       const stopTimers = startLeasedLoop({ tick: () => sweep.tick(), intervalMs: SWEEP_INTERVAL_MS, logger });
       const stopRetention = startLeasedLoop({ tick: () => retention.execute(), intervalMs: RETENTION_CHECK_INTERVAL_MS, logger });
       const stopAudit = startLeasedLoop({ tick: () => audit.tick(), intervalMs: AUDIT_INTERVAL_MS, logger });
-      return async () => { await Promise.all([stopTimers(), stopRetention(), stopAudit()]); };
+      const stats=options.stats?.store ?? new PostgresStatsStore(db,()=>options.clock.now());
+      const stopStats=startLeasedLoop({tick:async()=>{for(const guildId of await stats.allGuildIds()) await stats.maintenance(guildId);},intervalMs:120_000,logger});
+      const refresh = buildStatsRefreshJob(stats, options.clock, logger, options.statsAdminRefreshCron, options.timeZone);
+      const stopRefresh = options.stats?.dashboardUrl
+        ? startLeasedLoop({ tick: () => refresh.execute(), intervalMs:60_000, logger })
+        : async () => undefined;
+      return async () => { await Promise.all([stopTimers(), stopRetention(), stopAudit(),stopStats(),stopRefresh()]); };
     },
   });
 }
@@ -316,6 +333,7 @@ export function buildRetentionJob(db: Db, logger: Logger, options: CompositionOp
       const cutoff = new Date(options.clock.now().getTime() - INTERACTION_RECEIPT_RETENTION_DAYS * 24 * 60 * 60 * 1000);
       const receiptsDeleted = await receipts.deleteOlderThan(cutoff);
       const report = await purge.execute();
+      await (options.stats?.store ?? new PostgresStatsStore(db)).invalidateAdminSnapshot();
       return { ...report, ...journals, receiptsDeleted };
     },
   };
@@ -327,7 +345,7 @@ export function buildNightlyRetentionJob(db: Db, logger: Logger, options: Compos
   const retention = buildRetentionJob(db, logger, options);
   return {
     async execute() {
-      const scheduledAt = latestRetentionSchedule(options.clock.now());
+      const scheduledAt = latestRetentionSchedule(options.clock.now(), options.timeZone);
       const last = await state.get(RETENTION_SCHEDULE_KEY);
       if (last !== null && new Date(last) >= scheduledAt) return null;
       const report = await retention.execute();
@@ -339,8 +357,14 @@ export function buildNightlyRetentionJob(db: Db, logger: Logger, options: Compos
 }
 
 export function buildPurgeJob(db: Db, logger: Logger, options: CompositionOptions): PurgeInactiveGuilds {
+  const buffer = options.stats?.buffer;
   return new PurgeInactiveGuilds(
-    new PostgresGuildLifecycleRepository(db),
+    new PostgresGuildLifecycleRepository(db, async (guildId) => {
+      if (buffer?.eraseGuild) {
+        const users = await withTenant(db, guildId, (trx) => trx.selectFrom('stats_privacy').select('user_id').execute());
+        await buffer.eraseGuild(guildId, users.map((row) => row.user_id));
+      }
+    }),
     options.clock,
     options.guildRetentionDays,
     logger,
@@ -360,10 +384,11 @@ export function buildGatewayHandler(db: Db, logger: Logger, options: Composition
     logger,
   );
   const store = new PostgresWarStore(db);
-  return { handle: async event => {
-    if (event.type === 'channel_unusable') { await store.channelChanged(event.guildId, event.channelId); return; }
+  return { handle: async (event,delivery) => {
+    if (event.type === 'channel_unusable') { await store.channelChanged(event.guildId, event.channelId); await options.stats?.collector?.handle(event,delivery); return; }
     await guildHandler.handle(event);
-  } };
+    await options.stats?.collector?.handle(event,delivery);
+  },connectionChanged:(shardId,connected,lease)=>options.stats?.collector?.connectionChanged(shardId,connected,lease) ?? Promise.resolve() };
 }
 
 export function buildShardRunner(

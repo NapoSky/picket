@@ -1,0 +1,16 @@
+{
+  "name": "@picket/stats-server",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/main.js",
+  "dependencies": {
+    "@picket/config": "workspace:*",
+    "@picket/coordination": "workspace:*",
+    "@picket/discord": "workspace:*",
+    "@picket/kernel": "workspace:*",
+    "@picket/observability": "workspace:*",
+    "@picket/persistence": "workspace:*",
+    "@picket/stats": "workspace:*",
+    "@picket/guild": "workspace:*"
+  }
+}

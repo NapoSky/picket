@@ -11,9 +11,12 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@picket/kernel": "workspace:*",
+    "cron-parser": "^5.10.2",
     "zod": "^4.6.5"
   }
 }

@@ -18,7 +18,14 @@
     "test:int": "jest --selectProjects integration --maxWorkers=4",
     "test:all": "pnpm typecheck && jest",
     "test:arch": "jest --selectProjects unit tests/architecture",
-    "test:coverage": "jest --selectProjects unit --coverage"
+    "test:coverage": "jest --selectProjects unit --coverage",
+    "stats:dev": "pnpm build && vite --config packages/stats/vite.config.mjs",
+    "stats:dev:live": "pnpm stats:dev:prepare && node --env-file=.env.example --env-file=.env.dev apps/stats/dist/cli.js",
+    "stats:test": "pnpm typecheck && jest --selectProjects unit --testPathPatterns='packages/stats|apps/stats|packages/config/tests|tests/deploy/init-secrets.test.ts|tests/deploy/backup.test.ts|tests/deploy/stats-dev-live.test.ts|tests/deploy/stats-preview.test.ts'",
+    "stats:test:int": "jest --selectProjects integration --testPathPatterns='packages/stats|apps/stats|apps/bot/tests/stats-data.int.test.ts|packages/guild/tests/export.int.test.ts' --maxWorkers=4",
+    "stats:test:load": "jest --selectProjects integration --runTestsByPath packages/stats/tests/load.int.test.ts --maxWorkers=1",
+    "stats:dev:prepare": "docker compose -f compose.dev.yml up -d --wait && pnpm build && node --env-file=.env.example --env-file=.env.dev apps/bot/dist/cli.js migrate",
+    "stats:dev:oauth": "pnpm stats:dev:prepare && node --env-file=.env.example --env-file=.env.dev apps/stats/dist/main.js"
   },
   "devDependencies": {
     "@picket/testing": "workspace:*",
@@ -27,6 +34,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.4",
     "jest": "^30.5.2",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
   }
 }

@@ -17,6 +17,13 @@ Initially, everyone has member access and only administrators can configure PICK
 role to delegate configuration. Permission changes and data management remain reserved for administrators.
 Use `/picket status` to check the bot and your access level. See [Permissions](./permissions) for details.
 
+
+## Open the statistics dashboard
+
+Visit **[stats.picket-foxhole.com](https://stats.picket-foxhole.com)** and sign in with Discord, or run `/stats link`.
+Collection is disabled by default: an administrator must select actual member roles before it can be enabled.
+See [Voice statistics](./stats) for your first setup, access levels and privacy controls.
+
 ## Languages
 
 PICKET supports **English, French, German, Spanish and Brazilian Portuguese**. Keep **Automatic** to follow each

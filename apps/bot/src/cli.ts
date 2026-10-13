@@ -9,6 +9,7 @@ import { systemClock } from '@picket/kernel';
 import { createLogger } from '@picket/observability';
 import { createDatabase, migrate } from '@picket/persistence';
 import { buildCommandRegistry, buildRetentionJob } from './composition';
+import { DiskVoiceBuffer, PostgresStatsStore } from '@picket/stats';
 
 const USAGE = 'Usage: cli <migrate | deploy-commands [--force] | purge>';
 
@@ -50,6 +51,11 @@ async function runPurge(): Promise<number> {
       clock: systemClock,
       guildRetentionDays: config.guildRetentionDays,
       i18n: createI18n(),
+      stats: {
+        store: new PostgresStatsStore(database.db),
+        buffer: new DiskVoiceBuffer(config.stats.bufferPath, config.stats.bufferMaxBytes),
+        dashboardUrl: config.dashboard.origin,
+      },
     }).execute();
     logger.info({ ...report, purged: report.purged.length, failed: report.failed.length }, 'purge done');
     return report.failed.length > 0 ? 1 : 0;

@@ -1,6 +1,6 @@
 # Commands
 
-Commands start with `/picket`, `/todolist`, `/timers` or `/warlog`, work inside a server and reply privately. Created lists and boards are public messages.
+Commands start with `/picket`, `/todolist`, `/timers`, `/warlog` or `/stats`, work inside a server and reply privately. Created lists and boards are public messages.
 
 | Command | Level | What it does |
 | --- | --- | --- |
@@ -14,6 +14,13 @@ Commands start with `/picket`, `/todolist`, `/timers` or `/warlog`, work inside 
 | `/timers repair` | officer | Reposts the board messages from the saved timers. |
 | `/timers settings` | officer | Opens this channel’s private board panel with no arguments: alerts, roles, access and cleanup. |
 | `/warlog settings` | officer | Chooses a regular text channel, one to three zones and activation for the current war. See [War log](./warlog). |
+| `/stats settings` | officer | Configure explicit activation and excluded channels; member role changes require an administrator. |
+| `/stats status` | officer | Show collection settings and retention. |
+| `/stats export` | officer | Export statistics exclusively for this server (CSV/JSON, 1–60 days). |
+| `/stats link` | member | Open [the official dashboard](https://stats.picket-foxhole.com). |
+| `/stats privacy` | member | Opt out or erase your voice history. |
+
+See [Voice statistics](./stats) for scope, privacy and metric definitions.
 
 ## The `/picket settings` panel
 
@@ -25,7 +32,7 @@ Each section has its own color and icon; the current section’s button is highl
 - **Language**: a fixed language applies to everyone. English, French, German, Spanish and Brazilian Portuguese are available. Automatic follows each user’s Discord language, then the Discord server language, then English. Languages are paginated when necessary.
 - **Permissions**: officers can view roles; administrators add or remove one role at a time. Opening member access to `@everyone` requires confirmation. `@everyone` can never be an officer. Add a member role before removing `@everyone` if members should retain access.
 - **Advanced**: the IANA time zone remains preconfiguration and does not change timer displays; Discord displays timestamps in each viewer’s time zone. The audit channel publishes configuration changes, todolist creations, timer creations and removals, and alert acknowledgements. Countdown restarts and todolist contents are excluded. PICKET requires View Channel, Send Messages and Embed Links in the selected channel. If access is lost, publication pauses; restore the permissions and use **Test / resume audit**. Configure the war log using `/warlog settings`; see [War log](./warlog).
-- **Data**: only administrators see this screen. It explains deletion, its date and consequences before confirmation.
+- **Data**: administrators can export server data or request deletion. The export includes Stats settings, tracking preferences and 60-day member summaries, with pending voice counts; individual voice segments and raw events are omitted. See [Voice statistics](./stats#managing-your-data). The screen explains deletion, its date and consequences before confirmation.
 
 Every effective settings or permission change is audited in the database with its author and before/after state. Repeating a change adds no audit record.
 

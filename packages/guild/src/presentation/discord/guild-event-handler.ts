@@ -18,6 +18,11 @@ export function createGuildEventHandler(useCases: GuildEventUseCases, logger: Lo
   return {
     async handle(event: GatewayEvent): Promise<void> {
       switch (event.type) {
+        case 'guild_voice_unavailable':
+        case 'guild_voice_metadata':
+        case 'voice_state':
+        case 'voice_member':
+        case 'voice_member_removed': return;
         case 'channel_unusable': return;
         case 'ready': {
           const departed = await useCases.reconcile.execute({

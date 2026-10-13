@@ -22,7 +22,7 @@ async function audit(
 export class PostgresGuildLifecycleRepository implements GuildLifecycleRepository {
   readonly #db: Db;
 
-  constructor(db: Db) {
+  constructor(db: Db, private readonly beforePurge: (guildId: GuildId) => Promise<void> = async () => undefined) {
     this.#db = db;
   }
 
@@ -127,7 +127,9 @@ export class PostgresGuildLifecycleRepository implements GuildLifecycleRepositor
     });
   }
 
-  purge(guildId: GuildId): Promise<void> {
-    return purgeGuildData(this.#db, guildId);
+  async purge(guildId: GuildId): Promise<void> {
+    // A failed external erasure leaves the registry entry available for retry.
+    await this.beforePurge(guildId);
+    await purgeGuildData(this.#db, guildId);
   }
 }

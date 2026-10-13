@@ -218,14 +218,14 @@
 }
 
 @media (min-width: 640px) {
-  .picket-grid-4 {
+  .picket-modules {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (min-width: 960px) {
-  .picket-grid-4 {
-    grid-template-columns: repeat(4, 1fr);
+  .picket-modules {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
   .picket-grid-3 {
     grid-template-columns: repeat(3, 1fr);

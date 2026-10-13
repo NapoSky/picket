@@ -24,7 +24,7 @@ interface Row {
 }
 
 function toFeatures(raw: Record<string, boolean>): GuildFeatures {
-  return Object.fromEntries(FEATURES.map((feature) => [feature, raw[feature] === true])) as GuildFeatures;
+  return Object.fromEntries(FEATURES.filter(feature=>feature!=='stats'||raw.stats!==undefined).map((feature) => [feature, raw[feature] === true])) as GuildFeatures;
 }
 
 function toSettings(guildId: GuildId, row: Row): GuildSettings {

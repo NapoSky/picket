@@ -38,11 +38,14 @@ landing:
       - name: War log
         text: War events in your channel, with up to three selected zones and alerts adapted to your faction.
         link: /guide/warlog
+      - name: Voice statistics
+        text: Explore voice presence across 60 days, with personal and officer views in the Discord-authenticated dashboard.
+        link: /guide/stats
   steps:
     title: Up and running in three steps
     items:
       - title: Invite the bot
-        text: Add PICKET with the bot and applications.commands scopes. It only asks for the non-privileged Guilds intent.
+        text: Add PICKET with the bot and applications.commands scopes. Voice-role filtering uses Server Members Intent; presence and message content stay disabled.
       - title: Choose your officers
         text: Open /picket settings to choose your language, modules and access roles.
       - title: Post your first board
@@ -64,7 +67,7 @@ landing:
     text: Learn how to use PICKET, run your own instance, or read the terms that apply.
     cards:
       - title: User guide
-        text: Commands, timers, todo lists, war log and permissions.
+        text: Commands, timers, todo lists, war log, voice statistics and permissions.
         link: /guide/getting-started
       - title: Self-hosting
         text: Install and configure your own instance.

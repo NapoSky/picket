@@ -53,6 +53,7 @@ export interface SettingsPanelDependencies {
     readonly open: (context: CommandContext) => Promise<Reply>;
     readonly disable: (guildId: GuildId, actorId: UserId) => Promise<MessageKey>;
   };
+  readonly stats?: {readonly open:(context:CommandContext)=>Promise<Reply>;readonly disable:(guildId:GuildId,actorId:UserId)=>Promise<MessageKey>};
 }
 
 function nativeName(locale: string): string {
@@ -106,8 +107,8 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
         components.push(
           text(t('panel.homeHelp')),
           { kind: 'section', text: `### 🌐 ${t('panel.language')}\n**${settings.locale === null ? t('panel.auto') : nativeName(settings.locale)}**`, button: button('panel.language', 'psnav', 'view', 'language', 'primary') },
-          ...(['timers', 'todolists', 'warlog'] as const).map((feature): PanelContent => ({
-            kind: 'section', text: `### ${feature === 'timers' ? '⏱️' : feature === 'todolists' ? '📋' : '📡'} ${t(`features.${feature}`)}\n${settings.features[feature] ? '🟢' : '⚪'} **${t(settings.features[feature] ? 'panel.enabled' : 'panel.disabled')}**\n${t(feature === 'timers' ? 'panel.timersHelp' : feature === 'todolists' ? 'panel.todolistsHelp' : 'panel.warlogHelp')}`,
+          ...(['timers', 'todolists', 'warlog', ...(deps.stats ? ['stats' as const] : [])] as const).map((feature): PanelContent => ({
+            kind: 'section', text: `### ${feature === 'timers' ? '⏱️' : feature === 'todolists' ? '📋' : feature==='stats' ? '📊' : '📡'} ${t(`features.${feature}`)}\n${settings.features[feature] ? '🟢' : '⚪'} **${t(settings.features[feature] ? 'panel.enabled' : 'panel.disabled')}**\n${t(feature === 'timers' ? 'panel.timersHelp' : feature === 'todolists' ? 'panel.todolistsHelp' : feature==='stats' ? 'stats.help' : 'panel.warlogHelp')}`,
             button: settings.features[feature] ? button('panel.disable', 'psnav', 'disable', feature) : button('panel.enable', 'psedit', 'enable', feature, 'success'),
           })),
           text(`🔑 ${t('panel.access', { level: t(`levels.${context.level}`) })}`),
@@ -167,7 +168,7 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
         if (context.level === 'admin') components.push({ kind: 'buttons', buttons: [button('panel.confirm', 'psperm', 'everyone', '0', 'danger'), button('panel.cancel', 'psnav', 'cancel', 'member')] });
         break;
       case 'disable': {
-        if (argument !== 'timers' && argument !== 'todolists' && argument !== 'warlog') return ephemeral(t('settings.invalidOption'));
+        if (argument !== 'timers' && argument !== 'todolists' && argument !== 'warlog' && argument!=='stats') return ephemeral(t('settings.invalidOption'));
         components.push(text(`### ⏸️ ${t('panel.disableTitle', { feature: t(`features.${argument}`) })}\n${t('panel.disableHelp')}`), { kind: 'buttons', buttons: [button('panel.confirm', 'psedit', 'disable', argument, 'danger'), button('panel.cancel', 'psnav', 'cancel', 'home')] });
         break;
       }
@@ -227,10 +228,14 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
           if (namespace === 'psnav') {
             if (context.interaction.componentKind !== 'button') return ephemeral(context.t('settings.invalidOption'));
             if (['view', 'refresh', 'cancel'].includes(action) && PAGES.includes(argument as Page)) return render(context, argument as Page);
-            if (action === 'disable' && (argument === 'timers' || argument === 'todolists' || argument === 'warlog')) return render(context, 'disable', argument);
+            if (action === 'disable' && (argument === 'timers' || argument === 'todolists' || argument === 'warlog' || argument==='stats')) return render(context, 'disable', argument);
             if (['language', 'member', 'officer'].includes(action) && /^\d{1,6}$/.test(argument)) return render(context, action as Page, argument);
           }
           if (namespace === 'psedit') {
+            if(argument==='stats'&&context.interaction.componentKind==='button'&&deps.stats) {
+              if(action==='enable') return deps.stats.open(context);
+              if(action==='disable') return render(context,'home','0',await deps.stats.disable(context.guildId,context.interaction.userId));
+            }
             if (argument === 'warlog' && context.interaction.componentKind === 'button') {
               if (action === 'enable') return deps.warlog.open(context);
               if (action === 'disable') return render(context, 'home', '0', await deps.warlog.disable(context.guildId, context.interaction.userId));

@@ -18,8 +18,9 @@ export interface WsConnectorDependencies {
   readonly flushEveryMs?: number;
 }
 
-/** Seul intent demandé : `Guilds` (non privilégié). Aucun intent de contenu ni de membres. */
-const INTENTS = GatewayIntentBits.Guilds;
+/** Voice collection plus exact role changes. Message content and presence are unnecessary. */
+const INTENTS =
+  GatewayIntentBits.Guilds | GatewayIntentBits.GuildVoiceStates | GatewayIntentBits.GuildMembers;
 type SharedWsConnectorDependencies = WsConnectorDependencies & { readonly rest: DiscordBotRestClient };
 
 class DiscordWsShardConnection implements ShardConnection {
@@ -31,6 +32,10 @@ class DiscordWsShardConnection implements ShardConnection {
   readonly #queue: SerialQueue;
   #manager: WebSocketManager | null = null;
   #latest: SessionInfo | null = null;
+  #delivered: SessionInfo | null = null;
+  #replaying = false;
+  #blocked = false;
+  #retry: ReturnType<typeof setTimeout> | null = null;
   #dirty = false;
   #preserving = false;
   #timer: ReturnType<typeof setInterval> | null = null;
@@ -45,8 +50,19 @@ class DiscordWsShardConnection implements ShardConnection {
   }
 
   async start(): Promise<void> {
+    if (this.#preserving) return;
+    if (this.#timer) clearInterval(this.#timer);
+    this.#timer = null;
+    await this.#queue.drain();
+    await this.#flush();
     const stored = await this.#deps.sessions.load(this.#shardId);
+    if(this.#preserving) return;
     this.#latest = stored && stored.shardCount === this.#shardCount ? { ...stored } : null;
+    this.#delivered = this.#latest;
+    this.#replaying = this.#latest !== null;
+    await this.#deps.handler.connectionChanged?.(this.#shardId, false, this.#lease);
+    if(this.#preserving) return;
+    this.#blocked = false;
     this.#logger.info({ resuming: this.#latest !== null }, 'connecting to the gateway');
 
     const token = this.#deps.token.reveal();
@@ -63,19 +79,64 @@ class DiscordWsShardConnection implements ShardConnection {
 
     manager.on(WebSocketShardEvents.Dispatch, (payload, shardId) => {
       const event = normalizeDispatch(payload, shardId, this.#shardCount);
-      if (event) this.#queue.enqueue(event.type, async () => {
-        try { await this.#deps.handler.handle(event); }
-        catch (error) {
-          if ('guildId' in event) this.#logger.error({ err: error, guild_id: event.guildId, task: event.type }, 'guild event failed');
-          else throw error;
+      const receivedAt = new Date();
+      const info = this.#latest ? { ...this.#latest, sequence: payload.s } : null;
+      const replayed = this.#replaying;
+      this.#queue.enqueue(event?.type ?? 'dispatch_checkpoint', async () => {
+        if (this.#blocked) return;
+        try {
+          if (event)
+            await this.#deps.handler.handle(event, {
+              key: `${info?.sessionId ?? `fresh:${this.#lease.token}`}:${shardId}:${payload.s}`,
+              shardId,
+              at: receivedAt,
+              replayed,
+              lease: this.#lease,
+            });
+          if (info) {
+            this.#delivered = info;
+            this.#dirty = true;
+          }
+        } catch (error) {
+          // Never acknowledge a later sequence after an event failed both SQL and durable buffering.
+          this.#blocked = true;
+          this.#logger.error(
+            { err: error, task: event?.type },
+            'gateway processing paused: event was not durably handled',
+          );
+          void Promise.resolve(
+            manager.destroy({ code: CloseCodes.Resuming, reason: 'durable consumer unavailable' }),
+          )
+            .then(() => this.#scheduleRetry())
+            .catch(() => this.#scheduleRetry());
         }
       });
     });
-    manager.on(WebSocketShardEvents.Closed, (code) => this.#logger.warn({ code }, 'gateway connection closed'));
+    manager.on(WebSocketShardEvents.Closed, (code) => {
+      this.#replaying = true;
+      this.#logger.warn({ code }, 'gateway connection closed');
+      this.#queue.enqueue('voice_disconnected', async () => {
+        await this.#deps.handler.connectionChanged?.(this.#shardId, false, this.#lease);
+      });
+    });
     manager.on(WebSocketShardEvents.Error, (error) => this.#logger.error({ err: error }, 'gateway error'));
-    manager.on(WebSocketShardEvents.SocketError, (error) => this.#logger.error({ err: error }, 'gateway socket error'));
-    manager.on(WebSocketShardEvents.Resumed, () => this.#logger.info({}, 'gateway session resumed'));
-    manager.on(WebSocketShardEvents.Ready, () => this.#logger.info({}, 'gateway ready'));
+    manager.on(WebSocketShardEvents.SocketError, (error) =>
+      this.#logger.error({ err: error }, 'gateway socket error'),
+    );
+    manager.on(WebSocketShardEvents.Resumed, () => {
+      this.#replaying = false;
+      this.#logger.info({}, 'gateway session resumed');
+      this.#queue.enqueue('voice_resumed', async () => {
+        await this.#deps.handler.connectionChanged?.(this.#shardId, true, this.#lease);
+      });
+    });
+    manager.on(WebSocketShardEvents.Ready, () => {
+      this.#replaying = false;
+      this.#logger.info({}, 'gateway ready');
+      this.#queue.enqueue('voice_ready', async () => {
+        await this.#deps.handler.connectionChanged?.(this.#shardId, true, this.#lease);
+      });
+    });
 
     this.#timer = setInterval(() => {
       this.#flush().catch((error: unknown) => this.#logger.error({ err: error }, 'session flush failed'));
@@ -92,10 +153,22 @@ class DiscordWsShardConnection implements ShardConnection {
 
   async stop(): Promise<void> {
     this.#preserving = true;
+    if (this.#retry) clearTimeout(this.#retry);
     await this.#shutdown();
     await this.#queue.drain();
     await this.#flush();
     this.#logger.info({}, 'gateway connection stopped, session kept for the next holder');
+  }
+  #scheduleRetry(): void {
+    if (this.#preserving || this.#retry) return;
+    this.#retry = setTimeout(() => {
+      this.#retry = null;
+      this.start().catch((error) => {
+        this.#logger.warn({ err: error }, 'durable gateway retry pending');
+        this.#scheduleRetry();
+      });
+    }, 5_000);
+    this.#retry.unref();
   }
 
   async #shutdown(): Promise<void> {
@@ -113,6 +186,7 @@ class DiscordWsShardConnection implements ShardConnection {
       if (this.#preserving) return;
       // Session invalidée par Discord : ne jamais tenter de la reprendre.
       this.#latest = null;
+      this.#delivered = null;
       this.#dirty = false;
       this.#deps.sessions
         .clear(this.#lease, this.#shardId)
@@ -120,13 +194,18 @@ class DiscordWsShardConnection implements ShardConnection {
       return;
     }
     this.#latest = info;
-    this.#dirty = true;
   }
 
   async #flush(): Promise<void> {
-    if (!this.#dirty || this.#latest === null) return;
+    if (!this.#dirty || this.#delivered === null) return;
     this.#dirty = false;
-    const saved = await this.#deps.sessions.save(this.#lease, { ...this.#latest, shardId: this.#shardId });
+    let saved: boolean;
+    try {
+      saved = await this.#deps.sessions.save(this.#lease, { ...this.#delivered, shardId: this.#shardId });
+    } catch (error) {
+      this.#dirty = true;
+      throw error;
+    }
     if (!saved) this.#logger.error({}, 'session write refused: the lease is no longer held');
   }
 }

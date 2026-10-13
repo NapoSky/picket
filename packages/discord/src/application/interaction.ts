@@ -51,7 +51,7 @@ export interface IncomingInteraction {
   readonly componentKind: 'button' | 'stringSelect' | 'roleSelect' | 'channelSelect' | null;
   readonly selectedValues: readonly string[];
   readonly resolvedRoles: Readonly<Record<string, { readonly name: string }>>;
-  readonly resolvedChannels: Readonly<Record<string, { readonly kind: 'text' | 'announcement' | 'other' }>>;
+  readonly resolvedChannels: Readonly<Record<string, { readonly kind: 'text' | 'announcement' | 'voice' | 'stage' | 'other' }>>;
 }
 
 export interface ModalInput {

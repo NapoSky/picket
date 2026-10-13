@@ -25,10 +25,11 @@ export class ExportGuildData {
     const exportedAt = this.clock.now().toISOString();
     const bytes = new TextEncoder().encode(JSON.stringify({
       format: 'picket.guild-data', version: 1, guildId, exportedAt,
-      scope: 'All records in the current PICKET database belonging to this Discord server.',
+      scope: 'Server configuration and stored data, with voice-statistics member summaries over the last 60 days and pending-event counts.',
       notIncluded: [
         'Content stored only in Discord, including todolists.',
         'Global application state, process coordination and secrets.',
+        'Raw voice events, individual voice segments, connected-state records and disk journal contents.',
       ],
       data,
     }, null, 2) + '\n');

@@ -54,7 +54,11 @@ describe('deployment backups', () => {
     expect(dump).toBeGreaterThanOrEqual(0);
     expect(dump).toBeLessThan(migration);
     expect(migration).toBeLessThan(rollout);
+    const statsRollout = recorded.indexOf('rollout -f compose.yml picket-stats');
+    expect(statsRollout).toBeGreaterThan(rollout);
+    expect(recorded).toContain('compose pull picket picket-stats');
     expect(recorded[dump]).toContain('--username=postgres --dbname=picket --format=custom');
+    for(const table of ['stats_voice_*','stats_admin_*','stats_users','stats_channels','stats_web_sessions','stats_oauth_states']) expect(recorded[dump]).toContain(`--exclude-table-data=public.${table}`);
     const names = (await readdir(backups)).filter((name) => name.startsWith('picket-'));
     expect(names).toHaveLength(1);
     const snapshot = join(backups, names[0]!);

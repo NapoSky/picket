@@ -1,6 +1,10 @@
 import { latestRetentionSchedule } from '../src/retention-schedule';
 
 describe('retention schedule at 3 AM Europe/Paris', () => {
+  it('uses the instance timezone, including half-hour offsets', () => {
+    expect(latestRetentionSchedule(new Date('2026-01-07T03:00:00Z'),'UTC')).toEqual(new Date('2026-01-07T03:00:00Z'));
+    expect(latestRetentionSchedule(new Date('2026-01-07T03:00:00Z'),'Asia/Kolkata')).toEqual(new Date('2026-01-06T21:30:00Z'));
+  });
   it.each([
     ['2026-01-07T01:59:59Z', '2026-01-06T02:00:00Z'],
     ['2026-01-07T02:00:00Z', '2026-01-07T02:00:00Z'],

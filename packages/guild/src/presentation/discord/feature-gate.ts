@@ -9,7 +9,7 @@ export function createFeatureGate(settings: GuildSettingsRepository): FeatureGat
   return {
     isEnabled: async (guildId, feature) => {
       if (!isFeature(feature)) return false;
-      return (await settings.findOrCreate(guildId)).features[feature];
+      return (await settings.findOrCreate(guildId)).features[feature] ?? false;
     },
   };
 }

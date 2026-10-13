@@ -62,6 +62,15 @@ export class PostgresPermissionRepository implements PermissionRepository {
     });
   }
 
+  /** Read-only lookup for web authorization; never registers a guild or restores deleted settings. */
+  loadExisting(guildId:GuildId):Promise<PermissionConfig|null> {
+    return withTenant(this.#db,guildId,async trx=>{
+      const existing=await trx.selectFrom('guild_settings').innerJoin('guild_registry','guild_registry.guild_id','guild_settings.guild_id')
+        .select('guild_settings.guild_id').where('guild_settings.guild_id','=',guildId).where('guild_registry.inactive_since','is',null).executeTakeFirst();
+      return existing ? readConfig(trx,guildId) : null;
+    });
+  }
+
   modify(
     guildId: GuildId,
     actor: AuditActor,

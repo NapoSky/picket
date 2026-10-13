@@ -7,7 +7,8 @@ import { createI18n } from '@picket/i18n';
 import { systemClock } from '@picket/kernel';
 import { createGuildLogDestination, createHealthServer, createLogger } from '@picket/observability';
 import { createDatabase, PostgresGuildApplicationLogs } from '@picket/persistence';
-import { PostgresDiscordBudget } from '@picket/coordination';
+import { PostgresDiscordBudget,startLeasedLoop } from '@picket/coordination';
+import { DiskVoiceBuffer,PostgresStatsStore,VoiceCollector } from '@picket/stats';
 import { buildJobRunner, buildPipeline, buildShardRunner, buildWarLogRunner } from './composition';
 
 const FORCE_EXIT_AFTER_MS = 30_000;
@@ -45,12 +46,20 @@ async function run(): Promise<void> {
     guildRoles: new DiscordRestGuildRoles(config.discord.botToken, {}, rest),
     guildChannels: new DiscordRestGuildChannels(config.discord.botToken, {}, rest),
   };
+  const statsStore=new PostgresStatsStore(database.db);
+  const voiceBuffer=new DiskVoiceBuffer(config.stats.bufferPath,config.stats.bufferMaxBytes);
+  await voiceBuffer.initialize();
+  const voiceCollector=new VoiceCollector(statsStore,voiceBuffer,logger,()=>new Date(),rest);
+  voiceCollector.shardCount=config.shardCount;
   const composition = {
+    timeZone: config.timeZone,
+    statsAdminRefreshCron: config.statsAdminRefreshCron,
     clock: systemClock,
     guildRetentionDays: config.guildRetentionDays,
     i18n: createI18n(),
     discord,
     flushGuildLogs: () => logDestination.flush(),
+    stats:{store:statsStore,buffer:voiceBuffer,collector:voiceCollector,dashboardUrl:config.dashboard.origin},
   };
 
   let draining = false;
@@ -91,6 +100,7 @@ async function run(): Promise<void> {
   shards?.start();
   jobs?.start();
   warlog?.start();
+  const stopVoice=startLeasedLoop({tick:()=>voiceCollector.tick(),intervalMs:10_000,logger});
   logger.info(
     { roles: config.roles, port: config.http.port, healthPort: config.http.healthPort, shardCount: config.shardCount, restGlobalRps: config.discord.restGlobalRps, databasePoolMax: config.database.poolMax },
     'picket started',
@@ -107,6 +117,8 @@ async function run(): Promise<void> {
 
     // Cède d'abord les baux Gateway : une autre réplique reprend la session pendant que celle-ci se vide.
     await shards?.stop();
+    await stopVoice();
+    await voiceCollector.shutdown();
     // Les passes périodiques s'achèvent avant la fermeture de la base : le bail est rendu à la réplique suivante.
     await jobs?.stop();
     await warlog?.stop();
