@@ -389,6 +389,17 @@ function notice(message, error = false) {
   $('notice').hidden = !message;
   $('notice').classList.toggle('error', error);
 }
+function rememberGuildSelection() {
+  const selected = $('guild').value;
+  if (!current || !guilds.some(guild => guild.id === selected)) return;
+  try { localStorage.setItem(`picket-server:${current.user.id}`, selected); } catch {}
+}
+function restoreGuildSelection() {
+  let saved = null;
+  try { saved = localStorage.getItem(`picket-server:${current.user.id}`); } catch {}
+  $('guild').value = guilds.some(guild => guild.id === saved) ? saved : guilds[0]?.id ?? '';
+  rememberGuildSelection();
+}
 function renderGuildOptions() {
   const select = $('guild');
   const previous = select.value;
@@ -968,7 +979,7 @@ function choosePage(next) {
     const all = $('guild').querySelector('option[value="all"]');
     if (all) {
       all.remove();
-      $('guild').value = guilds[0]?.id ?? '';
+      restoreGuildSelection();
     }
   }
   if (previousGuild !== $('guild').value) $('channel').replaceChildren(new Option(t('allChannels'),''));
@@ -1006,7 +1017,10 @@ document.querySelectorAll('[data-overview-page]').forEach((tab) => {
 for (const id of ['guild', 'period', 'access', 'channel'])
   $(id).addEventListener('change', () => {
     offset = 0;
-    if (id === 'guild') $('channel').replaceChildren(new Option(t('allChannels'), ''));
+    if (id === 'guild') {
+      rememberGuildSelection();
+      $('channel').replaceChildren(new Option(t('allChannels'), ''));
+    }
     load();
   });
 $('next').addEventListener('click', () => {
@@ -1097,6 +1111,7 @@ try {
   guilds = data.guilds.sort((a, b) => Number(!!a.inactive) - Number(!!b.inactive)
     || Number(a.nameKnown === false) - Number(b.nameKnown === false) || a.name.localeCompare(b.name, language));
   renderGuildOptions();
+  restoreGuildSelection();
   $('welcome').hidden = true;
   $('workspace').hidden = false;
   $('logout').hidden = false;
