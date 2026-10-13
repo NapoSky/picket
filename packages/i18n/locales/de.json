@@ -345,6 +345,23 @@
     "warlogHelp": "Erhalte Kriegsereignisse aus deinen Zonen. Aktivieren öffnet die Kanal- und Zoneneinstellungen."
   },
   "audit": {
+    "warlogChanged": "Kriegsprotokoll-Einstellungen geändert",
+    "warlogEnabled": "Kriegsprotokoll aktiviert",
+    "warlogDisabled": "Kriegsprotokoll deaktiviert",
+    "warlogRenew": "Kriegsprotokoll pausiert · neuer Krieg",
+    "warlogBlocked": "Kriegsprotokoll pausiert · Kanal nicht erreichbar",
+    "warNumber": "Krieg {{war}}",
+    "warUnconfirmed": "Nicht bestätigt",
+    "fields": {
+      "language": "Sprache",
+      "timezone": "Zeitzone",
+      "auditChannel": "Audit-Kanal",
+      "channel": "Kanal",
+      "zones": "Zonen",
+      "status": "Status",
+      "confirmedWar": "Bestätigter Krieg",
+      "perspective": "Bezugsfraktion"
+    },
     "configuration": "Serverkonfiguration geändert",
     "language": "Sprache geändert",
     "timezone": "Zeitzone geändert",

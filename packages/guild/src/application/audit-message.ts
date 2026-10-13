@@ -10,6 +10,10 @@ const snowflake = (value: unknown): value is string => typeof value === 'string'
 const TITLES: Readonly<Record<string, MessageKey>> = {
   'settings.language': 'audit.language', 'settings.timezone': 'audit.timezone', 'settings.audit_channel': 'audit.channel',
   'settings.feature': 'audit.feature', 'permissions.add': 'audit.permissions', 'permissions.remove': 'audit.permissions',
+  'settings.warlog.enable': 'audit.warlogEnabled', 'settings.warlog.disable': 'audit.warlogDisabled',
+  'settings.warlog.channel': 'audit.warlogChanged', 'settings.warlog.zones': 'audit.warlogChanged',
+  'settings.warlog.perspective': 'audit.warlogChanged', 'settings.warlog.renew': 'audit.warlogRenew',
+  'settings.warlog.blocked': 'audit.warlogBlocked',
   'permissions.role_deleted': 'audit.roleDeleted', 'guild.deletion_requested': 'audit.suspended',
   'guild.deletion_cancelled': 'audit.resumed', 'guild.left': 'audit.departed', 'guild.left_while_offline': 'audit.departed', 'guild.rejoined': 'audit.returned',
   'audit.test': 'audit.test', add: 'audit.timerCreated', reactivate: 'audit.timerReactivated', strike: 'audit.timerStruck',
@@ -17,6 +21,15 @@ const TITLES: Readonly<Record<string, MessageKey>> = {
   acknowledge: 'audit.alertAcknowledged', 'todolist.created': 'audit.todolistCreated',
 };
 const TIMER_ACTIONS = new Set(['add', 'reactivate', 'strike', 'cleanup', 'auto_purge', 'reset_war', 'acknowledge']);
+const FIELD_LABELS: Readonly<Record<string, MessageKey>> = {
+  language: 'audit.fields.language', timezone: 'audit.fields.timezone', auditChannelId: 'audit.fields.auditChannel',
+  channelId: 'audit.fields.channel', zones: 'audit.fields.zones', paused: 'audit.fields.status',
+  confirmedWar: 'audit.fields.confirmedWar', perspective: 'audit.fields.perspective',
+};
+const ZONE_NAMES: Readonly<Record<string, MessageKey>> = {
+  west_islands: 'warlog.zones.west_islands', west_coast: 'warlog.zones.west_coast', center: 'warlog.zones.center',
+  east_coast: 'warlog.zones.east_coast', east_islands: 'warlog.zones.east_islands',
+};
 
 export function auditMessage(event: AuditEvent, t: Translator['t']): MessageView {
   const parts: string[] = [];
@@ -24,7 +37,13 @@ export function auditMessage(event: AuditEvent, t: Translator['t']): MessageView
   const value = (key: string, raw: unknown): string => {
     if (key === 'language') return raw === null ? t('status.languageAuto') : escape(raw);
     if (key === 'perspective' && (raw === 'NONE' || raw === 'WARDENS' || raw === 'COLONIALS')) return t(`warlog.factions.${raw}`);
-    if (key === 'auditChannelId' && snowflake(raw)) return `<#${raw}>`;
+    if ((key === 'auditChannelId' || key === 'channelId') && snowflake(raw)) return `<#${raw}>`;
+    // L'abonnement stocke une pause ; présenter l'état du journal, pas le booléen inversé.
+    if (key === 'paused' && typeof raw === 'boolean') return t(raw ? 'panel.disabled' : 'panel.enabled');
+    if (key === 'confirmedWar') return typeof raw === 'number' ? t('audit.warNumber', { war: raw }) : t('audit.warUnconfirmed');
+    if (key === 'zones' && Array.isArray(raw)) {
+      return raw.length ? raw.map((zone) => typeof zone === 'string' && Object.hasOwn(ZONE_NAMES, zone) ? t(ZONE_NAMES[zone]!) : escape(zone)).join(', ') : t('levels.none');
+    }
     if ((key === 'member' || key === 'officer') && Array.isArray(raw)) {
       const roles = raw.filter(snowflake);
       return roles.length === 0 ? t('levels.none') : roles.slice(0, 6).map((id) => id === event.guildId ? '@everyone' : `<@&${id}>`).join(', ') + (roles.length > 6 ? ` (+${roles.length - 6})` : '');
@@ -45,7 +64,7 @@ export function auditMessage(event: AuditEvent, t: Translator['t']): MessageView
       for (const feature of ['timers', 'todolists', 'warlog'] as const) {
         if (previous[feature] !== next[feature]) parts.push(`${t(`features.${feature}`)} : ${t(previous[feature] === true ? 'panel.enabled' : 'panel.disabled')} → ${t(next[feature] === true ? 'panel.enabled' : 'panel.disabled')}`);
       }
-    } else parts.push(`${value(key, before[key])} → ${value(key, after[key])}`);
+    } else parts.push(`${t(FIELD_LABELS[key]!)} : ${value(key, before[key])} → ${value(key, after[key])}`);
   }
   if (event.assetId !== null) parts.push(`${escape(detail.name ?? event.assetId)}${detail.code ? ` (${escape(detail.code)})` : ''}`);
   if (detail.region || detail.location) parts.push([detail.region, detail.location].filter(Boolean).map(escape).join(' / '));

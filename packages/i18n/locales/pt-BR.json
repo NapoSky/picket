@@ -345,6 +345,23 @@
     "warlogHelp": "Receba eventos de guerra das suas zonas. Ativar abre as configurações de canal e zonas."
   },
   "audit": {
+    "warlogChanged": "Configurações do registro de guerra alteradas",
+    "warlogEnabled": "Registro de guerra ativado",
+    "warlogDisabled": "Registro de guerra desativado",
+    "warlogRenew": "Registro de guerra em pausa · nova guerra",
+    "warlogBlocked": "Registro de guerra em pausa · canal inacessível",
+    "warNumber": "Guerra {{war}}",
+    "warUnconfirmed": "Não confirmada",
+    "fields": {
+      "language": "Idioma",
+      "timezone": "Fuso horário",
+      "auditChannel": "Canal de auditoria",
+      "channel": "Canal",
+      "zones": "Zonas",
+      "status": "Estado",
+      "confirmedWar": "Guerra confirmada",
+      "perspective": "Facção de referência"
+    },
     "configuration": "Configuração do servidor alterada",
     "language": "Idioma alterado",
     "timezone": "Fuso horário alterado",

@@ -345,6 +345,23 @@
     "warlogHelp": "Receive war events from your zones. Enabling opens the channel and zone settings."
   },
   "audit": {
+    "warlogChanged": "War log settings changed",
+    "warlogEnabled": "War log enabled",
+    "warlogDisabled": "War log disabled",
+    "warlogRenew": "War log paused · new war",
+    "warlogBlocked": "War log paused · channel inaccessible",
+    "warNumber": "War {{war}}",
+    "warUnconfirmed": "Unconfirmed",
+    "fields": {
+      "language": "Language",
+      "timezone": "Time zone",
+      "auditChannel": "Audit channel",
+      "channel": "Channel",
+      "zones": "Zones",
+      "status": "Status",
+      "confirmedWar": "Confirmed war",
+      "perspective": "Reference faction"
+    },
     "configuration": "Server configuration changed",
     "language": "Language changed",
     "timezone": "Time zone changed",
