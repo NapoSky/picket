@@ -207,11 +207,27 @@ export class PostgresStatsStore {
   }
 
   async channelName(guildId: string, channelId: string, name: string, lease?: Lease): Promise<void> {
+    return this.rememberChannelNames(guildId, { [channelId]: name }, lease);
+  }
+
+  async channelNames(guildId: string): Promise<Readonly<Record<string, string>>> {
+    return withTenant(this.db, GuildId.assert(guildId), async trx => {
+      const rows = (await sql<{ channel_id: string; name: string }>`SELECT channel_id,name FROM stats_channels
+        WHERE guild_id=${guildId}`.execute(trx)).rows;
+      return Object.fromEntries(rows.map(row => [row.channel_id, row.name]));
+    });
+  }
+
+  /** Update only channels with retained activity; metadata does not extend retention. */
+  async rememberChannelNames(guildId: string, names: Readonly<Record<string, string>>, lease?: Lease): Promise<void> {
+    const entries = Object.entries(names).filter(([id, name]) => typeof name === 'string' && name.trim() && name !== id)
+      .map(([id, name]) => ({ id, name }));
+    if (!entries.length) return;
     await withTenant(this.db, GuildId.assert(guildId), async (trx) => {
       await fence(trx, lease);
-      await sql`UPDATE stats_channels SET name=${name} WHERE guild_id=${guildId} AND channel_id=${channelId} AND name<>${name}`.execute(
-        trx,
-      );
+      await sql`UPDATE stats_channels c SET name=n.name
+        FROM jsonb_to_recordset(${JSON.stringify(entries)}::jsonb) AS n(id text,name text)
+        WHERE c.guild_id=${guildId} AND c.channel_id=n.id AND c.name IS DISTINCT FROM n.name`.execute(trx);
     });
   }
   async metadata(guildId: string, name: string, afkChannelId: string | null, lease?: Lease): Promise<void> {
@@ -338,7 +354,9 @@ export class PostgresStatsStore {
           trx,
         );
         await sql`INSERT INTO stats_channels(guild_id,channel_id,name,last_seen_at) VALUES(${event.guildId},${event.channelId},${event.channelName || event.channelId},${at})
-          ON CONFLICT(guild_id,channel_id) DO UPDATE SET name=EXCLUDED.name,last_seen_at=EXCLUDED.last_seen_at WHERE stats_channels.last_seen_at<=EXCLUDED.last_seen_at`.execute(
+          ON CONFLICT(guild_id,channel_id) DO UPDATE SET
+            name=CASE WHEN EXCLUDED.name=EXCLUDED.channel_id THEN stats_channels.name ELSE EXCLUDED.name END,
+            last_seen_at=EXCLUDED.last_seen_at WHERE stats_channels.last_seen_at<=EXCLUDED.last_seen_at`.execute(
           trx,
         );
       }

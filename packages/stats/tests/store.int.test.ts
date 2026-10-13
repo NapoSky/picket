@@ -1,7 +1,8 @@
 import { GuildId, noopLogger } from '@picket/kernel';
 import { PostgresGuildSettingsRepository } from '@picket/guild';
 import { PostgresLeaseStore } from '@picket/coordination';
-import { normalizeDispatch } from '@picket/discord';
+import { createDiscordBotRest, normalizeDispatch } from '@picket/discord';
+import { Secret } from '@picket/kernel';
 import { createTestDatabase, queryAsAdmin, type TestDatabase } from '@picket/testing';
 import { sql } from '@picket/persistence';
 import {
@@ -43,7 +44,7 @@ describe('voice facts, RLS, erasure and recovery (PostgreSQL)', () => {
   beforeEach(async () => {
     await queryAsAdmin(
       database,
-      'TRUNCATE stats_settings,stats_privacy,stats_users,stats_channels,stats_voice_events,stats_voice_segments,stats_voice_presence,guild_permission_roles,guild_settings,guild_registry CASCADE',
+      'TRUNCATE stats_settings,stats_privacy,stats_users,stats_channels,stats_voice_events,stats_voice_segments,stats_voice_presence,guild_permission_roles,guild_settings,guild_registry,leases CASCADE',
     );
     const guilds = new PostgresGuildSettingsRepository(database.handle.db);
     for (const id of [A, B]) {
@@ -51,7 +52,7 @@ describe('voice facts, RLS, erasure and recovery (PostgreSQL)', () => {
       await store.configure(id, U, { memberRoles: [R], enabled: true });
       await queryAsAdmin(
         database,
-        "UPDATE stats_settings SET enabled_at=now()-interval '2 days' WHERE guild_id=$1",
+        "UPDATE stats_settings SET enabled_at=now()-interval '3 days' WHERE guild_id=$1",
         [id],
       );
     }
@@ -371,5 +372,92 @@ describe('voice facts, RLS, erasure and recovery (PostgreSQL)', () => {
     expect(report.seconds).toBe(300);
     expect(report.sessions).toBe(1);
     expect(report.users).toEqual([expect.objectContaining({ userId: U, seconds: 300 })]);
+  });
+  const metadataBuffer: DurableVoiceBuffer = {
+    append: async () => undefined, replay: async () => 0, erase: async () => undefined,
+    status: async () => ({ bytes: 0, count: 0, oldest: null }),
+  };
+  async function closedChannel(name: string) {
+    const start = new Date(Date.now() - 61_000), end = new Date(start.getTime() + 60_000);
+    await store.observe(observation({ channelName: name, at: start.toISOString() }));
+    await store.observe(observation({ key: 'closed', channelId: null, at: end.toISOString() }));
+  }
+  async function metadataCollector(clock = now) {
+    const lease = (await new PostgresLeaseStore(database.handle.db).acquire('stats-channel-metadata', 'holder', 15_000))!;
+    const rest = createDiscordBotRest(new Secret('unused'));
+    const collector = new VoiceCollector(store, metadataBuffer, noopLogger, clock, rest);
+    await collector.connectionChanged(0, false, lease);
+    await collector.connectionChanged(0, true, lease);
+    return { collector, rest, lease };
+  }
+  it('preserves a known channel name when a later observation contains only its ID', async () => {
+    await closedChannel('Chill - 🎵');
+    await store.observe(observation({ key: 'new-session', userId: V, channelName: C, at: new Date().toISOString() }));
+    expect((await store.channelNames(A))[C]).toBe('Chill - 🎵');
+  });
+  it('hydrates saved channel names after a Gateway resume without fetching or exposing other guild metadata', async () => {
+    await closedChannel('Chill - 🎵');
+    await store.observe(observation({ key: 'other-guild-name', guildId: B, channelName: 'Other server' }));
+    const { collector, rest, lease } = await metadataCollector();
+    const get = jest.spyOn(rest, 'get');
+    await collector.handle({ type: 'voice_state', guildId: GuildId.assert(A),
+      person: { userId: V, channelId: C, roles: [R], name: 'Bob', bot: false } },
+      { key: 'resumed-join', shardId: 0, at: new Date(), replayed: false, lease });
+    await collector.tick();
+    expect(get).not.toHaveBeenCalled();
+    expect((await store.channelNames(A))[C]).toBe('Chill - 🎵');
+  });
+  it('repairs an ID-only name for closed history without a new connection or extending retention', async () => {
+    await closedChannel(C);
+    const before = (await queryAsAdmin(database, 'SELECT last_seen_at FROM stats_channels WHERE guild_id=$1', [A]))[0]!.last_seen_at;
+    const { collector, rest } = await metadataCollector();
+    const get = jest.spyOn(rest, 'get').mockResolvedValue({ id: C, guild_id: A, type: 2, name: 'Chill - 🎵' });
+    await collector.tick();
+    await collector.tick();
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get).toHaveBeenCalledWith(`/channels/${C}`);
+    const report = await store.report({ kind: 'guild', guildId: A, userId: U },
+      { from: new Date(Date.now() - 120_000), to: now() });
+    expect(report.channels).toEqual([{ id: C, name: 'Chill - 🎵', seconds: 60 }]);
+    expect(report.recent[0]?.channel).toBe('Chill - 🎵');
+    expect((await queryAsAdmin(database, 'SELECT last_seen_at FROM stats_channels WHERE guild_id=$1', [A]))[0]!.last_seen_at).toEqual(before);
+  });
+  it('applies fresh snapshot names to retained channels without storing unrelated channels', async () => {
+    await closedChannel(C);
+    const { collector, rest, lease } = await metadataCollector();
+    const get = jest.spyOn(rest, 'get');
+    await collector.handle({ type: 'guild_available', guildId: GuildId.assert(A), voiceSnapshot: {
+      name: 'Regiment', afkChannelId: null, people: [], channels: { [C]: 'Operations', [D]: 'Untracked' },
+    } }, { key: 'fresh-snapshot', shardId: 0, at: new Date(), replayed: false, lease });
+    expect(await store.channelNames(A)).toEqual({ [C]: 'Operations' });
+    expect(get).not.toHaveBeenCalled();
+  });
+  it('rejects a channel name returned for a different server', async () => {
+    await closedChannel(C);
+    const { collector, rest } = await metadataCollector();
+    jest.spyOn(rest, 'get').mockResolvedValue({ id: C, guild_id: B, type: 2, name: 'Private channel in another server' });
+    await collector.tick();
+    expect(await store.channelNames(A)).toEqual({ [C]: C });
+    expect(await store.channelNames(B)).toEqual({});
+  });
+  it('keeps collecting voice activity when a name lookup fails and retries metadata later', async () => {
+    let instant = new Date();
+    const { collector, rest, lease } = await metadataCollector(() => instant);
+    const get = jest.spyOn(rest, 'get').mockRejectedValueOnce(Object.assign(new Error('Missing access'), { status: 403 }))
+      .mockResolvedValue({ id: C, guild_id: A, type: 2, name: 'Operations' });
+    const start = new Date(instant.getTime() - 61_000), end = new Date(start.getTime() + 60_000);
+    for (const [channelId, at, key] of [[C, start, 'name-failure-join'], [null, end, 'name-failure-leave']] as const)
+      await collector.handle({ type: 'voice_state', guildId: GuildId.assert(A),
+        person: { userId: U, channelId, roles: [R], name: 'Alice', bot: false } },
+        { key, shardId: 0, at, replayed: false, lease });
+    await collector.tick();
+    instant = new Date(instant.getTime() + 31_000);
+    await collector.tick();
+    expect(get).toHaveBeenCalledTimes(1);
+    expect((await queryAsAdmin(database, 'SELECT * FROM stats_voice_segments'))).toHaveLength(1);
+    instant = new Date(instant.getTime() + 300_000);
+    await collector.tick();
+    expect(get).toHaveBeenCalledTimes(2);
+    expect((await store.channelNames(A))[C]).toBe('Operations');
   });
 });

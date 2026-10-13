@@ -10,6 +10,7 @@ export class VoiceCollector implements GatewayEventHandler {
   readonly #unavailable = new Set<string>();
   readonly #people = new Map<string, Map<string, GatewayVoicePerson>>();
   readonly #channels = new Map<string, Readonly<Record<string, string>>>();
+  readonly #channelRetryAfter = new Map<string, number>();
   readonly #config = new Map<string, { config: StatsConfig; loaded: number }>();
   readonly #connections = new Map<number, Lease>();
   readonly #guildShards = new Map<string, number>();
@@ -52,6 +53,7 @@ export class VoiceCollector implements GatewayEventHandler {
   private async hydrate(guildId: string): Promise<Map<string, GatewayVoicePerson>> {
     const existing = this.#people.get(guildId);
     if (existing) return existing;
+    this.#channels.set(guildId, { ...await this.store.channelNames(guildId), ...this.#channels.get(guildId) });
     const people = new Map<string, GatewayVoicePerson>();
     for (const row of await this.store.presence(guildId))
       people.set(row.user_id, {
@@ -133,6 +135,8 @@ export class VoiceCollector implements GatewayEventHandler {
     if (!config.enabled) config = await this.config(guildId, true);
     const was = this.#followed.has(`${guildId}:${person.userId}`);
     const follow = eligible(config, person);
+    if (follow && person.channelId && !this.#channels.get(guildId)?.[person.channelId])
+      this.#channels.set(guildId, { ...this.#channels.get(guildId), [person.channelId]: person.channelId });
     // Temporary connected state can be persisted in healthy enabled guilds to support later role gains.
     // Only eligible transitions or closure of an existing tracked presence may enter the disk journal.
     const observation: VoiceObservation = {
@@ -168,7 +172,8 @@ export class VoiceCollector implements GatewayEventHandler {
         this.#unavailable.delete(event.guildId);
         if (!event.voiceSnapshot) return;
         const old = await this.hydrate(event.guildId);
-        this.#channels.set(event.guildId, event.voiceSnapshot.channels);
+        this.#channels.set(event.guildId, { ...this.#channels.get(event.guildId), ...event.voiceSnapshot.channels });
+        await this.store.rememberChannelNames(event.guildId, event.voiceSnapshot.channels, delivery.lease);
         const resolved = [];
         for (const person of event.voiceSnapshot.people)
           resolved.push(await this.known(event.guildId, person));
@@ -234,6 +239,9 @@ export class VoiceCollector implements GatewayEventHandler {
         await this.store.interrupt(event.guildId, delivery.lease);
         this.#people.delete(event.guildId);
         this.#config.delete(event.guildId);
+        this.#channels.delete(event.guildId);
+        for (const key of this.#channelRetryAfter.keys())
+          if (key.startsWith(`${event.guildId}:`)) this.#channelRetryAfter.delete(key);
         return;
       case 'channel_unusable': {
         if (event.name)
@@ -285,6 +293,25 @@ export class VoiceCollector implements GatewayEventHandler {
 
   shardCount = 1;
 
+  private async resolveChannelName(guildId: string, channelId: string, lease: Lease): Promise<void> {
+    if (!this.rest) return;
+    const key = `${guildId}:${channelId}`;
+    this.#channelRetryAfter.set(key, this.now().getTime() + 300_000);
+    try {
+      const data = await this.rest.get(`/channels/${channelId}`) as {
+        id?: unknown; guild_id?: unknown; name?: unknown; type?: unknown;
+      };
+      if (data.id !== channelId || data.guild_id !== guildId || (data.type !== 2 && data.type !== 13) ||
+        typeof data.name !== 'string' || !data.name.trim()) throw new Error('Invalid voice channel metadata');
+      await this.store.channelName(guildId, channelId, data.name, lease);
+      this.#channels.set(guildId, { ...this.#channels.get(guildId), [channelId]: data.name });
+      this.#channelRetryAfter.delete(key);
+    } catch (error) {
+      if (error instanceof StatsLeaseLostError) throw error;
+      this.logger.warn({ guild_id: guildId, channel_id: channelId }, 'voice channel name unavailable; retrying later');
+    }
+  }
+
   tick(): Promise<void> {
     return this.serial(() => this.flush());
   }
@@ -325,12 +352,21 @@ export class VoiceCollector implements GatewayEventHandler {
         }
       }
       if (this.#backlog || this.now().getTime() < this.#openUntil) return;
+      let nameLookups = 0;
       for (const [guildId, people] of this.#people) {
         if (this.#unavailable.has(guildId)) continue;
         if (this.now().getTime() - (this.#ticked.get(guildId) ?? 0) < 30_000) continue;
         const shard = this.#guildShards.get(guildId);
         const lease = shard === undefined ? undefined : this.#connections.get(shard);
         if (!lease || shard === undefined) continue;
+        // Bounded metadata repair, including closed history after a resumed session.
+        // Network failures never discard a voice observation or pause its collection.
+        if (this.rest) for (const [channelId, name] of Object.entries(this.#channels.get(guildId) ?? {})) {
+          if (name !== channelId || nameLookups >= 5 ||
+            (this.#channelRetryAfter.get(`${guildId}:${channelId}`) ?? 0) > this.now().getTime()) continue;
+          nameLookups++;
+          await this.resolveChannelName(guildId, channelId, lease);
+        }
         const config = await this.config(guildId);
         if (!config.enabled) continue;
         const open = await this.store.openUserIds(guildId);

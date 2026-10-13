@@ -276,6 +276,11 @@ prouvant l'inactivité d'un membre.
 
 PICKET conserve les identifiants **serveur, utilisateur et salon**, les horodatages des événements vocaux et les
 segments de présence. Les pseudos des participants suivis et noms des salons rendent les rapports lisibles.
+
+Les noms des salons sont conservés entre les redémarrages du bot. Si seul un ID a été enregistré, PICKET récupère
+le nom auprès de Discord lorsqu'il est disponible et met à jour les rapports existants. Un salon supprimé ou
+inaccessible conserve son dernier nom connu ; l'ID reste affiché si aucun nom n'a jamais été disponible.
+Une mise à jour du nom ne prolonge pas la rétention de l'historique.
 Un état temporaire des humains connectés, rôles compris, permet de gérer les changements d'éligibilité et les reprises,
 sans enregistrer un annuaire complet.
 

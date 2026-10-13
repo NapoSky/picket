@@ -270,6 +270,10 @@ PICKET keeps **server, user and channel identifiers**, voice event timestamps an
 tracked participants and channel names make reports readable. Temporary connected human state, including roles,
 supports eligibility changes and recovery without maintaining a complete member directory.
 
+Channel names are retained across bot restarts. If only an ID was recorded, PICKET retrieves the name from Discord
+when available and updates the existing reports. A deleted or inaccessible channel keeps its last known name;
+an ID remains when no name was ever available. Updating a name does not extend the history retention period.
+
 **All statistical history and derived reports are limited to a rolling 60-day window.** Disabling collection keeps
 that history until expiry. Settings and opt-out preferences are kept separately to honour your choice. Erasure removes
 your history, its report contributions and pending records.
