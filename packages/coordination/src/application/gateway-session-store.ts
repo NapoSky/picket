@@ -7,6 +7,8 @@ export interface GatewaySession {
   readonly sessionId: string;
   readonly shardCount: number;
   readonly shardId: number;
+  /** Intents sent when identifying. Legacy sessions have no recorded mask. */
+  readonly intents?: number;
 }
 
 export interface GatewaySessionStore {

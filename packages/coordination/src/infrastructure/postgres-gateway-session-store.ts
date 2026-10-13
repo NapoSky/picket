@@ -10,7 +10,8 @@ function isSession(value: unknown): value is GatewaySession {
     typeof candidate['sessionId'] === 'string' &&
     Number.isInteger(candidate['sequence']) &&
     Number.isInteger(candidate['shardCount']) &&
-    Number.isInteger(candidate['shardId'])
+    Number.isInteger(candidate['shardId']) &&
+    (candidate['intents'] === undefined || (Number.isSafeInteger(candidate['intents']) && (candidate['intents'] as number) >= 0))
   );
 }
 

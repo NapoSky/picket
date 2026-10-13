@@ -105,6 +105,12 @@ Collection is disabled per guild by default. Run migrations and deploy commands,
 
 ### Settings in the main Docker stack
 
+Gateway sessions record the intents used when they were opened. After an upgrade changes those intents, or when
+an older session has no recorded mask, the bot automatically opens a fresh session once. Look for
+`gateway session incompatible; identifying with current intents`, followed by `gateway ready` in the bot logs.
+Later rollouts resume compatible sessions normally. Voice activity never received under the old session cannot
+be reconstructed.
+
 Give the bot **View Channel** on tracked voice channels, including private ones; channel/category overwrites
 can override the permission granted when inviting it. Statistics do not require **Connect**, **Speak** or
 **Administrator**. The dashboard uses the signed-in user's OAuth scopes for membership checks. Adding bot

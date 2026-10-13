@@ -1,6 +1,7 @@
 import { GuildId, noopLogger } from '@picket/kernel';
 import { PostgresGuildSettingsRepository } from '@picket/guild';
 import { PostgresLeaseStore } from '@picket/coordination';
+import { normalizeDispatch } from '@picket/discord';
 import { createTestDatabase, queryAsAdmin, type TestDatabase } from '@picket/testing';
 import { sql } from '@picket/persistence';
 import {
@@ -344,5 +345,31 @@ describe('voice facts, RLS, erasure and recovery (PostgreSQL)', () => {
       { key: 'after-enable', shardId: 0, at: new Date(), replayed: false, lease },
     );
     expect(await store.openUserIds(A)).toEqual(new Set([V]));
+  });
+  it('records a five-minute Gateway voice session with either targeted role and makes it available to reports', async () => {
+    const secondRole = '400000000000000002';
+    await store.configure(A, U, { memberRoles: [R, secondRole] });
+    const end = new Date(Date.now() - 1000), start = new Date(end.getTime() - 300_000);
+    const lease = (await new PostgresLeaseStore(database.handle.db).acquire('stats-five-minute-test', 'holder', 15_000))!;
+    const buffer: DurableVoiceBuffer = {
+      append: async () => undefined, replay: async () => 0, erase: async () => undefined,
+      status: async () => ({ bytes: 0, count: 0, oldest: null }),
+    };
+    const collector = new VoiceCollector(store, buffer, noopLogger);
+    const dispatch = (channel: string | null): Parameters<typeof normalizeDispatch>[0] => ({
+      t: 'VOICE_STATE_UPDATE', s: 1, op: 0,
+      d: { guild_id: A, user_id: U, channel_id: channel,
+        member: { roles: [secondRole], user: { id: U, username: 'Alice', bot: false } } },
+    } as Parameters<typeof normalizeDispatch>[0]);
+    for (const [channel, at, key] of [[C, start, 'gateway-join'], [null, end, 'gateway-leave']] as const) {
+      const event = normalizeDispatch(dispatch(channel), 0, 1);
+      expect(event).not.toBeNull();
+      await collector.handle(event!, { key, shardId: 0, at, replayed: false, lease });
+    }
+    const report = await store.report({ kind: 'guild', guildId: A, userId: U },
+      { from: new Date(start.getTime() - 1000), to: now() });
+    expect(report.seconds).toBe(300);
+    expect(report.sessions).toBe(1);
+    expect(report.users).toEqual([expect.objectContaining({ userId: U, seconds: 300 })]);
   });
 });

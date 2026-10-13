@@ -57,13 +57,22 @@ class DiscordWsShardConnection implements ShardConnection {
     await this.#flush();
     const stored = await this.#deps.sessions.load(this.#shardId);
     if(this.#preserving) return;
-    this.#latest = stored && stored.shardCount === this.#shardCount ? { ...stored } : null;
+    const compatible = stored && stored.shardCount === this.#shardCount && stored.intents === INTENTS;
+    if (stored && !compatible) {
+      // RESUME retains the old subscriptions. Only IDENTIFY applies new intents.
+      // A legacy session's intents are unknown, so it must be replaced once.
+      await this.#deps.sessions.clear(this.#lease, this.#shardId);
+      this.#logger.info({ previousIntents: stored.intents ?? null, intents: INTENTS,
+        previousShardCount: stored.shardCount, shardCount: this.#shardCount },
+        'gateway session incompatible; identifying with current intents');
+    }
+    this.#latest = compatible ? { ...stored } : null;
     this.#delivered = this.#latest;
     this.#replaying = this.#latest !== null;
     await this.#deps.handler.connectionChanged?.(this.#shardId, false, this.#lease);
     if(this.#preserving) return;
     this.#blocked = false;
-    this.#logger.info({ resuming: this.#latest !== null }, 'connecting to the gateway');
+    this.#logger.info({ resuming: this.#latest !== null, intents: INTENTS }, 'connecting to the gateway');
 
     const token = this.#deps.token.reveal();
     const manager = new WebSocketManager({
@@ -201,7 +210,7 @@ class DiscordWsShardConnection implements ShardConnection {
     this.#dirty = false;
     let saved: boolean;
     try {
-      saved = await this.#deps.sessions.save(this.#lease, { ...this.#delivered, shardId: this.#shardId });
+      saved = await this.#deps.sessions.save(this.#lease, { ...this.#delivered, shardId: this.#shardId, intents: INTENTS });
     } catch (error) {
       this.#dirty = true;
       throw error;

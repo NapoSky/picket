@@ -94,6 +94,16 @@ describe('coordination on Postgres (integration)', () => {
       expect(await sessions.load(0)).toEqual(session(11));
     });
 
+    it('retains the intents mask while accepting legacy session metadata', async () => {
+      const lease = (await leases.acquire('gateway:shard:0', 'a', 5_000))!;
+      await sessions.save(lease, session(10));
+      expect((await sessions.load(0))?.intents).toBeUndefined();
+      await sessions.save(lease, { ...session(11), intents: 131 });
+      expect(await sessions.load(0)).toEqual({ ...session(11), intents: 131 });
+      await queryAsAdmin(database, `UPDATE gateway_sessions SET session=jsonb_set(session,'{intents}','"invalid"') WHERE shard_id=0`);
+      expect(await sessions.load(0)).toBeNull();
+    });
+
     it('refuses writes from a process that does not hold the lease', async () => {
       await leases.acquire('gateway:shard:0', 'a', 5_000);
       const impostor = { name: 'gateway:shard:0', holder: 'b', token: 1n };

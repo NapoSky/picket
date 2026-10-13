@@ -105,6 +105,12 @@ La collecte est désactivée par défaut dans chaque guilde. Jouez les migration
 
 ### Réglages de la stack Docker principale
 
+Les sessions Gateway enregistrent les intents utilisés à leur ouverture. Après une mise à jour de ces intents,
+ou si une ancienne session ne possède pas ce masque, le bot ouvre automatiquement une nouvelle session une fois.
+Les logs du bot affichent `gateway session incompatible; identifying with current intents`, puis `gateway ready`.
+Les rollouts suivants reprennent normalement les sessions compatibles. Une activité vocale jamais reçue avec
+l'ancienne session ne peut pas être reconstruite.
+
 Accordez au bot **Voir les salons** sur les salons vocaux suivis, y compris les salons privés ; les dérogations
 des salons/catégories peuvent remplacer la permission accordée à l'invitation. Les statistiques ne demandent pas
 **Se connecter**, **Parler** ou **Administrateur**. Le dashboard vérifie l'appartenance via les scopes OAuth de
