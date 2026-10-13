@@ -317,7 +317,7 @@ export function createDashboardServer(options: DashboardOptions) {
       const settings = await options.store.settings(guildId);
       const membership = memberships.find((g) => g.id === guildId);
       const level = global ? 'instance_admin' : (await access(current, guildId, false, membership)).level;
-      if (global && !membership && !settings.nameKnown && botNames === undefined) {
+      if (global && !membership && active.has(guildId) && botNames === undefined) {
         try {
           botNames = new Map((await options.identity.guildNames()).map(guild => [guild.id, guild.name]));
         } catch {

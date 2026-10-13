@@ -274,6 +274,16 @@ Channel names are retained across bot restarts. If only an ID was recorded, PICK
 when available and updates the existing reports. A deleted or inaccessible channel keeps its last known name;
 an ID remains when no name was ever available. Updating a name does not extend the history retention period.
 
+Server, channel and participant names follow Discord renames, including participants who have disconnected.
+Reports and exports use the latest known label for the same ID, without splitting activity into duplicate entries.
+A participant's server nickname takes precedence over their Discord display name, then their username.
+Gateway updates apply as they arrive. Periodic verification also rotates through active servers and retained
+participants/channels, with at most five Discord requests per ten-second pass. A completed sweep waits thirty
+minutes before starting again; covering every retained participant takes longer on larger instances. No complete
+member directory is downloaded. Deleted or inaccessible entities keep their last known name, and name verification
+does not extend retention or recreate erased data. The dashboard renews server labels every two minutes while active,
+preserving your selected server.
+
 **All statistical history and derived reports are limited to a rolling 60-day window.** Disabling collection keeps
 that history until expiry. Settings and opt-out preferences are kept separately to honour your choice. Erasure removes
 your history, its report contributions and pending records.

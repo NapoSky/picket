@@ -6,6 +6,13 @@ import { eligible, type StatsConfig, type VoiceObservation } from '../domain/mod
 import type { DurableVoiceBuffer } from '../application/store';
 import { PostgresStatsStore, StatsLeaseLostError } from './postgres-stats-store';
 
+const NAME_SWEEP_PAUSE_MS = 30 * 60_000;
+interface NameSweep {
+  guildAfter: number;
+  member: { after: string; next: number };
+  channel: { after: string; next: number };
+}
+
 export class VoiceCollector implements GatewayEventHandler {
   readonly #unavailable = new Set<string>();
   readonly #people = new Map<string, Map<string, GatewayVoicePerson>>();
@@ -16,6 +23,11 @@ export class VoiceCollector implements GatewayEventHandler {
   readonly #guildShards = new Map<string, number>();
   readonly #followed = new Set<string>();
   readonly #ticked = new Map<string, number>();
+  readonly #nameSweeps = new Map<string, NameSweep>();
+  readonly #nameVersions = new Map<string, number>();
+  #nameRefresh: Promise<void> | undefined;
+  #nameGuildCursor = '';
+  #nextNameSweep: number;
   #openUntil = 0;
   #backlog = false;
   readonly #bufferedGuilds = new Set<string>();
@@ -35,7 +47,10 @@ export class VoiceCollector implements GatewayEventHandler {
     readonly logger: Logger,
     readonly now: () => Date = () => new Date(),
     readonly rest?: DiscordBotRestClient,
-  ) {}
+  ) {
+    // Gateway events and ID-only repair run immediately; spread periodic work after startup.
+    this.#nextNameSweep = this.now().getTime() + NAME_SWEEP_PAUSE_MS;
+  }
 
   private async config(guildId: string, refresh = false): Promise<StatsConfig> {
     const cached = this.#config.get(guildId);
@@ -163,6 +178,9 @@ export class VoiceCollector implements GatewayEventHandler {
   private async consume(event: GatewayEvent, delivery?: GatewayDelivery): Promise<void> {
     if (!delivery) return;
     if ('guildId' in event) this.#guildShards.set(event.guildId, delivery.shardId);
+    if ('guildId' in event && ['guild_available', 'guild_voice_metadata', 'voice_member', 'voice_state',
+      'channel_unusable', 'guild_removed'].includes(event.type))
+      this.#nameVersions.set(event.guildId, (this.#nameVersions.get(event.guildId) ?? 0) + 1);
     switch (event.type) {
       case 'guild_voice_unavailable':
         this.#unavailable.add(event.guildId);
@@ -218,6 +236,7 @@ export class VoiceCollector implements GatewayEventHandler {
         return;
       }
       case 'voice_member': {
+        await this.store.rememberMemberName(event.guildId, event.userId, event.name, delivery.lease);
         const people = await this.hydrate(event.guildId);
         const previous = people.get(event.userId);
         if (!previous) return;
@@ -240,6 +259,7 @@ export class VoiceCollector implements GatewayEventHandler {
         this.#people.delete(event.guildId);
         this.#config.delete(event.guildId);
         this.#channels.delete(event.guildId);
+        this.#nameSweeps.delete(event.guildId);
         for (const key of this.#channelRetryAfter.keys())
           if (key.startsWith(`${event.guildId}:`)) this.#channelRetryAfter.delete(key);
         return;
@@ -293,8 +313,18 @@ export class VoiceCollector implements GatewayEventHandler {
 
   shardCount = 1;
 
+  private async applyNameRefresh(guildId: string, lease: Lease, version: number, work: () => Promise<void>): Promise<void> {
+    await this.serial(async () => {
+      const shard = this.#guildShards.get(guildId);
+      if (shard === undefined || this.#connections.get(shard) !== lease || !this.#people.has(guildId) ||
+        this.#unavailable.has(guildId) || (this.#nameVersions.get(guildId) ?? 0) !== version) return;
+      await work();
+    });
+  }
+
   private async resolveChannelName(guildId: string, channelId: string, lease: Lease): Promise<void> {
     if (!this.rest) return;
+    const version = this.#nameVersions.get(guildId) ?? 0;
     const key = `${guildId}:${channelId}`;
     this.#channelRetryAfter.set(key, this.now().getTime() + 300_000);
     try {
@@ -303,13 +333,112 @@ export class VoiceCollector implements GatewayEventHandler {
       };
       if (data.id !== channelId || data.guild_id !== guildId || (data.type !== 2 && data.type !== 13) ||
         typeof data.name !== 'string' || !data.name.trim()) throw new Error('Invalid voice channel metadata');
-      await this.store.channelName(guildId, channelId, data.name, lease);
-      this.#channels.set(guildId, { ...this.#channels.get(guildId), [channelId]: data.name });
+      const name = data.name;
+      const apply = async () => {
+        await this.store.channelName(guildId, channelId, name, lease);
+        this.#channels.set(guildId, { ...this.#channels.get(guildId), [channelId]: name });
+      };
+      await this.applyNameRefresh(guildId, lease, version, apply);
       this.#channelRetryAfter.delete(key);
     } catch (error) {
       if (error instanceof StatsLeaseLostError) throw error;
       this.logger.warn({ guild_id: guildId, channel_id: channelId }, 'voice channel name unavailable; retrying later');
     }
+  }
+
+  private async refreshNames(budget: number): Promise<void> {
+    const at = this.now().getTime();
+    if (!this.rest || budget <= 0 || at < this.#nextNameSweep) return;
+    this.#nextNameSweep = at + 10_000;
+    // Rotate guilds fairly, including those with closed retained history and stats now disabled.
+    const guilds = [...this.#guildShards.keys()].filter(id => !this.#unavailable.has(id) &&
+      this.#people.has(id) && this.#connections.has(this.#guildShards.get(id)!)).sort();
+    const guildId = guilds.find(id => id > this.#nameGuildCursor) ?? guilds[0];
+    if (!guildId) return;
+    this.#nameGuildCursor = guildId;
+    const lease = this.#connections.get(this.#guildShards.get(guildId)!)!;
+    const sweep = this.#nameSweeps.get(guildId) ?? {
+      guildAfter: 0, member: { after: '', next: 0 }, channel: { after: '', next: 0 },
+    };
+    this.#nameSweeps.set(guildId, sweep);
+    if (at >= sweep.guildAfter) {
+      const version = this.#nameVersions.get(guildId) ?? 0;
+      sweep.guildAfter = at + NAME_SWEEP_PAUSE_MS;
+      budget--;
+      try {
+        const guild = await this.rest.get(`/guilds/${guildId}`) as { id?: unknown; name?: unknown };
+        if (guild.id !== guildId || typeof guild.name !== 'string' || !guild.name.trim())
+          throw new Error('Invalid guild identity');
+        const name = guild.name;
+        await this.applyNameRefresh(guildId, lease, version, () => this.store.rememberGuildName(guildId, name, lease));
+      } catch (error) {
+        if (error instanceof StatsLeaseLostError) throw error;
+        this.logger.warn({ guild_id: guildId }, 'guild name unavailable; retaining last known name');
+      }
+    }
+    for (const kind of ['channel', 'member'] as const) {
+      const cursor = sweep[kind];
+      if (budget <= 0 || at < cursor.next) continue;
+      const targets = await this.store.nameTargets(guildId, kind, cursor.after, Math.min(budget, kind === 'channel' ? 1 : 3));
+      if (!targets.length) {
+        cursor.after = '';
+        cursor.next = at + NAME_SWEEP_PAUSE_MS;
+        continue;
+      }
+      for (const id of targets) {
+        cursor.after = id;
+        budget--;
+        if (kind === 'channel') {
+          if ((this.#channelRetryAfter.get(`${guildId}:${id}`) ?? 0) <= at)
+            await this.resolveChannelName(guildId, id, lease);
+          continue;
+        }
+        try {
+          const version = this.#nameVersions.get(guildId) ?? 0;
+          const member = await this.rest.get(`/guilds/${guildId}/members/${id}`) as {
+            nick?: string | null; user?: { id?: string; global_name?: string | null; username?: string };
+          };
+          const name = member.nick ?? member.user?.global_name ?? member.user?.username;
+          if (member.user?.id !== id || typeof name !== 'string' || !name.trim())
+            throw new Error('Invalid member identity');
+          await this.applyNameRefresh(guildId, lease, version, async () => {
+            await this.store.rememberMemberName(guildId, id, name, lease);
+            const person = this.#people.get(guildId)?.get(id);
+            if (person) this.#people.get(guildId)!.set(id, { ...person, name });
+          });
+        } catch (error) {
+          if (error instanceof StatsLeaseLostError) throw error;
+          // Deleted members retain their historical label; never recreate erased/expired rows.
+          if ((error as { status?: number }).status !== 404)
+            this.logger.warn({ guild_id: guildId, user_id: id }, 'member name unavailable; retaining last known name');
+        }
+      }
+    }
+  }
+
+  async refreshMetadata(): Promise<void> {
+    if (this.#nameRefresh) return this.#nameRefresh;
+    const pending = this.checkNames();
+    this.#nameRefresh = pending;
+    try { await pending; } finally { this.#nameRefresh = undefined; }
+  }
+
+  private async checkNames(): Promise<void> {
+    if (!this.rest || this.#backlog || this.now().getTime() < this.#openUntil) return;
+    let budget = 5;
+    // Repair ID-only history first, outside both the voice queue and its checkpoint loop.
+    for (const guildId of this.#people.keys()) {
+      const shard = this.#guildShards.get(guildId);
+      const lease = shard === undefined ? undefined : this.#connections.get(shard);
+      if (!lease || this.#unavailable.has(guildId)) continue;
+      for (const [channelId, name] of Object.entries(this.#channels.get(guildId) ?? {})) {
+        if (name !== channelId || budget <= 0 ||
+          (this.#channelRetryAfter.get(`${guildId}:${channelId}`) ?? 0) > this.now().getTime()) continue;
+        budget--;
+        await this.resolveChannelName(guildId, channelId, lease);
+      }
+    }
+    await this.refreshNames(budget);
   }
 
   tick(): Promise<void> {
@@ -352,21 +481,12 @@ export class VoiceCollector implements GatewayEventHandler {
         }
       }
       if (this.#backlog || this.now().getTime() < this.#openUntil) return;
-      let nameLookups = 0;
       for (const [guildId, people] of this.#people) {
         if (this.#unavailable.has(guildId)) continue;
         if (this.now().getTime() - (this.#ticked.get(guildId) ?? 0) < 30_000) continue;
         const shard = this.#guildShards.get(guildId);
         const lease = shard === undefined ? undefined : this.#connections.get(shard);
         if (!lease || shard === undefined) continue;
-        // Bounded metadata repair, including closed history after a resumed session.
-        // Network failures never discard a voice observation or pause its collection.
-        if (this.rest) for (const [channelId, name] of Object.entries(this.#channels.get(guildId) ?? {})) {
-          if (name !== channelId || nameLookups >= 5 ||
-            (this.#channelRetryAfter.get(`${guildId}:${channelId}`) ?? 0) > this.now().getTime()) continue;
-          nameLookups++;
-          await this.resolveChannelName(guildId, channelId, lease);
-        }
         const config = await this.config(guildId);
         if (!config.enabled) continue;
         const open = await this.store.openUserIds(guildId);

@@ -404,6 +404,7 @@ describe('voice facts, RLS, erasure and recovery (PostgreSQL)', () => {
       person: { userId: V, channelId: C, roles: [R], name: 'Bob', bot: false } },
       { key: 'resumed-join', shardId: 0, at: new Date(), replayed: false, lease });
     await collector.tick();
+    await collector.refreshMetadata();
     expect(get).not.toHaveBeenCalled();
     expect((await store.channelNames(A))[C]).toBe('Chill - 🎵');
   });
@@ -413,7 +414,9 @@ describe('voice facts, RLS, erasure and recovery (PostgreSQL)', () => {
     const { collector, rest } = await metadataCollector();
     const get = jest.spyOn(rest, 'get').mockResolvedValue({ id: C, guild_id: A, type: 2, name: 'Chill - 🎵' });
     await collector.tick();
+    await collector.refreshMetadata();
     await collector.tick();
+    await collector.refreshMetadata();
     expect(get).toHaveBeenCalledTimes(1);
     expect(get).toHaveBeenCalledWith(`/channels/${C}`);
     const report = await store.report({ kind: 'guild', guildId: A, userId: U },
@@ -437,6 +440,7 @@ describe('voice facts, RLS, erasure and recovery (PostgreSQL)', () => {
     const { collector, rest } = await metadataCollector();
     jest.spyOn(rest, 'get').mockResolvedValue({ id: C, guild_id: B, type: 2, name: 'Private channel in another server' });
     await collector.tick();
+    await collector.refreshMetadata();
     expect(await store.channelNames(A)).toEqual({ [C]: C });
     expect(await store.channelNames(B)).toEqual({});
   });
@@ -451,13 +455,154 @@ describe('voice facts, RLS, erasure and recovery (PostgreSQL)', () => {
         person: { userId: U, channelId, roles: [R], name: 'Alice', bot: false } },
         { key, shardId: 0, at, replayed: false, lease });
     await collector.tick();
+    await collector.refreshMetadata();
     instant = new Date(instant.getTime() + 31_000);
     await collector.tick();
+    await collector.refreshMetadata();
     expect(get).toHaveBeenCalledTimes(1);
     expect((await queryAsAdmin(database, 'SELECT * FROM stats_voice_segments'))).toHaveLength(1);
     instant = new Date(instant.getTime() + 300_000);
     await collector.tick();
+    await collector.refreshMetadata();
     expect(get).toHaveBeenCalledTimes(2);
     expect((await store.channelNames(A))[C]).toBe('Operations');
+  });
+  it('renames disconnected participants by ID without creating facts, touching retention or other guild nicknames', async () => {
+    await closedChannel('Voice');
+    await store.observe(observation({ key: 'other-nickname', guildId: B, name: 'Other nickname' }));
+    const before = await queryAsAdmin(database, 'SELECT user_id,last_seen_at FROM stats_users WHERE guild_id=$1', [A]);
+    const facts = await queryAsAdmin(database, 'SELECT * FROM stats_voice_segments WHERE guild_id=$1', [A]);
+    const { collector, lease } = await metadataCollector();
+    for (const [userId, nick] of [[U, 'New nickname'], [V, 'Untracked person']] as const) {
+      const event = normalizeDispatch({ op: 0, s: 1, t: 'GUILD_MEMBER_UPDATE', d: {
+        guild_id: A, roles: [R], nick, user: { id: userId, username: 'account', global_name: 'Profile name' },
+      } } as Parameters<typeof normalizeDispatch>[0], 0, 1)!;
+      await collector.handle(event, { key: `rename-${userId}`, shardId: 0, at: now(), replayed: false, lease });
+    }
+    const rows = await queryAsAdmin(database, 'SELECT user_id,name,last_seen_at FROM stats_users WHERE guild_id=$1', [A]);
+    expect(rows).toEqual([expect.objectContaining({ user_id: U, name: 'New nickname', last_seen_at: before[0]!.last_seen_at })]);
+    expect(await queryAsAdmin(database, 'SELECT * FROM stats_voice_segments WHERE guild_id=$1', [A])).toEqual(facts);
+    expect((await queryAsAdmin(database, 'SELECT name FROM stats_users WHERE guild_id=$1', [B]))[0]!.name).toBe('Other nickname');
+  });
+  it('protects retained member names against ID-only observations', async () => {
+    await closedChannel('Voice');
+    await store.observe(observation({ key: 'fallback-name', name: U, at: now().toISOString() }));
+    expect((await queryAsAdmin(database, 'SELECT name FROM stats_users WHERE guild_id=$1', [A]))[0]!.name).toBe('Alice');
+  });
+  it('periodically reconciles known guild, channel and member names even with collection disabled', async () => {
+    await closedChannel('Old channel');
+    await store.metadata(A, 'Old guild', D);
+    await store.configure(A, U, { enabled: false, excludedChannels: [D] });
+    const before = await queryAsAdmin(database, 'SELECT last_seen_at FROM stats_users WHERE guild_id=$1', [A]);
+    let instant = now();
+    const { collector, rest } = await metadataCollector(() => instant);
+    const get = jest.spyOn(rest, 'get').mockImplementation(async path => {
+      if (path === `/guilds/${A}`) return { id: A, name: 'Renamed guild' };
+      if (path === `/channels/${C}`) return { id: C, guild_id: A, type: 2, name: 'Renamed channel' };
+      if (path === `/guilds/${A}/members/${U}`)
+        return { nick: 'Server nickname', user: { id: U, global_name: 'Display name', username: 'account' } };
+      throw new Error(`Unexpected metadata request: ${path}`);
+    });
+    await collector.tick();
+    await collector.refreshMetadata();
+    expect(get).not.toHaveBeenCalled();
+    instant = new Date(instant.getTime() + 30 * 60_000);
+    await collector.tick();
+    await collector.refreshMetadata();
+    expect(get).toHaveBeenCalledTimes(3);
+    expect(await store.settings(A)).toMatchObject({ name: 'Renamed guild', enabled: false, afkChannelId: D, excludedChannels: [D] });
+    const report = await store.report({ kind: 'guild', guildId: A, userId: U },
+      { from: new Date(Date.now() - 120_000), to: now() });
+    expect(report.channels).toEqual([{ id: C, name: 'Renamed channel', seconds: 60 }]);
+    expect(report.users).toEqual([expect.objectContaining({ userId: U, name: 'Server nickname', seconds: 60 })]);
+    expect(report.sessions).toBe(1);
+    expect(await queryAsAdmin(database, 'SELECT last_seen_at FROM stats_users WHERE guild_id=$1', [A])).toEqual(before);
+    await collector.tick();
+    await collector.refreshMetadata();
+    expect(get).toHaveBeenCalledTimes(3);
+  });
+  it('bounds metadata pages, rotates servers and skips erased, expired and unrelated people', async () => {
+    for (const guildId of [A, B])
+      for (let i = 0; i < 8; i++) {
+        await store.observe(observation({ guildId, userId: `${300000000000000010n + BigInt(i)}`, key: `retained-${guildId}-${i}` }));
+        await store.observe(observation({ guildId, userId: `${300000000000000010n + BigInt(i)}`, channelId: null,
+          key: `closed-${guildId}-${i}`, at: new Date(Date.now() - 3500_000).toISOString() }));
+      }
+    await queryAsAdmin(database, "UPDATE stats_users SET last_seen_at=now()-interval '61 days' WHERE user_id=$1", ['300000000000000010']);
+    await store.setPrivacy(A, '300000000000000011', false, true);
+    let instant = now();
+    const { collector, rest } = await metadataCollector(() => instant);
+    const paths: string[] = [];
+    jest.spyOn(rest, 'get').mockImplementation(async path => {
+      paths.push(path);
+      const parts = path.split('/');
+      if (parts[1] === 'channels') return { id: C, guild_id: paths.some(p => p === `/guilds/${B}`) ? B : A, type: 2, name: 'Voice' };
+      if (parts.length === 3) return { id: parts[2], name: `Guild ${parts[2]}` };
+      return { nick: null, user: { id: parts[4], global_name: 'Profile renamed', username: 'account' } };
+    });
+    instant = new Date(instant.getTime() + 30 * 60_000);
+    for (let i = 0; i < 6; i++) {
+      const count = paths.length;
+      await collector.tick();
+      await collector.refreshMetadata();
+      expect(paths.length - count).toBeLessThanOrEqual(5);
+      instant = new Date(instant.getTime() + 10_000);
+    }
+    expect(paths).toContain(`/guilds/${A}/members/300000000000000012`);
+    expect(paths).toContain(`/guilds/${B}/members/300000000000000011`);
+    expect(paths).not.toContain(`/guilds/${A}/members/300000000000000011`);
+    expect(paths.some(path => path.endsWith('/300000000000000010'))).toBe(false);
+    expect(paths.some(path => path.endsWith('/members'))).toBe(false);
+    expect(await queryAsAdmin(database, 'SELECT name FROM stats_users WHERE guild_id=$1 AND user_id=$2', [B, '300000000000000011']))
+      .toEqual([expect.objectContaining({ name: 'Profile renamed' })]);
+  });
+  it('retains member labels on inaccessible or mismatched identities and fences metadata writes', async () => {
+    await closedChannel('Voice');
+    let instant = now();
+    const { collector, rest, lease } = await metadataCollector(() => instant);
+    jest.spyOn(rest, 'get').mockResolvedValue({ user: { id: V, username: 'Wrong member' } });
+    instant = new Date(instant.getTime() + 30 * 60_000);
+    await collector.tick();
+    await collector.refreshMetadata();
+    expect((await queryAsAdmin(database, 'SELECT name FROM stats_users WHERE guild_id=$1', [A]))[0]!.name).toBe('Alice');
+    await queryAsAdmin(database, 'DELETE FROM leases WHERE name=$1', [lease.name]);
+    await expect(store.rememberMemberName(A, U, 'Stale holder', lease)).rejects.toThrow('Stats shard lease lost');
+    await store.setPrivacy(A, U, false, true);
+    await store.rememberMemberName(A, U, 'Erased person');
+    expect(await queryAsAdmin(database, 'SELECT * FROM stats_users WHERE guild_id=$1', [A])).toEqual([]);
+  });
+  it('keeps voice events flowing during a slow periodic lookup and preserves a newer Gateway rename', async () => {
+    await closedChannel('Voice');
+    let instant = now();
+    const { collector, rest, lease } = await metadataCollector(() => instant);
+    let finish!: (value: unknown) => void, started!: () => void;
+    const response = new Promise<unknown>(resolve => { finish = resolve; });
+    const requested = new Promise<void>(resolve => { started = resolve; });
+    jest.spyOn(rest, 'get').mockImplementation(async path => {
+      if (path === `/guilds/${A}`) return { id: A, name: 'Guild' };
+      if (path === `/channels/${C}`) return { id: C, guild_id: A, type: 2, name: 'Voice' };
+      if (path === `/guilds/${A}/members/${U}`) { started(); return response; }
+      throw new Error('Unexpected lookup');
+    });
+    instant = new Date(instant.getTime() + 30 * 60_000);
+    const refreshing = collector.refreshMetadata();
+    await requested;
+    try {
+      await collector.handle({ type: 'voice_member', guildId: GuildId.assert(A), userId: U,
+        roles: [R], name: 'New Gateway nickname', bot: false },
+        { key: 'newer-name', shardId: 0, at: now(), replayed: false, lease });
+      await collector.handle({ type: 'voice_state', guildId: GuildId.assert(A),
+        person: { userId: U, channelId: C, roles: [R], name: 'New Gateway nickname', bot: false } },
+        { key: 'voice-during-lookup', shardId: 0, at: now(), replayed: false, lease });
+      expect(await store.openUserIds(A)).toEqual(new Set([U]));
+      const checkpoint = jest.spyOn(store, 'checkpoint');
+      instant = now();
+      await collector.tick();
+      expect(checkpoint).toHaveBeenCalledWith(A, lease, instant);
+    } finally {
+      finish({ nick: 'Older REST nickname', user: { id: U, username: 'account' } });
+      await refreshing;
+    }
+    expect((await queryAsAdmin(database, 'SELECT name FROM stats_users WHERE guild_id=$1', [A]))[0]!.name).toBe('New Gateway nickname');
   });
 });

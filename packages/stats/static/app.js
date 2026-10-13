@@ -400,6 +400,15 @@ function restoreGuildSelection() {
   $('guild').value = guilds.some(guild => guild.id === saved) ? saved : guilds[0]?.id ?? '';
   rememberGuildSelection();
 }
+let guildNamesUpdatedAt = 0;
+function updateGuilds(data) {
+  guilds = data.guilds.sort((a, b) => Number(!!a.inactive) - Number(!!b.inactive)
+    || Number(a.nameKnown === false) - Number(b.nameKnown === false) || a.name.localeCompare(b.name, language));
+  const previous = $('guild').value;
+  renderGuildOptions();
+  if (previous !== 'all' && !guilds.some(guild => guild.id === previous)) restoreGuildSelection();
+  guildNamesUpdatedAt = Date.now();
+}
 function renderGuildOptions() {
   const select = $('guild');
   const previous = select.value;
@@ -896,6 +905,17 @@ async function load() {
   privacyFailure = null;
   renderPrivacyStatus();
   try {
+    if (Date.now() - guildNamesUpdatedAt >= 120000) {
+      try {
+        const names = await (await api('/api/guilds')).json();
+        if (ticket !== generation) return;
+        updateGuilds(names);
+        setHeading();
+      } catch (error) {
+        if (error.status === 401) throw error;
+        // Optional label refresh must not prevent loading activity or checking access.
+      }
+    }
     if (page === 'picket') {
       instanceReport = null;
       text('instance-total', '—');
@@ -1108,9 +1128,7 @@ translate();
 try {
   current = await (await api('/api/session')).json();
   const data = await (await api('/api/guilds')).json();
-  guilds = data.guilds.sort((a, b) => Number(!!a.inactive) - Number(!!b.inactive)
-    || Number(a.nameKnown === false) - Number(b.nameKnown === false) || a.name.localeCompare(b.name, language));
-  renderGuildOptions();
+  updateGuilds(data);
   restoreGuildSelection();
   $('welcome').hidden = true;
   $('workspace').hidden = false;

@@ -281,6 +281,17 @@ Les noms des salons sont conservés entre les redémarrages du bot. Si seul un I
 le nom auprès de Discord lorsqu'il est disponible et met à jour les rapports existants. Un salon supprimé ou
 inaccessible conserve son dernier nom connu ; l'ID reste affiché si aucun nom n'a jamais été disponible.
 Une mise à jour du nom ne prolonge pas la rétention de l'historique.
+
+Les noms des serveurs, salons et participants suivent les changements sur Discord, même après la déconnexion
+d'un participant. Les rapports et exports utilisent le dernier libellé connu pour un même ID, sans créer de doublon
+d'activité. Le pseudo du serveur est prioritaire, puis le nom d'affichage Discord, puis le nom d'utilisateur.
+Les événements Gateway sont appliqués à réception. Une vérification périodique parcourt aussi les serveurs actifs
+et les participants/salons ayant un historique conservé, avec au plus cinq requêtes Discord par passage de dix secondes.
+Un parcours terminé attend trente minutes avant de recommencer ; vérifier tous les participants prend davantage
+de temps sur une grande instance. Aucun annuaire complet des membres n'est téléchargé. Les éléments supprimés
+ou inaccessibles conservent leur dernier nom connu ; cette vérification ne prolonge pas la rétention et ne recrée
+pas les données effacées. Le dashboard renouvelle les noms des serveurs toutes les deux minutes lorsqu'il est actif,
+en conservant le serveur sélectionné.
 Un état temporaire des humains connectés, rôles compris, permet de gérer les changements d'éligibilité et les reprises,
 sans enregistrer un annuaire complet.
 

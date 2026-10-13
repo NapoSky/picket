@@ -150,9 +150,10 @@ export class PostgresStatsStore {
   }
 
   /** Preserve trusted Discord names independently of collection and future bot departures. */
-  async rememberGuildName(guildId: string, name: string): Promise<void> {
+  async rememberGuildName(guildId: string, name: string, lease?: Lease): Promise<void> {
     if (!name.trim()) return;
     await withTenant(this.db, GuildId.assert(guildId), async (trx) => {
+      await fence(trx, lease);
       await sql`INSERT INTO stats_settings(guild_id,guild_name) VALUES(${guildId},${name})
         ON CONFLICT(guild_id) DO UPDATE SET guild_name=EXCLUDED.guild_name
         WHERE stats_settings.guild_name IS DISTINCT FROM EXCLUDED.guild_name`.execute(trx);
@@ -208,6 +209,29 @@ export class PostgresStatsStore {
 
   async channelName(guildId: string, channelId: string, name: string, lease?: Lease): Promise<void> {
     return this.rememberChannelNames(guildId, { [channelId]: name }, lease);
+  }
+
+  /** Rename retained participants without creating activity or extending retention. */
+  async rememberMemberName(guildId: string, userId: string, name: string, lease?: Lease): Promise<void> {
+    if (!name.trim() || name === userId) return;
+    await withTenant(this.db, GuildId.assert(guildId), async trx => {
+      await fence(trx, lease);
+      await sql`UPDATE stats_users SET name=${name}
+        WHERE guild_id=${guildId} AND user_id=${userId} AND name IS DISTINCT FROM ${name}`.execute(trx);
+    });
+  }
+
+  /** Small keyset pages of retained identities, never Discord's complete member directory. */
+  async nameTargets(guildId: string, kind: 'member' | 'channel', after: string, limit: number): Promise<string[]> {
+    const table = kind === 'member' ? 'stats_users' : 'stats_channels';
+    const id = sql.ref(kind === 'member' ? 'user_id' : 'channel_id');
+    return withTenant(this.db, GuildId.assert(guildId), async trx => {
+      const rows = (await sql<{ id: string }>`SELECT ${id} AS id FROM ${sql.table(table)}
+        WHERE guild_id=${guildId} AND ${id}>${after}
+          AND last_seen_at>${new Date(this.now().getTime() - STATS_RETENTION_MS)}
+        ORDER BY ${id} LIMIT ${limit}`.execute(trx)).rows;
+      return rows.map(row => row.id);
+    });
   }
 
   async channelNames(guildId: string): Promise<Readonly<Record<string, string>>> {
@@ -316,7 +340,7 @@ export class PostgresStatsStore {
         await sql`UPDATE stats_voice_segments SET current_roles=${[...event.roles]}::text[],confirmed_through=GREATEST(confirmed_through,${at}) WHERE id=${open.id}`.execute(
           trx,
         );
-        await sql`UPDATE stats_users SET name=${event.name},last_seen_at=${at} WHERE guild_id=${event.guildId} AND user_id=${event.userId} AND name<>${event.name}`.execute(
+        await sql`UPDATE stats_users SET name=${event.name},last_seen_at=${at} WHERE guild_id=${event.guildId} AND user_id=${event.userId} AND name<>${event.name} AND ${event.name}<>${event.userId} AND ${event.name}<>''`.execute(
           trx,
         );
         return;
@@ -350,7 +374,7 @@ export class PostgresStatsStore {
           trx,
         );
         await sql`INSERT INTO stats_users(guild_id,user_id,name,last_seen_at) VALUES(${event.guildId},${event.userId},${event.name || event.userId},${at})
-          ON CONFLICT(guild_id,user_id) DO UPDATE SET name=EXCLUDED.name,last_seen_at=EXCLUDED.last_seen_at WHERE stats_users.last_seen_at<=EXCLUDED.last_seen_at`.execute(
+          ON CONFLICT(guild_id,user_id) DO UPDATE SET name=CASE WHEN EXCLUDED.name=EXCLUDED.user_id THEN stats_users.name ELSE EXCLUDED.name END,last_seen_at=EXCLUDED.last_seen_at WHERE stats_users.last_seen_at<=EXCLUDED.last_seen_at`.execute(
           trx,
         );
         await sql`INSERT INTO stats_channels(guild_id,channel_id,name,last_seen_at) VALUES(${event.guildId},${event.channelId},${event.channelName || event.channelId},${at})

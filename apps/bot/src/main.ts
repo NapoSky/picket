@@ -101,6 +101,7 @@ async function run(): Promise<void> {
   jobs?.start();
   warlog?.start();
   const stopVoice=startLeasedLoop({tick:()=>voiceCollector.tick(),intervalMs:10_000,logger});
+  const stopVoiceNames=startLeasedLoop({tick:()=>voiceCollector.refreshMetadata(),intervalMs:10_000,logger});
   logger.info(
     { roles: config.roles, port: config.http.port, healthPort: config.http.healthPort, shardCount: config.shardCount, restGlobalRps: config.discord.restGlobalRps, databasePoolMax: config.database.poolMax },
     'picket started',
@@ -118,6 +119,7 @@ async function run(): Promise<void> {
     // Cède d'abord les baux Gateway : une autre réplique reprend la session pendant que celle-ci se vide.
     await shards?.stop();
     await stopVoice();
+    await stopVoiceNames();
     await voiceCollector.shutdown();
     // Les passes périodiques s'achèvent avant la fermeture de la base : le bail est rendu à la réplique suivante.
     await jobs?.stop();

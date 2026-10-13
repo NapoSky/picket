@@ -382,6 +382,17 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
     await store.rememberGuildName(A, '');
     expect((await store.settings(A)).name).toBe('Renamed Regiment');
   });
+  it('refreshes a known server name outside the administrator memberships without duplicating the server', async () => {
+    team = true;
+    memberships = [guild(A)];
+    await store.rememberGuildName(B, 'Previous guild name');
+    botGuildNames = [{ id: B, name: 'Renamed guild' }];
+    const guilds = (await get('/api/guilds')).json().guilds;
+    expect(guilds.filter((g: { id: string }) => g.id === B)).toEqual([
+      expect.objectContaining({ id: B, name: 'Renamed guild', nameKnown: true }),
+    ]);
+    expect((await store.settings(B)).name).toBe('Renamed guild');
+  });
   it('distinguishes unavailable old names from inactivity and does not expose other servers to members', async () => {
     memberships = [guild(A)];
     const memberGuilds = (await get('/api/guilds')).json().guilds;
