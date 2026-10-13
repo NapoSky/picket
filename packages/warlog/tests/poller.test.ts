@@ -11,9 +11,42 @@ function harness() {
   } satisfies WarStore;
   const map: MapData = { version: 1, updatedAt: 1_000, items: [{ iconType: 56, teamId: 'COLONIALS', flags: 0, x: .1, y: .2 }] };
   const api = { war: jest.fn().mockResolvedValue(war), maps: jest.fn().mockResolvedValue(['WestgateHex']), labels: jest.fn().mockResolvedValue([{ text: 'Jade Cove', x: .1, y: .2, major: true }]), map: jest.fn().mockResolvedValue(map), reset: jest.fn(), stop: jest.fn() } satisfies WarApi;
-  const poller = new WarPoller(api, store, { name: 'warlog-poller', holder: 'a', token: 1n }, { now: () => new Date(now) }, noopLogger);
-  return { store, api, map, tick: () => poller.tick(), advance: (ms: number) => { now += ms; } };
+  const logger = { ...noopLogger, warn: jest.fn() };
+  const poller = new WarPoller(api, store, { name: 'warlog-poller', holder: 'a', token: 1n }, { now: () => new Date(now) }, logger);
+  return { store, api, map, logger, tick: () => poller.tick(), advance: (ms: number) => { now += ms; } };
 }
+
+it('reports each unknown icon once across regions and polling cycles while retaining tracked objects', async () => {
+  const h = harness();
+  h.api.maps.mockResolvedValue(['WestgateHex', 'OriginHex']);
+  h.api.map.mockResolvedValue({ ...h.map, items: [...h.map.items, { ...h.map.items[0]!, iconType: 97 }, { ...h.map.items[0]!, iconType: 88 }] });
+  await h.tick(); h.advance(15_000); await h.tick();
+  expect(h.logger.warn.mock.calls).toEqual([[{ icons: [97] }, 'unknown War API icons']]);
+  const snapshot = h.store.commit.mock.calls[1]![1] as PollSnapshot;
+  expect(Object.values(snapshot.objects)).toHaveLength(2);
+  expect(Object.values(snapshot.objects).every(object => object.code === '1B')).toBe(true);
+  expect(h.store.commit.mock.calls[1]?.[2]).toEqual([]);
+
+  h.api.map.mockResolvedValue({ ...h.map, items: [...h.map.items, { ...h.map.items[0]!, iconType: 97 }, { ...h.map.items[0]!, iconType: 98 }] });
+  h.advance(15_000); await h.tick(); h.advance(15_000); await h.tick();
+  expect(h.logger.warn.mock.calls).toEqual([
+    [{ icons: [97] }, 'unknown War API icons'],
+    [{ icons: [98] }, 'unknown War API icons'],
+  ]);
+});
+it('keeps unknown icon diagnostics deduplicated after recovery and a new war', async () => {
+  const h = harness();
+  h.api.map.mockResolvedValue({ ...h.map, items: [{ ...h.map.items[0]!, iconType: 97 }] });
+  await h.tick();
+  h.api.map.mockRejectedValueOnce(new Error('region unavailable'));
+  h.advance(15_000); await h.tick(); h.advance(15_000); await h.tick();
+  h.api.war.mockResolvedValue({ ...war, id: 'war101', number: 101 });
+  h.advance(15_000); await h.tick();
+  expect(h.logger.warn.mock.calls.filter(call => call[1] === 'unknown War API icons')).toEqual([
+    [{ icons: [97] }, 'unknown War API icons'],
+  ]);
+  expect(h.store.commit).toHaveBeenCalledTimes(3);
+});
 
 it('initialises silently then emits a capture with separate API and detection timestamps', async () => {
   const h = harness(); await h.tick();

@@ -12,6 +12,8 @@ export class WarPoller {
   #failures = 0;
   #begun = false;
   #lastSuccessAt: number | null = null;
+  // Keep diagnostics across baseline rebuilds so recurring undocumented icons do not spam logs.
+  readonly #reportedUnknownIcons = new Set<number>();
   constructor(private readonly api: WarApi, private readonly store: WarStore, private readonly lease: Lease, private readonly clock: Clock, private readonly logger: Logger, private readonly intervalMs = 15_000) {}
 
   async tick(): Promise<void> {
@@ -51,12 +53,15 @@ export class WarPoller {
           receivedAt[region] = this.clock.now().getTime();
           regions[region] = map;
           for (const item of map.items) {
-            if (!WAR_ICONS[item.iconType] && !KNOWN_UNTRACKED_ICONS.includes(item.iconType)) unknown.add(item.iconType);
+            if (!WAR_ICONS[item.iconType] && !KNOWN_UNTRACKED_ICONS.includes(item.iconType) && !this.#reportedUnknownIcons.has(item.iconType)) unknown.add(item.iconType);
             const candidate = mapObject(region, item, this.#labels[region] ?? [], map.updatedAt);
             if (candidate) objects[candidate.key] = mapObject(region, item, this.#labels[region] ?? [], map.updatedAt, baseline ? undefined : this.#snapshot?.objects[candidate.key])!;
           }
         });
-        if (unknown.size) this.logger.warn({ icons: [...unknown] }, 'unknown War API icons');
+        if (unknown.size) {
+          this.logger.warn({ icons: [...unknown] }, 'unknown War API icons');
+          for (const icon of unknown) this.#reportedUnknownIcons.add(icon);
+        }
         const checked = await this.api.war();
         if (checked.id !== war.id || checked.number !== war.number || isActiveWar(checked) !== isActiveWar(war)) throw new Error('War changed while loading maps');
       } else if (!baseline && this.#snapshot) {
