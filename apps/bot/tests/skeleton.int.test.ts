@@ -1,5 +1,7 @@
 import { buildCommandsPayload, createInteractionServer, toWireResponse } from '@picket/discord';
-import { ChannelId, Secret, noopLogger, systemClock } from '@picket/kernel';
+import { ChannelId, GuildId, Secret, noopLogger, systemClock } from '@picket/kernel';
+import { PostgresLeaseStore } from '@picket/coordination';
+import { PostgresWarStore, type WarObject } from '@picket/warlog';
 import { createDatabase } from '@picket/persistence';
 import {
   InMemoryInteractionReplies,
@@ -120,6 +122,35 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
     expect(JSON.stringify(await say({ ...admin, guildId: other, path: old }))).toContain('No old command arguments');
     expect(await queryAsAdmin(database, 'SELECT locale FROM guild_settings WHERE guild_id = $1', [other])).toEqual([{ locale: null }]);
     expect(await queryAsAdmin(database, 'SELECT role_id FROM guild_permission_roles WHERE guild_id = $1', [other])).toEqual([{ role_id: other }]);
+  });
+  it('connects the global war-log control to validated activation and cancels pending deliveries on disable', async () => {
+    const guildId = '700000000000000099', options = { ...admin, guildId };
+    const home = await say(options);
+    const warPanel = await click(home, 'enable', 'warlog', options);
+    expect(JSON.stringify(warPanel)).toContain('Choose a regular text channel');
+    expect(await queryAsAdmin(database, 'SELECT features FROM guild_settings WHERE guild_id = $1', [guildId])).toEqual([{ features: { timers: true, todolists: true, warlog: false } }]);
+    const store = new PostgresWarStore(database.handle.db);
+    const lease = (await new PostgresLeaseStore(database.handle.db).acquire('warlog-poller', 'settings-test', 300_000))!;
+    const snapshot = { war: { id: 'settings-war100', number: 100, startedAt: businessNow.getTime(), endedAt: null, winner: 'NONE' as const }, regions: {}, objects: {} };
+    expect(await store.commit(lease, snapshot, [], true, businessNow)).toBe(true);
+    const refreshed = await click(warPanel, 'refresh', '0', options);
+    const channel = '600000000000000099';
+    await click(refreshed, 'channel', '0', { ...options, componentType: 8, values: [channel], resolved: { channels: { [channel]: { id: channel, type: 0 } } } });
+    await click(refreshed, 'zone', '2', options);
+    const enabled = await click(refreshed, 'enable', '0', options);
+    expect(JSON.stringify(enabled)).toContain('Enabled');
+    expect(await store.subscription(GuildId.assert(guildId))).toMatchObject({ paused: false, confirmedWar: 100, zones: ['center'] });
+    const object: WarObject = { key: 'DeadLandsHex:1B:0.10000:0.20000', region: 'DeadLandsHex', code: '1B', x: 0.1, y: 0.2, location: 'Abandoned Ward', state: '1W', stateAt: businessNow.getTime() };
+    businessNow = new Date(businessNow.getTime() + 1_000);
+    expect(await store.commit(lease, { ...snapshot, objects: { [object.key]: object } }, [{ type: 'claimed', war: 100, object, faction: 'WARDENS', occurredAt: businessNow.getTime(), detectedAt: businessNow.getTime() }], false, businessNow)).toBe(true);
+    expect(await queryAsAdmin(database, 'SELECT guild_id FROM warlog_deliveries WHERE guild_id = $1', [guildId])).toHaveLength(1);
+    const confirmation = await click(await say(options), 'disable', 'warlog', options);
+    expect((await store.subscription(GuildId.assert(guildId))).paused).toBe(false);
+    const disabled = await click(confirmation, 'disable', 'warlog', options);
+    expect(control(disabled, 'enable', 'warlog')).toBeDefined();
+    expect((await store.subscription(GuildId.assert(guildId))).paused).toBe(true);
+    expect(await queryAsAdmin(database, 'SELECT features FROM guild_settings WHERE guild_id = $1', [guildId])).toEqual([{ features: { timers: true, todolists: true, warlog: false } }]);
+    expect(await queryAsAdmin(database, 'SELECT guild_id FROM warlog_deliveries WHERE guild_id = $1', [guildId])).toHaveLength(0);
   });
   it('previews deletion, blocks writes during suspension, recovers after expiry and purges on time', async () => {
     const guildId = '700000000000000077'; const options = { ...admin, guildId };

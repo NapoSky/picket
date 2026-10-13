@@ -341,7 +341,8 @@
     "cancelDeletion": "Cancel deletion",
     "legacy": "Commands have moved to this panel. No old command arguments were applied.",
     "statusReserved": "Time zone: preconfiguration only.",
-    "roleLabel": "Role {{id}}"
+    "roleLabel": "Role {{id}}",
+    "warlogHelp": "Receive war events from your zones. Enabling opens the channel and zone settings."
   },
   "audit": {
     "configuration": "Server configuration changed",
@@ -477,6 +478,8 @@
       "rocket_forgotten": "Impact marker removed",
       "scorched": "Structure scorched",
       "war_ended": "War ended"
-    }
+    },
+    "zoneContents": "View regions in each zone",
+    "backToSettings": "Back to settings"
   }
 }

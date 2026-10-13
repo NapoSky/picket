@@ -1,5 +1,5 @@
 import { ACCESS_RANK, encodeCustomId, ephemeral, type AccessPolicy, type CommandContext, type CommandEntry, type ComponentContext, type ComponentFamily, type GuildGate, type PanelContent, type Reply, type RootDescriptor } from '@picket/discord';
-import { WAR_ZONE_KEYS, type WarZone } from '@picket/game-data';
+import { WAR_REGION_NAMES, WAR_ZONES, WAR_ZONE_KEYS, type WarZone } from '@picket/game-data';
 import { ChannelId, type Clock } from '@picket/kernel';
 import type { ConfigureWarLog } from '../../application/settings';
 import type { SettingsChange, WarStore } from '../../application/ports';
@@ -26,9 +26,10 @@ export function createWarLogSettingsPanel(deps: { store: WarStore; configure: Co
       { kind: 'text', text: `${enabled ? '🟢' : '⚪'} **${t(enabled ? 'panel.enabled' : 'panel.disabled')}**\n${t('warlog.channel')}: ${sub.channelId ? `<#${sub.channelId}>` : t('levels.none')}` },
       { kind: 'channelSelect', customId: id('channel'), placeholder: t('warlog.chooseChannel'), channelKinds: ['text'] },
       { kind: 'text', text: t('warlog.perspectiveHelp') },
-      { kind: 'buttons', buttons: (['NONE', 'COLONIALS', 'WARDENS'] as const).map(perspective => ({ kind: 'button', customId: id('perspective', perspective), label: t(perspective === 'NONE' ? 'warlog.neutralPerspective' : `warlog.factions.${perspective}`), style: sub.perspective === perspective ? 'success' : 'secondary' })) },
+      { kind: 'buttons', buttons: (['NONE', 'COLONIALS', 'WARDENS'] as const).map(perspective => ({ kind: 'button', customId: id('perspective', perspective), label: t(perspective === 'NONE' ? 'warlog.neutralPerspective' : `warlog.factions.${perspective}`), style: sub.perspective === perspective ? perspective === 'WARDENS' ? 'primary' : 'success' : 'secondary' })) },
       { kind: 'text', text: t('warlog.chooseZones', { selected: sub.zones.length }) },
       { kind: 'buttons', buttons: WAR_ZONE_KEYS.map((zone, index) => ({ kind: 'button', customId: id('zone', String(index)), label: t(`warlog.zones.${zone}`), style: sub.zones.includes(zone) ? 'success' : 'secondary', disabled: !sub.zones.includes(zone) && sub.zones.length >= 3 })) },
+      { kind: 'buttons', buttons: [{ kind: 'button', customId: id('coverage'), label: t('warlog.zoneContents'), style: 'secondary' }] },
       { kind: 'text', text: t('warlog.renewHelp') },
       ...(sub.failureReason ? [{ kind: 'text' as const, text: t('warlog.deliveryBlocked') }] : []),
       { kind: 'buttons', buttons: [
@@ -38,8 +39,9 @@ export function createWarLogSettingsPanel(deps: { store: WarStore; configure: Co
     ];
     return { kind: 'panel', update: context.interaction.message !== null, panel: { components, accentColor: 0x435768 } };
   }
+  const open = async (context: CommandContext): Promise<Reply> => await guard(context) ?? render(context);
   const command: CommandEntry = { path: ['warlog', 'settings'], level: 'officer', description: 'commands.warlog.settings.description', handler: async context => ({
-    kind: 'deferred', ephemeral: true, update: false, run: async () => await guard(context) ?? render(context),
+    kind: 'deferred', ephemeral: true, update: false, run: () => open(context),
   }) };
   const handler = async (context: ComponentContext): Promise<Reply> => {
     const [owner, guild, expires, action, arg, expectedWar, extra] = context.payload.split('.');
@@ -51,6 +53,13 @@ export function createWarLogSettingsPanel(deps: { store: WarStore; configure: Co
       const denied = await guard(context); if (denied) return denied;
       const interaction = context.interaction;
       if (action === 'refresh' && interaction.componentKind === 'button') return render(context);
+      if (action === 'coverage' && interaction.componentKind === 'button') return {
+        kind: 'panel', update: true, panel: { accentColor: 0x435768, components: [
+          { kind: 'text', text: `## 🗺️ ${context.t('warlog.zoneContents')}` },
+          ...WAR_ZONE_KEYS.map((zone): PanelContent => ({ kind: 'text', text: `### ${context.t(`warlog.zones.${zone}`)}\n${WAR_ZONES[zone].map(region => WAR_REGION_NAMES[region] ?? region).join(' · ')}` })),
+          { kind: 'buttons', buttons: [{ kind: 'button', customId: encodeCustomId('wl', 1, `${owner}.${guild}.${expires}.refresh.0.${expectedWar}`), label: context.t('warlog.backToSettings'), style: 'secondary' }] },
+        ] },
+      };
       let change: SettingsChange | null = null;
       if (action === 'channel' && interaction.componentKind === 'channelSelect' && interaction.selectedValues.length === 1) {
         const value = interaction.selectedValues[0]!;
@@ -74,5 +83,5 @@ export function createWarLogSettingsPanel(deps: { store: WarStore; configure: Co
     } };
   };
   const family: ComponentFamily = { namespace: 'wl', version: 1, level: 'officer', onComponent: handler };
-  return { command, family };
+  return { command, family, open };
 }

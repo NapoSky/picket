@@ -40,9 +40,17 @@ function setup(i18n = testI18n, auditControl?: AuditControl) {
   };
   const suspension = new GetSuspension(lifecycle, 30);
   const show = new ShowPermissions(permissions);
+  const warlog = {
+    open: jest.fn().mockResolvedValue({ kind: 'message', ephemeral: true, content: 'Choose a regular text channel and confirm your zones.' }),
+    disable: jest.fn().mockImplementation(async () => {
+      if (!settings.features.warlog) return 'warlog.results.unchanged';
+      settings = { ...settings, features: { ...settings.features, warlog: false } };
+      return 'warlog.results.saved';
+    }),
+  };
   const panel = createSettingsPanel({ settings: new GetGuildSettings(reader), update: new UpdateGuildSettings(store, i18n.locales), permissions: show,
     updatePermissions: new UpdatePermissions(permissions), access: new ResolveAccess(permissions), suspension,
-    request: new RequestGuildDeletion(lifecycle, clock, 30), cancel: new CancelGuildDeletion(lifecycle), clock, i18n,
+    request: new RequestGuildDeletion(lifecycle, clock, 30), cancel: new CancelGuildDeletion(lifecycle), clock, i18n, warlog,
     exportData: new ExportGuildData({ read: async () => ({ guild_settings: [settings], guild_permission_roles: [config] }) }, clock), ...(auditControl ? { audit: auditControl } : {}) });
   const status = statusCommand(new GetGuildStatus(reader), show);
   const registry = new CommandRegistry([PICKET_ROOT], [status, panel.command], i18n, [...panel.aliases, { ...status, path: ['picket', 'permissions', 'show'] }]);
@@ -53,7 +61,7 @@ function setup(i18n = testI18n, auditControl?: AuditControl) {
   }
   const open = (overrides: Partial<IncomingInteraction> = {}) => call(makeInteraction({ commandPath: ['picket', 'settings'], memberPermissions: 8n, ...overrides }));
   const click = (customId: string, overrides: Partial<IncomingInteraction> = {}) => call(makeInteraction({ kind: 'component', customId, componentKind: 'button', memberPermissions: 8n, message: { id: MessageId.assert('910000000000000001'), channelId }, ...overrides }));
-  return { panel, registry, pipeline, open, click, audit, read: () => ({ settings, config, inactive }), advance: (ms: number) => { time = new Date(time.getTime() + ms); }, setConfig: (value: PermissionConfig) => { config = value; } };
+  return { panel, registry, pipeline, open, click, audit, warlog, read: () => ({ settings, config, inactive }), advance: (ms: number) => { time = new Date(time.getTime() + ms); }, setConfig: (value: PermissionConfig) => { config = value; } };
 }
 function view(reply: Reply | null): PanelView {
   if (reply?.kind !== 'panel') throw new Error(`Expected panel: ${JSON.stringify(reply)}`);
@@ -77,11 +85,23 @@ describe('private server settings panel', () => {
     expect(registry.resolve(['picket', 'settings', 'language'])).toBeDefined();
     expect(registry.resolve(['picket', 'data', 'cancel-deletion'])).toBeDefined();
   });
-  it('opens a private V2 message, with useful modules and no war-log activation', async () => {
+  it('opens a private V2 message with all three module controls', async () => {
     const result = await setup().open();
     expect(toWireResponse(result!)).toMatchObject({ type: 4, data: { flags: 32832 } });
-    expect(text(result)).toContain('Timers'); expect(text(result)).not.toContain('War log enabled');
+    expect(text(result)).toContain('Timers'); expect(text(result)).toContain('War log');
+    expect(control(result, 'disable', 'warlog').length).toBeLessThanOrEqual(100);
     expect(control(result, 'disable', 'timers').length).toBeLessThanOrEqual(100);
+  });
+  it('disables war-log through its subscription service after confirmation and opens its validated settings to enable', async () => {
+    const env = setup();
+    const confirmation = await env.click(control(await env.open(), 'disable', 'warlog'));
+    expect(env.warlog.disable).not.toHaveBeenCalled();
+    const disabled = await env.click(control(confirmation, 'disable', 'warlog'));
+    expect(env.warlog.disable).toHaveBeenCalledWith(guildId, UserId.assert('500000000000000001'));
+    expect(env.read().settings.features.warlog).toBe(false);
+    const enabled = await env.click(control(disabled, 'enable', 'warlog'));
+    expect(text(enabled)).toContain('confirm your zones'); expect(env.warlog.open).toHaveBeenCalledTimes(1);
+    expect(env.read().settings.features.warlog).toBe(false); expect(env.audit).toEqual([]);
   });
   it('keeps members out of settings', async () => {
     expect(text(await setup().open({ memberPermissions: 0n }))).toContain('required level: officer');

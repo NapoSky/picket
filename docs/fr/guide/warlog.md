@@ -97,6 +97,13 @@ de construction : c'est donc une estimation, pas une confirmation du jeu. La des
 Un officier ouvre `/warlog settings`. Les changements s'appliquent à **tout le serveur**. Plusieurs zones alimentent
 le même salon ; cliquez à nouveau sur une zone sélectionnée pour la retirer.
 
+Cliquez sur **Voir les régions des zones** pour consulter les régions des cinq zones, puis revenir aux réglages.
+Le bouton **Coloniaux** sélectionné est vert ; le bouton **Wardens** sélectionné est bleu.
+
+Le journal de guerre figure aussi à côté des Timers et des Todolists sur l'accueil de `/picket settings`.
+**Activer** ouvre son panneau pour vérifier le salon et les zones avant de confirmer.
+**Désactiver** demande confirmation, suspend l'abonnement et annule les messages en attente.
+
 ::: details Réglages disponibles et valeurs par défaut
 
 | Réglage | Choix | Par défaut |

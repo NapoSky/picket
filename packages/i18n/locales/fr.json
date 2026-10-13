@@ -341,7 +341,8 @@
     "cancelDeletion": "Annuler la suppression",
     "legacy": "Les commandes ont été regroupées dans ce panneau. Les anciens arguments n’ont appliqué aucune modification.",
     "statusReserved": "Fuseau horaire : préconfiguration uniquement.",
-    "roleLabel": "Rôle {{id}}"
+    "roleLabel": "Rôle {{id}}",
+    "warlogHelp": "Recevoir les événements de guerre de vos zones. Activer ouvre le choix du canal et des zones."
   },
   "audit": {
     "configuration": "Configuration du serveur modifiée",
@@ -477,6 +478,8 @@
       "rocket_forgotten": "Marqueur d’impact retiré",
       "scorched": "Structure incendiée",
       "war_ended": "Guerre terminée"
-    }
+    },
+    "zoneContents": "Voir les régions des zones",
+    "backToSettings": "Retour aux réglages"
   }
 }

@@ -34,3 +34,37 @@ it('filters home regions and validates payload factions', async () => {
   fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ ...body, mapItems: [{ ...body.mapItems[0], teamId: 'OTHER' }] })));
   await expect(api.map('WestgateHex')).rejects.toThrow('faction');
 });
+it('accepts text anchors outside the map without clamping their positions', async () => {
+  const { api, fetcher } = make();
+  const labels = [
+    { text: 'The Squeeze', x: 0.3175878, y: 1.0565143, mapMarkerType: 'Minor' },
+    { text: 'Whispering Gulch', x: 0.49615276, y: 1.0449303, mapMarkerType: 'Minor' },
+    { text: 'Outside edge', x: -0.01, y: 0.5, mapMarkerType: 'Major' },
+  ];
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ mapTextItems: labels })));
+  expect(await api.labels('ReachingTrailHex')).toEqual(labels.map(({ mapMarkerType, ...label }) => ({ ...label, major: mapMarkerType === 'Major' })));
+});
+it('ignores unnamed text anchors without discarding useful labels', async () => {
+  const { api, fetcher } = make();
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ mapTextItems: [
+    { text: '', x: 0.71211976, y: 0.41616037, mapMarkerType: 'Minor' },
+    { text: '   ', x: 0.5, y: 0.5, mapMarkerType: 'Minor' },
+    { text: 'Nevish Line', x: 0.2, y: 0.3, mapMarkerType: 'Major' },
+  ] })));
+  expect(await api.labels('NevishLineHex')).toEqual([{ text: 'Nevish Line', x: 0.2, y: 0.3, major: true }]);
+});
+it.each([null, 123, 'x'.repeat(257)])('rejects malformed map label text', async text => {
+  const { api, fetcher } = make();
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ mapTextItems: [{ text, x: 0.1, y: 0.2, mapMarkerType: 'Major' }] })));
+  await expect(api.labels('NevishLineHex')).rejects.toThrow('Malformed map label text');
+});
+it.each([null, '1.05', Infinity, NaN])('rejects invalid text anchor coordinate %s', async x => {
+  const { api, fetcher } = make();
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ mapTextItems: [{ text: 'Bad anchor', x, y: 0.5, mapMarkerType: 'Minor' }] })));
+  await expect(api.labels('ReachingTrailHex')).rejects.toThrow('Malformed map label coordinate');
+});
+it.each([-0.01, 1.0565143])('still rejects dynamic map item coordinate %s outside the map', async y => {
+  const { api, fetcher } = make();
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ ...body, mapItems: [{ ...body.mapItems[0], y }] })));
+  await expect(api.map('ReachingTrailHex')).rejects.toThrow('Malformed');
+});

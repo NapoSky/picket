@@ -135,8 +135,9 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
   const gate = createGuildGate(new GetSuspension(lifecycle, options.guildRetentionDays));
   const features = createFeatureGate(settings);
   const warStore = new PostgresWarStore(db);
+  const configureWarLog = new ConfigureWarLog(warStore, options.discord?.guildChannels ?? { inspect: unavailable }, options.clock);
   const warPanel = createWarLogSettingsPanel({ store: warStore,
-    configure: new ConfigureWarLog(warStore, options.discord?.guildChannels ?? { inspect: unavailable }, options.clock),
+    configure: configureWarLog,
     clock: options.clock, access, gate,
   });
   const timerPanel = createTimerSettingsPanel({
@@ -154,6 +155,10 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
     clock: options.clock, i18n: options.i18n,
     guildRoles: options.discord?.guildRoles ?? { names: async () => ({}) },
     audit: buildAuditPublisher(db, logger, options),
+    warlog: {
+      open: warPanel.open,
+      disable: async (guildId, actorId) => `warlog.results.${await configureWarLog.execute(guildId, actorId, { kind: 'disable' })}`,
+    },
   });
   const status = statusCommand(new GetGuildStatus(settings), showPermissions);
   return {

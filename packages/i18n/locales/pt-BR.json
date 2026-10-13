@@ -341,7 +341,8 @@
     "cancelDeletion": "Cancelar exclusão",
     "legacy": "Os comandos foram movidos para este painel. Nenhum argumento dos comandos antigos foi aplicado.",
     "statusReserved": "Fuso horário: apenas pré-configuração.",
-    "roleLabel": "Cargo {{id}}"
+    "roleLabel": "Cargo {{id}}",
+    "warlogHelp": "Receba eventos de guerra das suas zonas. Ativar abre as configurações de canal e zonas."
   },
   "audit": {
     "configuration": "Configuração do servidor alterada",
@@ -477,6 +478,8 @@
       "rocket_forgotten": "Marcador de impacto removido",
       "scorched": "Estrutura incendiada",
       "war_ended": "Guerra encerrada"
-    }
+    },
+    "zoneContents": "Ver as regiões de cada zona",
+    "backToSettings": "Voltar às configurações"
   }
 }

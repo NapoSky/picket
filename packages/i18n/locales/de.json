@@ -341,7 +341,8 @@
     "cancelDeletion": "Löschung abbrechen",
     "legacy": "Befehle wurden in dieses Fenster verschoben. Alte Befehlsargumente wurden nicht angewendet.",
     "statusReserved": "Zeitzone: nur Vorkonfiguration.",
-    "roleLabel": "Rolle {{id}}"
+    "roleLabel": "Rolle {{id}}",
+    "warlogHelp": "Erhalte Kriegsereignisse aus deinen Zonen. Aktivieren öffnet die Kanal- und Zoneneinstellungen."
   },
   "audit": {
     "configuration": "Serverkonfiguration geändert",
@@ -477,6 +478,8 @@
       "rocket_forgotten": "Einschlagsmarkierung entfernt",
       "scorched": "Gebäude verbrannt",
       "war_ended": "Krieg beendet"
-    }
+    },
+    "zoneContents": "Regionen der Zonen anzeigen",
+    "backToSettings": "Zurück zu den Einstellungen"
   }
 }

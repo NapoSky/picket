@@ -96,6 +96,13 @@ so this is an estimate, rather than confirmation from the game. Destruction canc
 An officer opens `/warlog settings`. Changes apply to the **whole server**. Several selected zones feed the same
 channel; click a selected zone again to remove it.
 
+Click **View regions in each zone** to see the regions covered by all five zones, then return to your settings.
+The selected **Colonials** button is green; the selected **Wardens** button is blue.
+
+The war log also appears alongside Timers and Todolists on the home page of `/picket settings`.
+**Enable** opens the war-log panel so you can review the channel and zones before confirming.
+**Disable** asks for confirmation, pauses the subscription and cancels pending messages.
+
 ::: details Available settings and defaults
 
 | Setting | Choices | Default |

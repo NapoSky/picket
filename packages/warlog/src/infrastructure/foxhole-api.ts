@@ -11,6 +11,9 @@ const text = (value: unknown): string => { if (typeof value !== 'string' || !val
 const team = (value: unknown): War['winner'] => { if (value !== 'NONE' && value !== 'WARDENS' && value !== 'COLONIALS') throw new Error('Malformed War API faction'); return value; };
 const timestamp = (value: unknown): number | null => value === null ? null : integer(value);
 const coordinate = (value: unknown): number => { const n = number(value); if (n > 1) throw new Error('Malformed map coordinate'); return n; };
+// Text anchors can sit outside the map (e.g. The Squeeze has y=1.0565143).
+// Keep their actual position for nearest-label lookup instead of clamping it.
+const labelCoordinate = (value: unknown): number => { if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error('Malformed map label coordinate'); return value; };
 const list = (value: unknown): unknown[] => { if (!Array.isArray(value) || value.length > 10_000) throw new Error('Malformed War API list'); return value; };
 
 export class FoxholeApi implements WarApi {
@@ -79,8 +82,9 @@ export class FoxholeApi implements WarApi {
     const parse = (value: unknown) => list(record(value).mapTextItems).map((entry): MapLabel => {
       const label = record(entry);
       if (label.mapMarkerType !== 'Major' && label.mapMarkerType !== 'Minor') throw new Error('Malformed map label');
-      return { text: text(label.text), x: coordinate(label.x), y: coordinate(label.y), major: label.mapMarkerType === 'Major' };
-    });
+      if (typeof label.text !== 'string' || label.text.length > 256) throw new Error('Malformed map label text');
+      return { text: label.text, x: labelCoordinate(label.x), y: labelCoordinate(label.y), major: label.mapMarkerType === 'Major' };
+    }).filter(label => label.text.trim().length > 0); // Nevish Line includes an unnamed text anchor.
     return parse(await this.#get(`maps/${encodeURIComponent(region)}/static`, parse));
   }
   async map(region: string): Promise<MapData> {
