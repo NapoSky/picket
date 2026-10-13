@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -35,13 +35,28 @@ describe('exact connected development command', () => {
     const port = await freePort();
     let healthPort = await freePort();
     while (healthPort === port) healthPort = await freePort();
+    const root = resolve('.');
+    // Run the unchanged package scripts from a private fixture. CI has no .env.dev,
+    // and this test must never read or overwrite the developer's environment files.
+    const development = {
+      NODE_ENV: 'development', DATABASE_URL: database.appUrl.reveal(), DATABASE_MIGRATOR_URL: database.migratorUrl.reveal(),
+      DATABASE_APP_ROLE: 'picket_app', DASHBOARD_PORT: String(port), HEALTH_PORT: String(healthPort),
+      STATS_BUFFER_PATH: join(directory, 'buffer'), LOG_LEVEL: 'info',
+    };
+    await Promise.all([
+      ...['apps', 'packages', 'node_modules'].map(name => symlink(join(root, name), join(directory, name), 'dir')),
+      ...['tsconfig.json', 'tsconfig.base.json', 'pnpm-workspace.yaml'].map(name => symlink(join(root, name), join(directory, name), 'file')),
+      readFile(join(root, 'package.json')).then(contents => writeFile(join(directory, 'package.json'), contents)),
+      readFile(join(root, '.env.example')).then(contents => writeFile(join(directory, '.env.example'), contents)),
+      writeFile(join(directory, '.env.dev'), Object.entries(development).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join('\n') + '\n', { mode: 0o600 }),
+    ]);
+    const env: Record<string, string | undefined> = {
+      ...process.env, PATH: `${bin}:${process.env.PATH}`, TEST_DOCKER_CALLS: calls,
+    };
+    for (const key of [...Object.keys(development), 'DATABASE_URL_FILE', 'DATABASE_MIGRATOR_URL_FILE',
+      'DISCORD_APPLICATION_ID', 'DISCORD_BOT_TOKEN', 'DISCORD_BOT_TOKEN_FILE', 'DISCORD_CLIENT_SECRET', 'DISCORD_CLIENT_SECRET_FILE']) delete env[key];
     const child = spawn('pnpm', ['stats:dev:live', 'admin', '--host'], {
-      cwd: resolve('.'), detached: true, stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, TEST_DOCKER_CALLS: calls,
-        NODE_ENV: 'development', DATABASE_URL: database.appUrl.reveal(), DATABASE_MIGRATOR_URL: database.migratorUrl.reveal(),
-        DATABASE_APP_ROLE: 'picket_app', DASHBOARD_PORT: String(port), HEALTH_PORT: String(healthPort),
-        STATS_BUFFER_PATH: join(directory, 'buffer'), LOG_LEVEL: 'info',
-      },
+      cwd: directory, detached: true, stdio: ['ignore', 'pipe', 'pipe'], env,
     });
     let output = '';
     child.stdout!.on('data', (data: Buffer) => { output += data.toString(); });
