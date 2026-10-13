@@ -109,6 +109,7 @@ const translations = {
       'All statistical history covers a maximum of 60 days. “No observed activity” does not mean “never active”.',
     privacyTitle: 'Your data, your choice',
     privacyUnavailable: 'Your privacy preferences could not be loaded. These actions are temporarily unavailable. Use Refresh to try again.',
+    discordRateLimited: 'Discord is limiting access checks. Try again in {seconds} seconds. Your stored privacy preferences remain unchanged.',
     privacyHelp:
       'Manage tracking for your account in the selected server. Erasure also removes your contribution from the statistics.',
     optOut: 'Exclude me from future tracking',
@@ -284,6 +285,7 @@ const translations = {
       'L’historique statistique couvre au maximum 60 jours. « Aucune activité observée » ne signifie pas « jamais actif ».',
     privacyTitle: 'Vos données, votre choix',
     privacyUnavailable: 'Vos préférences de confidentialité n’ont pas pu être chargées. Ces actions sont temporairement indisponibles. Utilisez Actualiser pour réessayer.',
+    discordRateLimited: 'Discord limite les vérifications d’accès. Réessayez dans {seconds} secondes. Vos préférences de confidentialité enregistrées restent inchangées.',
     privacyHelp:
       'Gérez le suivi de votre compte sur le serveur sélectionné. L’effacement retire également votre contribution des statistiques.',
     optOut: 'M’exclure des prochaines collectes',
@@ -370,6 +372,7 @@ let current = null,
   offset = 0,
   eraseAll = false;
 let instanceReport = null;
+let privacyFailure = null;
 let overviewPage = 'overview';
 const t = (key) => translations[language][key] ?? translations.en[key] ?? key;
 const number = (value, decimals = 0) =>
@@ -425,6 +428,7 @@ function translate() {
   if (current) {
     renderGuildOptions();
     setHeading();
+    renderPrivacyStatus();
     if (page === 'picket' && instanceReport) renderInstance(instanceReport);
     else if (report) render(report);
   }
@@ -443,12 +447,16 @@ async function api(path, options = {}) {
     try {
       body = await response.json();
     } catch {}
-    throw Object.assign(new Error(body.error ?? 'unavailable'), { status: response.status });
+    throw Object.assign(new Error(body.error ?? 'unavailable'), {
+      status: response.status, retryAfter: Number(response.headers.get('Retry-After')),
+    });
   }
   return response;
 }
 function errorText(error) {
   if (error.message === 'stats_snapshot_pending') return t('snapshotPending');
+  if (error.message === 'discord_rate_limited')
+    return t('discordRateLimited').replace('{seconds}', number(Math.max(1, error.retryAfter || 60)));
   return error.status === 403
     ? t('forbidden')
     : error.message === 'invalid_period'
@@ -458,6 +466,11 @@ function errorText(error) {
         : error.status === 401
           ? t('sessionExpired')
           : t('error');
+}
+function renderPrivacyStatus() {
+  $('privacy-status').hidden = !privacyFailure;
+  if (privacyFailure) text('privacy-status', privacyFailure.message === 'discord_rate_limited'
+    ? errorText(privacyFailure) : t('privacyUnavailable'));
 }
 function setHeading() {
   const isOverview = page === 'overview' || page === 'picket';
@@ -869,7 +882,8 @@ async function load() {
   setHeading();
   for (const id of ['opt-out', 'save-privacy', 'erase']) $(id).disabled = true;
   $('opt-out').checked = false;
-  $('privacy-status').hidden = true;
+  privacyFailure = null;
+  renderPrivacyStatus();
   try {
     if (page === 'picket') {
       instanceReport = null;
@@ -897,8 +911,8 @@ async function load() {
       } catch (error) {
         if (error.status === 401) throw error;
         if (ticket === generation) {
-          $('privacy-status').textContent = t('privacyUnavailable');
-          $('privacy-status').hidden = false;
+          privacyFailure = error;
+          renderPrivacyStatus();
           $('privacy-card').open = true;
         }
       }

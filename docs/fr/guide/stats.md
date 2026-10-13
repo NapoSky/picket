@@ -38,6 +38,11 @@ ne donne aucun accès aux données individuelles des autres serveurs.
 
 ## Vos premières statistiques
 
+Accordez à PICKET **Voir les salons** sur les salons vocaux à suivre, y compris les salons privés et les
+dérogations de leurs catégories. Le bot peut ainsi recevoir les métadonnées et les noms des salons. Les statistiques
+ne demandent pas **Se connecter**, **Parler** ou **Administrateur**. Les vérifications d'accès du dashboard utilisent
+le scope `guilds.members.read` de votre compte OAuth, indépendamment des permissions du bot sur les salons.
+
 Supposons que votre groupe utilise les rôles **Membre** et **Logistique**, et souhaite exclure le salon **Pause**.
 
 1. **Un administrateur ouvre `/stats settings`**, depuis n'importe quel salon du serveur. Ce panneau est aussi
@@ -263,6 +268,7 @@ prouvant l'inactivité d'un membre.
 | Vous ne voyez pas les données d'autres personnes | Choisissez **Activité du régiment** si vous êtes officier ou administrateur de ce serveur ; sinon, la vue reste personnelle. |
 | Les chiffres sont en retard ou une interruption est indiquée | Consultez la dernière confirmation et réessayez **Actualiser** plus tard. Le temps non observé ne sera pas ajouté automatiquement. |
 | Vos droits viennent de changer | Actualisez ou reconnectez-vous ; la liste des serveurs et l'accès Team peuvent mettre jusqu'à deux minutes à se renouveler. |
+| Discord limite les vérifications d'accès | Les délais courts sont réessayés automatiquement. Pour un délai plus long, attendez le nombre de secondes affiché avant d'utiliser **Actualiser**. Les actions de confidentialité restent désactivées jusqu'au chargement ; votre préférence enregistrée ne change pas. |
 | `/stats link` ne propose pas de lien sur une instance auto-hébergée | Son opérateur doit [configurer le dashboard](../self-hosting/configuration#statistiques-vocales-et-dashboard). |
 | Un export est trop volumineux | Réduisez la période ou choisissez un salon ; aucun fichier partiel n'est présenté comme complet. |
 

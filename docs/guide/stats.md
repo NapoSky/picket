@@ -38,6 +38,11 @@ does not grant access to individual data in other servers.
 
 ## Your first statistics
 
+Give PICKET **View Channel** on the voice channels to track, including private channels and their category
+overwrites. This lets the bot receive channel metadata and names. It does not need **Connect**, **Speak** or
+**Administrator** for statistics. OAuth dashboard access checks use your account's `guilds.members.read` scope,
+independently of the bot's channel permissions.
+
 Suppose your group uses the **Member** and **Logistics** roles and wants to exclude the **Break room** channel.
 
 1. **An administrator opens `/stats settings`**, from any channel in the server. This panel is also available in
@@ -255,6 +260,7 @@ is not reconstructed. There is no complete member directory or ranking that prov
 | You cannot see other people's data | Select **Regiment activity** if you are an officer or administrator of that server; otherwise, the view stays personal. |
 | Figures are delayed or an interruption is shown | Check the last confirmation and try **Refresh** later. Unobserved time will not be automatically added. |
 | Your access has just changed | Refresh or sign in again; the server list and Team access may take up to two minutes to renew. |
+| Discord limits access checks | Short delays are retried automatically. For a longer delay, wait the number of seconds shown before using **Refresh**. Privacy actions remain disabled until preferences load; your recorded preference is unchanged. |
 | `/stats link` offers no link on a self-hosted instance | Its operator must [configure the dashboard](../self-hosting/configuration#voice-statistics-and-dashboard). |
 | An export is too large | Narrow the period or choose a channel; no partial file is presented as complete. |
 

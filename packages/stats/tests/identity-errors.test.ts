@@ -9,7 +9,10 @@ function provider(fetcher: typeof fetch) {
 }
 
 it.each([401, 403, 404, 429, 500])('keeps Discord membership status %i without retaining credentials or response bodies', async status => {
-  const fetcher = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(new Response('private-response', { status }));
+  const fetcher = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockImplementation(async () =>
+    new Response(JSON.stringify({ message: 'private-response', code: 0 }), { status, headers: {
+      'Content-Type': 'application/json', ...(status === 429 ? { 'Retry-After': '60' } : {}),
+    } }));
   const identity = provider(fetcher);
   const error = await identity.memberRoles('private-token', guildId).catch(value => value);
   expect(error).toBeInstanceOf(DashboardDiscordError);

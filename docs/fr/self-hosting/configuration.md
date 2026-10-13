@@ -105,6 +105,12 @@ La collecte est désactivée par défaut dans chaque guilde. Jouez les migration
 
 ### Réglages de la stack Docker principale
 
+Accordez au bot **Voir les salons** sur les salons vocaux suivis, y compris les salons privés ; les dérogations
+des salons/catégories peuvent remplacer la permission accordée à l'invitation. Les statistiques ne demandent pas
+**Se connecter**, **Parler** ou **Administrateur**. Le dashboard vérifie l'appartenance via les scopes OAuth de
+l'utilisateur connecté. Ajouter des permissions au bot ne modifie pas les limites OAuth Discord : le dashboard
+gère automatiquement les délais courts et affiche le délai à respecter pour les limites plus longues.
+
 `picket` et `picket-stats` utilisent le même `deploy/.env`, la même image et la même base PostgreSQL. Les deux
 services héritent de `x-picket-environment` dans `deploy/compose.yml` : l’ID de l’application Discord, le token
 du bot et la connexion à la base existants sont réutilisés. Aucun fichier d’environnement propre aux stats ni

@@ -218,6 +218,15 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
       expect((await get(`/api/privacy?guild=${A}`)).statusCode).toBe(expected);
     },
   );
+  it('returns the Discord cooldown for privacy retries without changing stored preferences', async () => {
+    await store.setPrivacy(A, U, true, false);
+    jest.spyOn(identity, 'memberRoles').mockRejectedValueOnce(new DashboardDiscordError('membership', 429, undefined, 61));
+    const response = await get(`/api/privacy?guild=${A}`);
+    expect(response.statusCode).toBe(503);
+    expect(response.headers['retry-after']).toBe('61');
+    expect(response.json()).toEqual({ error: 'discord_rate_limited' });
+    expect(await store.privacy(A, U)).toBe(true);
+  });
   it('shares only current instance counts with members while preserving tenant settings isolation', async () => {
     expect((await app.inject('/api/instance')).statusCode).toBe(401);
     const overview = (await get('/api/instance')).json();

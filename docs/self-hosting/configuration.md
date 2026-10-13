@@ -105,6 +105,12 @@ Collection is disabled per guild by default. Run migrations and deploy commands,
 
 ### Settings in the main Docker stack
 
+Give the bot **View Channel** on tracked voice channels, including private ones; channel/category overwrites
+can override the permission granted when inviting it. Statistics do not require **Connect**, **Speak** or
+**Administrator**. The dashboard uses the signed-in user's OAuth scopes for membership checks. Adding bot
+permissions does not change Discord's OAuth rate limits; the dashboard handles short waits automatically and
+shows a retry delay for longer limits.
+
 `picket` and `picket-stats` use the same `deploy/.env`, image and PostgreSQL database. Both services inherit
 `x-picket-environment` from `deploy/compose.yml`: the existing Discord application ID, bot token and database
 connection are reused. There is no separate stats environment file or second Discord application to configure.

@@ -1,4 +1,7 @@
-import type { DiscordBotRestClient } from '@picket/discord';
+import { createHash } from 'node:crypto';
+import { Secret } from '@picket/kernel';
+import { createDiscordOAuthRest, DiscordAPIError, HTTPError, RateLimitError,
+  type DiscordBotRestClient, type DiscordOAuthRestClient } from '@picket/discord';
 
 export interface OAuthUser {
   readonly id: string;
@@ -32,6 +35,7 @@ export class DashboardDiscordError extends Error {
     readonly operation: 'user' | 'guilds' | 'membership',
     readonly upstreamStatus?: number,
     readonly upstreamFailure?: 'timeout' | 'network',
+    readonly retryAfterSeconds?: number,
   ) {
     super('Discord identity unavailable');
     this.name = 'DashboardDiscordError';
@@ -44,6 +48,10 @@ export class DashboardDiscord implements DashboardIdentityProvider {
   readonly #guildCache = new Map<string, { at: number; guilds: readonly OAuthGuild[] }>();
   #team: { at: number; ids: Set<string> } | null = null;
   #botGuilds: { at: number; guilds: readonly Pick<OAuthGuild, 'id' | 'name'>[] } | null = null;
+  readonly #oauth = new Map<string, {
+    client: DiscordOAuthRestClient; expires: number; globalCooldown: number; invalid: boolean;
+    cooldowns: Map<string, number>; pending: Map<string, Promise<unknown>>;
+  }>();
   constructor(
     readonly applicationId: string,
     readonly clientSecret: string,
@@ -54,18 +62,65 @@ export class DashboardDiscord implements DashboardIdentityProvider {
 
   private async request(path: string, token: string): Promise<unknown> {
     const operation = path.endsWith('/member') ? 'membership' : path.startsWith('/users/@me/guilds') ? 'guilds' : 'user';
-    let response: Response;
-    try {
-      response = await this.fetcher(`https://discord.com/api/v10${path}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: AbortSignal.timeout(8_000),
-      });
-    } catch (error) {
+    const key = createHash('sha256').update(token).digest('hex');
+    const instant = Date.now();
+    for (const [key, state] of this.#oauth) {
+      if (state.expires > instant || state.pending.size) continue;
+      state.client.clearHashSweeper(); state.client.clearHandlerSweeper();
+      this.#oauth.delete(key);
+    }
+    let state = this.#oauth.get(key);
+    if (!state) {
+      if (this.#oauth.size >= 1000) throw new Error('Discord OAuth client capacity reached');
+      state = {
+        client: createDiscordOAuthRest(new Secret(token), {
+          makeRequest: (url, init) => this.fetcher(url, {
+            method: init.method ?? 'GET', headers: init.headers as NonNullable<RequestInit['headers']>, signal: init.signal ?? null,
+          }),
+          // Short waits are handled by the SDK. Long quotas return a retry delay
+          // instead of keeping an HTTP request queued indefinitely.
+          rejectOnRateLimit: limit => Math.max(limit.retryAfter, limit.timeToReset, limit.sublimitTimeout) > 2000,
+        }),
+        expires: instant + 8 * 60 * 60 * 1000, globalCooldown: 0, invalid: false,
+        cooldowns: new Map(), pending: new Map(),
+      };
+      this.#oauth.set(key, state);
+    }
+    if (state.invalid) throw new DashboardDiscordError(operation, 401);
+    const cooldown = Math.max(state.globalCooldown, state.cooldowns.get(operation) ?? 0);
+    if (cooldown > instant)
+      throw new DashboardDiscordError(operation, 429, undefined, Math.ceil((cooldown - instant) / 1000));
+    const pending = state.pending.get(path);
+    if (pending) return pending;
+    // Only coalesce simultaneous reads. Completed membership/role results are
+    // never cached, so exports and permission revocations keep fresh checks.
+    const query = path.indexOf('?');
+    const request = state.client.get((query < 0 ? path : path.slice(0, query)) as `/${string}`,
+      query < 0 ? {} : { query: new URLSearchParams(path.slice(query + 1)) });
+    const result = request.catch(error => {
+      if (error instanceof RateLimitError) {
+        const retryMs = Math.max(error.retryAfter, error.timeToReset, error.sublimitTimeout);
+        const retrySeconds = Math.max(1, Math.ceil(Number.isFinite(retryMs) ? retryMs / 1000 : 60));
+        if (error.global) state.globalCooldown = Date.now() + retrySeconds * 1000;
+        else state.cooldowns.set(operation, Date.now() + retrySeconds * 1000);
+        throw new DashboardDiscordError(operation, 429, undefined, retrySeconds);
+      }
+      if (error instanceof DiscordAPIError || error instanceof HTTPError) {
+        if (error.status === 401) {
+          state.invalid = true;
+          this.#guildCache.delete(token);
+        }
+        throw new DashboardDiscordError(operation, error.status);
+      }
       throw new DashboardDiscordError(operation, undefined,
         error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name) ? 'timeout' : 'network');
+    });
+    state.pending.set(path, result);
+    try {
+      return await result;
+    } finally {
+      state.pending.delete(path);
     }
-    if (!response.ok) throw new DashboardDiscordError(operation, response.status);
-    return response.json();
   }
 
   async exchange(code: string): Promise<OAuthToken> {

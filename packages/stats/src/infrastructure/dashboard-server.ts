@@ -211,6 +211,7 @@ export function createDashboardServer(options: DashboardOptions) {
         ...(error instanceof DashboardDiscordError ? {
           dependency: 'discord', operation: error.operation,
           upstreamStatus: error.upstreamStatus, upstreamFailure: error.upstreamFailure,
+          retryAfterSeconds: error.retryAfterSeconds,
         } : {}),
         ...(typeof (error as { status?: unknown }).status === 'number'
           ? { upstreamStatus: (error as { status: number }).status } : {}),
@@ -219,6 +220,9 @@ export function createDashboardServer(options: DashboardOptions) {
       else options.logger.warn(fields, 'dashboard Discord authorization denied');
       reply.header('X-Request-Id', request.id);
     }
+    if (error instanceof DashboardDiscordError && error.upstreamStatus === 429 && error.retryAfterSeconds)
+      return reply.code(503).header('Retry-After', String(error.retryAfterSeconds))
+        .send({ error: 'discord_rate_limited' });
     return reply.code(status).send({ error: status === 503 ? 'unavailable' : failure.message });
   });
 
