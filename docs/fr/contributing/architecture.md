@@ -118,8 +118,10 @@ limités aux périmètres personnel, guilde et Team.
 par personne/jour : **7 200 000 segments**, avec reconnexions, changements de salon et deux salons. Il rapproche les
 totaux, séries quotidiennes par serveur, personnes distinctes, durées horaires et pics de présence. La réponse inclut
 la première page de membres et les présences récentes, comme le dashboard admin. Vingt confirmations du pool principal
-s'exécutent en parallèle, avec quatre connexions principales et deux dashboard. La passe d'intégration habituelle utilise
-un fixture réduit de 300 guildes, dix personnes et deux segments quotidiens. `STATS_LOAD_PEOPLE` (1–200) et
+s'exécutent en parallèle, avec quatre connexions principales et deux dashboard. Ce benchmark se lance uniquement
+sur demande via `pnpm stats:test:load`. Il est exclu des commandes unitaires/d’intégration habituelles et de la CI
+récurrente, y compris son ancien profil réduit de 360 000 segments. Les tests fonctionnels conservent la couverture de
+la collecte, des totaux, des instantanés, des accès et de l’effacement sur de petits jeux de données. `STATS_LOAD_PEOPLE` (1–200) et
 `STATS_LOAD_SEGMENTS` (1–48) ajustent le profil de test sans limiter la collecte. Les faits synthétiques mesurent les
 lectures et la contention des confirmations, pas le débit complet du Gateway ; les événements bruts et autres tables
 ne sont pas compris dans la taille des segments. Les mesures sont écrites dans le dossier temporaire système sous

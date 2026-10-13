@@ -6,11 +6,10 @@ import { PostgresLeaseStore } from '@picket/coordination';
 import { performance } from 'node:perf_hooks';
 import { createTestDatabase, queryAsAdmin, type TestDatabase } from '@picket/testing';
 import { PostgresStatsStore } from '../src';
-// Standard integration fixture stays small; stats:test:load exercises 50 people
-// and eight disconnect/reconnect or channel segments per person/day over 60 days.
-const extended = process.env.npm_lifecycle_event === 'stats:test:load';
-const peoplePerGuild = Number(process.env.STATS_LOAD_PEOPLE ?? (extended ? 50 : 10));
-const segmentsPerDay = Number(process.env.STATS_LOAD_SEGMENTS ?? (extended ? 8 : 2));
+// Opt-in benchmark, excluded from recurring correctness suites and CI.
+// 50 people and eight reconnect/channel segments per person/day over 60 days.
+const peoplePerGuild = Number(process.env.STATS_LOAD_PEOPLE ?? 50);
+const segmentsPerDay = Number(process.env.STATS_LOAD_SEGMENTS ?? 8);
 if (!Number.isInteger(peoplePerGuild) || peoplePerGuild < 1 || peoplePerGuild > 200 ||
     !Number.isInteger(segmentsPerDay) || segmentsPerDay < 1 || segmentsPerDay > 48)
   throw new Error('Invalid stats load profile: people 1–200; segments 1–48');

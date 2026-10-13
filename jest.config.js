@@ -38,6 +38,8 @@ module.exports = {
       ...common,
       displayName: 'integration',
       testMatch: ['**/tests/**/*.int.test.ts'],
+      // Benchmarks run only through stats:test:load, never in correctness suites or CI.
+      testPathIgnorePatterns: ['/node_modules/', '/packages/stats/tests/load\\.int\\.test\\.ts$'],
       // Un Postgres jetable (Testcontainers) partagé par toutes les suites.
       globalSetup: '<rootDir>/packages/testing/src/global-setup.ts',
       globalTeardown: '<rootDir>/packages/testing/src/global-teardown.ts',

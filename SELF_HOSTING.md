@@ -90,8 +90,12 @@ pnpm stats:dev --host 192.168.1.10 # listen on a specific address
 pnpm stats:dev officer           # officer in Demo regiment, member in Demo allies
 pnpm stats:test                  # typecheck, stats unit tests, config and secret initialization
 pnpm stats:test:int              # stats integration tests, isolated PostgreSQL 18 (Docker)
-pnpm stats:test:load             # 300 guilds × 50 people × 8 segments/day × 60 days (Docker)
+pnpm stats:test:load             # opt-in benchmark: 300 guilds × 50 people × 8 segments/day × 60 days (Docker)
 ```
+
+The load benchmark runs only through `pnpm stats:test:load`; it is excluded from ordinary test commands and CI.
+Use it for a performance investigation or after changing report queries, indexes or materialized views.
+`STATS_LOAD_PEOPLE` and `STATS_LOAD_SEGMENTS` can reduce its default 7.2-million-segment workload.
 
 The preview uses the actual dashboard HTML/CSS/JS with a separate in-memory API and a visible fictitious-data banner.
 Its deterministic 60-day fixture contains five servers, 74 distinct people (98 server/person pairs) and four channels.

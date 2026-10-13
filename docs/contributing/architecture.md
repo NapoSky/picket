@@ -108,8 +108,10 @@ The shared PICKET overview exposes current active-guild totals and enabled-featu
 segments per person/day: **7,200,000 segments**, mixing reconnects, moves and two channels. It reconciles member and
 instance totals, daily server series, distinct active people, hourly durations and peak presence. The response includes
 the first member page and recent presences, as in the admin dashboard. It also runs twenty primary-pool checkpoints
-concurrently, with pools of four main and two dashboard connections. The regular integration run uses a smaller
-300-guild / 10-person / two-segment fixture. `STATS_LOAD_PEOPLE` (1–200) and `STATS_LOAD_SEGMENTS` (1–48) override the
+concurrently, with pools of four main and two dashboard connections. This benchmark is opt-in through
+`pnpm stats:test:load` and excluded from ordinary unit/integration commands and recurring CI, including its former
+360,000-segment reduced profile. Correctness tests still cover collection, report totals, snapshots, access and erasure
+on small fixtures. `STATS_LOAD_PEOPLE` (1–200) and `STATS_LOAD_SEGMENTS` (1–48) override the
 load profile without changing collection limits. Synthetic retained facts measure report cost and checkpoint contention,
 not full Gateway collection throughput; raw events and other tables are excluded from the reported segments size.
 Measurements are written to the system temporary directory as `picket-stats-benchmark.json`.
