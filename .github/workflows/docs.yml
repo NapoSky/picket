@@ -5,21 +5,23 @@ on:
     branches: [main]
     paths:
       - docs/**
+      - '**/*.md'
       - scripts/generate-doc-diagrams.mjs
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
       - .nvmrc
-      - .github/workflows/docs.yml
+      - .github/workflows/**
   pull_request:
     paths:
       - docs/**
+      - '**/*.md'
       - scripts/generate-doc-diagrams.mjs
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
       - .nvmrc
-      - .github/workflows/docs.yml
+      - .github/workflows/**
   workflow_dispatch:
 
 permissions:
@@ -30,6 +32,21 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  secrets:
+    name: Documentation secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # Documentation-only pushes skip application CI, so keep its secret check here.
+      - name: gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest \
+            detect --source /repo --redact --no-banner --verbose
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -57,7 +74,7 @@ jobs:
 
   deploy:
     if: github.event_name != 'pull_request'
-    needs: build
+    needs: [build, secrets]
     runs-on: ubuntu-latest
     permissions:
       pages: write
