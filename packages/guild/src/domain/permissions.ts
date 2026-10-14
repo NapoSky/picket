@@ -10,7 +10,7 @@ export interface PermissionConfig {
 
 export const ADMINISTRATOR_BIT = 1n << 3n;
 
-/** Le rôle @everyone porte l'identifiant de la guilde. */
+/** The @everyone role uses the guild identifier. */
 export function everyoneRoleId(guildId: GuildId): RoleId {
   return guildId as string as RoleId;
 }
@@ -26,14 +26,14 @@ function sortedUnique(roles: readonly RoleId[]): RoleId[] {
 export interface AccessInput {
   readonly guildId: GuildId;
   readonly roleIds: readonly RoleId[];
-  /** Permissions calculées par Discord ; `null` = interaction partielle, jamais autorisée par défaut. */
+  /** Permissions computed by Discord; `null` means a partial interaction, never allowed by default. */
   readonly permissions: bigint | null;
   readonly config: PermissionConfig;
 }
 
 /**
- * Le niveau le plus élevé l'emporte. `administrator` couvre le propriétaire (Discord lui attribue
- * toutes les permissions) et les rôles portant la permission Administrator.
+ * Highest access level wins. `administrator` covers the owner (Discord grants all permissions) and roles
+ * with the Administrator permission.
  */
 export function resolveAccessLevel(input: AccessInput): AccessLevel | null {
   if (input.permissions === null) return null;
@@ -84,7 +84,7 @@ export function decidePermissionChange(
   return { kind: 'apply', next: { ...current, [request.level]: roles.filter((role) => role !== request.roleId) } };
 }
 
-/** Retire un rôle supprimé de la guilde de tous les niveaux. */
+/** Remove a deleted guild role from every access level. */
 export function removeRoleFromConfig(current: PermissionConfig, roleId: RoleId): PermissionDecision {
   if (!current.officer.includes(roleId) && !current.member.includes(roleId)) {
     return { kind: 'unchanged', reason: 'not_present' };

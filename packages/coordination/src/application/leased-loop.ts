@@ -2,13 +2,13 @@ import type { Logger, OperationalMetrics, MetricComponent } from '@picket/kernel
 import type { StopWork } from './leader-elector';
 
 export interface LeasedLoopOptions {
-  /** Une passe de travail ; une erreur est journalisée et la boucle continue. */
+  /** One work pass; log an error and continue the loop. */
   readonly tick: () => Promise<unknown>;
   readonly intervalMs: number;
   readonly logger: Logger;
   readonly metrics?: OperationalMetrics;
   readonly component?: MetricComponent;
-  /** Attente interruptible ; injectable pour les tests. */
+  /** Interruptible sleep; injectable for tests. */
   readonly sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
 }
 
@@ -28,8 +28,8 @@ function defaultSleep(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 /**
- * Travail périodique réservé au détenteur d'un bail (voir `LeaderElector.onAcquired`) : la première passe part tout de
- * suite, et l'arrêt attend la fin de la passe en cours pour qu'aucune écriture ne survive à la perte du bail.
+ * Periodic work reserved for a lease holder (see `LeaderElector.onAcquired`). Run the first pass
+ * immediately; shutdown waits for the current pass so no write survives loss of ownership.
  */
 export function startLeasedLoop(options: LeasedLoopOptions): StopWork {
   const abort = new AbortController();

@@ -4,7 +4,7 @@ export type MetricOperation = 'interaction' | 'acknowledgement' | 'deferred' | '
   | 'lease_acquire' | 'lease_renew' | 'loop' | 'war_poll' | 'http' | 'diagnostic';
 export type MetricOutcome = 'success' | 'error' | 'timeout' | 'rejected' | 'duplicate' | 'limited' | 'standby';
 export type MetricComponent = 'default' | 'interactions' | 'dashboard' | 'bot' | 'webhook' | 'oauth'
-  | 'gateway' | 'job-runner' | 'warlog-poller' | 'timers' | 'retention' | 'audit'
+  | 'gateway' | 'job-runner' | 'warlog-poller' | 'timers' | 'retention' | 'audit' | 'locks'
   | 'voice' | 'voice-metadata' | 'stats-maintenance' | 'stats-refresh' | 'war-publish' | 'war-hooks';
 export type MetricSignal = 'pool_total' | 'pool_idle' | 'pool_waiting' | 'pool_max'
   | 'role_enabled' | 'role_leader' | 'ready' | 'draining' | 'shards_expected' | 'shards_connected'

@@ -3,12 +3,14 @@ import { LockTimeoutError, type KeyedLock } from '../application/keyed-lock';
 
 const LOCK_NOT_AVAILABLE = '55P03';
 const DEFAULT_TIMEOUT_MS = 10_000;
-// Les appels REST faits sous le verrou laissent la transaction « inactive » : le plafond du pool (15 s) la tuerait.
+// REST calls under the lock leave the transaction idle: the pool's 15 s limit would terminate it.
 const IDLE_IN_TRANSACTION_MS = 120_000;
 
 /**
- * Verrou consultatif de transaction : libéré par Postgres si la réplique meurt (connexion fermée),
- * donc jamais bloqué indéfiniment. La transaction reste ouverte pendant `work` (appels REST courts).
+ * Transaction advisory lock: PostgreSQL releases it when the replica dies (connection closed), so it never
+ * remains locked indefinitely. Keep the transaction open during `work` (short REST calls). When work uses
+ * SQL (including the REST budget), db must use a dedicated lock pool; callbacks must never acquire another
+ * connection from this pool.
  */
 export class PostgresKeyedLock implements KeyedLock {
   readonly #db: Db;

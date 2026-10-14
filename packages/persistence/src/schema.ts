@@ -131,6 +131,7 @@ export interface TimerAlertsTable {
   due_at: Date | string;
   threshold_min: number;
   message_id: Nullable<string>;
+  delivery_pending: Generated<boolean>;
   sent_at: Timestamp;
   acked_by: Nullable<string>;
   acked_at: Nullable<Date>;

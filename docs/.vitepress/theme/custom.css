@@ -1,4 +1,4 @@
-/* Palette PICKET : acier / charbon, bleu Warden et vert Colonial atténués, ambre en signal. */
+/* PICKET palette: steel/charcoal, muted Warden blue and Colonial green, amber for signals. */
 :root {
   --picket-blue: #6f9cc9;
   --picket-green: #8aa07a;
@@ -58,7 +58,7 @@
   --vp-home-hero-name-background: linear-gradient(110deg, #3d6d99 20%, #5b7a4b 85%);
 }
 
-/* Le logo détouré garde un contraste suffisant sur fond clair. */
+/* The cutout logo retains sufficient contrast on a light background. */
 :root:not(.dark) .VPNavBarTitle .logo,
 :root:not(.dark) .VPImage.image-src {
   filter: drop-shadow(0 0 1px rgba(13, 16, 19, 0.5));
@@ -69,7 +69,7 @@
   font-weight: 700;
 }
 
-/* Bannière en fond de l'accueil */
+/* Home page background banner. */
 .VPHome {
   position: relative;
   overflow: hidden;
@@ -98,7 +98,7 @@
   position: relative;
 }
 
-/* La bannière porte déjà le nom et l'emblème : le titre reste pour l'accessibilité. */
+/* The banner already includes the name and emblem; keep the title for accessibility. */
 .VPHero .name {
   position: absolute;
   width: 1px;
@@ -155,7 +155,7 @@
   }
 }
 
-/* Cartes de fonctionnalités */
+/* Feature cards. */
 .VPFeature {
   border: 1px solid var(--vp-c-divider) !important;
   background: color-mix(in srgb, var(--vp-c-bg-soft) 85%, transparent) !important;
@@ -167,7 +167,7 @@
   transform: translateY(-2px);
 }
 
-/* Sections de la landing */
+/* Landing page sections. */
 .picket-landing {
   max-width: 1152px;
   margin: 0 auto;
@@ -281,7 +281,7 @@ a.picket-card:hover {
   text-transform: uppercase;
 }
 
-/* Étapes */
+/* Steps. */
 .picket-steps {
   display: grid;
   gap: 16px;
@@ -321,7 +321,7 @@ a.picket-card:hover {
   font-weight: 700;
 }
 
-/* Neutralité */
+/* Faction neutrality. */
 .picket-neutral {
   display: grid;
   gap: 32px;
@@ -362,7 +362,7 @@ a.picket-card:hover {
   border-radius: 8px;
 }
 
-/* Pied de page */
+/* Footer. */
 .VPFooter {
   border-top: 1px solid var(--vp-c-divider);
 }

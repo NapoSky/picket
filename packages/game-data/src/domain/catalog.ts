@@ -1,26 +1,26 @@
 import { REGIONS_DATA } from './regions-data';
 
 export interface GameLocation {
-  /** Identifiant stable et court (lettres minuscules et chiffres), unique dans la région. */
+  /** Short stable identifier (lowercase letters and digits), unique within the region. */
   readonly key: string;
   readonly name: string;
   readonly regionKey: string;
-  /** Rang d'affichage dans la région (ordre alphabétique, sans l'article « The »). */
+  /** Display rank within the region (alphabetical order, ignoring the article The). */
   readonly order: number;
 }
 
 export interface GameRegion {
-  /** Identifiant stable et court (lettres minuscules et chiffres), unique. */
+  /** Short stable identifier (lowercase letters and digits), unique. */
   readonly key: string;
   readonly name: string;
   readonly order: number;
   readonly locations: readonly GameLocation[];
 }
 
-/** Version du jeu de données : à incrémenter quand un nom ou une clé change. */
+/** Dataset version: increment when a name or key changes. */
 export const GAME_DATA_VERSION = '2026.03';
 
-/** Minuscules, sans accents ni ponctuation ni espaces : sert de clé et de base à la recherche. */
+/** Lowercase, without accents, punctuation or spaces: used as a key and search input. */
 export function normalizeText(value: string): string {
   return value
     .normalize('NFD')
@@ -29,7 +29,7 @@ export function normalizeText(value: string): string {
     .replace(/[^a-z0-9]/g, '');
 }
 
-// L'article ne compte pas dans l'ordre alphabétique (« The Deadlands » se range sous D).
+// Ignore the article in alphabetical order (The Deadlands sorts under D).
 const sortName = (name: string): string => normalizeText(name.replace(/^the\s+/iu, ''));
 const byName = (a: string, b: string): number => sortName(a).localeCompare(sortName(b)) || a.localeCompare(b);
 
@@ -71,8 +71,8 @@ export function findLocation(regionKey: string, key: string): GameLocation | und
 }
 
 /**
- * Accepte la clé ou le nom exact (casse, accents et ponctuation ignorés) : jamais de correction approximative,
- * une faute de frappe se traduit par une erreur et des suggestions, pas par un autre lieu.
+ * Accept the exact key or name (ignoring case, accents and punctuation), never fuzzy correction. A typo
+ * produces an error and suggestions, not a different location.
  */
 export function resolveRegion(input: string): GameRegion | undefined {
   return BY_KEY.get(normalizeText(input));

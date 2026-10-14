@@ -8,7 +8,7 @@ import { openItemIndexes } from '../domain/tick';
 
 export const TODOLIST_COLOR = 0x5865f2;
 
-/** Textes déjà traduits par la présentation. */
+/** Text already translated by presentation. */
 export interface PageTexts {
   readonly title: string;
   readonly footer: (page: number, total: number) => string;
@@ -22,7 +22,7 @@ export type PrepareError = ParseError | LayoutError;
 
 export interface PublishFailure {
   readonly reason: DiscordErrorReason;
-  /** Pages déjà publiées avant l'échec, retirées au mieux. */
+  /** Pages published before failure; removed on a best-effort basis. */
   readonly rolledBack: number;
 }
 
@@ -56,7 +56,7 @@ export class CreateTodolist {
     this.#messaging = messaging;
   }
 
-  /** Pur et immédiat : permet de refuser la saisie avant tout accusé de réception différé. */
+  /** Pure and immediate: reject invalid input before any deferred acknowledgement. */
   prepare(text: string, texts: PageTexts): Result<PreparedTodolist, PrepareError> {
     const parsed = parseTodolist(text);
     if (!parsed.ok) return parsed;
@@ -70,7 +70,7 @@ export class CreateTodolist {
     });
   }
 
-  /** Publie les pages dans l'ordre ; en cas d'échec, retire celles déjà publiées pour ne jamais laisser une liste tronquée. */
+  /** Publish pages in order; on failure remove those already published to avoid a truncated list. */
   async publish(channelId: ChannelId, prepared: PreparedTodolist): Promise<Result<readonly MessageId[], PublishFailure>> {
     const posted: MessageId[] = [];
     try {
@@ -83,7 +83,7 @@ export class CreateTodolist {
           await this.#messaging.delete(channelId, id);
           rolledBack += 1;
         } catch {
-          // Au mieux : un message resté en place est une page valide, pas un état corrompu.
+          // Best effort: a message left in place is a valid page, not corrupted state.
         }
       }
       if (error instanceof DiscordApiError) return err({ reason: error.reason, rolledBack });

@@ -33,7 +33,7 @@ jobs:
         run: pnpm typecheck
       - name: Unit tests, architecture rules and translation checks
         run: pnpm exec jest --selectProjects unit --coverage
-      # Docker est disponible sur les runners hébergés : Testcontainers y démarre un vrai Postgres.
+      # Hosted runners provide Docker: Testcontainers starts a real PostgreSQL instance.
       - name: Integration tests (PostgreSQL)
         run: pnpm test:int
       - uses: actions/upload-artifact@v7

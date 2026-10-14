@@ -1,38 +1,40 @@
 export const ASSET_TYPE_IDS = ['stockpile', 'facility', 'field', 'naval_ship', 'tank', 'train'] as const;
 export type AssetTypeId = (typeof ASSET_TYPE_IDS)[number];
 
-/** `down` : compte à rebours vers `début + durée` ; `up` : ancienneté depuis le début. */
+/** `down`: countdown to `start + duration`; `up`: age since start. */
 export type Direction = 'down' | 'up';
 
 export interface CodeRule {
   readonly mode: 'required' | 'optional' | 'none';
   readonly pattern: RegExp;
   readonly maxLength: number;
-  /** Mis en majuscules à l'enregistrement. */
+  /** Convert to uppercase when stored. */
   readonly uppercase: boolean;
 }
 
 export interface AssetType {
   readonly id: AssetTypeId;
-  /** Deux lettres, utilisées dans les `custom_id`. */
+  /** Two letters used in `custom_id` values. */
   readonly short: string;
   readonly icon: string;
   readonly direction: Direction;
-  /** Durée proposée à la saisie ; sans effet pour un type `up`, où elle n'est jamais demandée. */
+  /** Suggested input duration; irrelevant to `up` types, which never request a duration. */
   readonly defaultDurationS: number;
   readonly code: CodeRule;
-  /** Rang dans un lieu : les stockpiles d'abord. */
+  /** Rank within a location: stockpiles first. */
   readonly order: number;
-  /** Le propriétaire est-il affiché dans le tableau ? Pas pour un champ, qui n'a pas de responsable à relancer. */
+  /** Display the owner on the board? Not for a field, which has no responsible person to remind. */
   readonly showOwner: boolean;
 }
 
 const HOUR = 3600;
 const NO_CODE: CodeRule = { mode: 'none', pattern: /^$/u, maxLength: 0, uppercase: false };
-// Un seul format de code partout (saisie, validation, rendu) : 3 à 6 caractères alphanumériques.
+// One code format for input, validation and rendering: 3 to 6 alphanumeric characters.
 const SHORT_CODE: CodeRule = { mode: 'optional', pattern: /^[A-Za-z0-9]{3,6}$/u, maxLength: 6, uppercase: true };
 
-/** Les durées de 50 h et 48 h sont celles du bot d'origine : leur lien avec les règles du jeu reste à confirmer. */
+/**
+ * The 50 h and 48 h durations come from the original bot; their relation to game rules remains unconfirmed.
+ */
 export const ASSET_TYPES: Readonly<Record<AssetTypeId, AssetType>> = {
   stockpile: {
     id: 'stockpile',

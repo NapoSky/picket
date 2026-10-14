@@ -5,21 +5,22 @@ import type { Clock, GuildId, Logger, MessageId } from '@picket/kernel';
 import type { TimerAsset } from '../domain/asset';
 import { DEFAULT_LOCATION_EMOJI, DEFAULT_REGION_EMOJI } from '../domain/constants';
 import { isAbandoned, nextWake, planAlerts, purgeCandidates, staleAlerts } from '../domain/schedule';
+import { contentHash } from '../domain/hash';
 import { renderBoard, type RenderedPage } from './board-view';
 import type { BoardRecord, Localizer, PageRecord, TimerStore } from './ports';
 import { boardTexts, buildAlertView } from './texts';
 
 export type MaintenanceOutcome =
   | { readonly kind: 'ok' }
-  /** Board inconnu ou déjà archivé. */
+  /** Unknown or already archived board. */
   | { readonly kind: 'gone' }
-  /** Board vide et inactif depuis trop longtemps : supprimé avec ses données. */
+  /** Board empty and inactive too long: deleted together with its data. */
   | { readonly kind: 'deleted' }
-  /** Le canal a disparu : le board est désactivé, son historique est conservé. */
+  /** Channel gone: disable the board while retaining its history. */
   | { readonly kind: 'disabled'; readonly reason: string }
-  /** Discord a refusé : le rendu reste en attente et sera retenté. */
+  /** Discord refused: rendering remains pending and will be retried. */
   | { readonly kind: 'retry'; readonly reason: string; readonly retryAt: Date }
-  /** Un autre processus traite déjà ce board : il lira l'état le plus récent. */
+  /** Another process is already maintaining this board; it will read the latest state. */
   | { readonly kind: 'busy' };
 
 export interface BoardMaintenanceDeps {
@@ -40,9 +41,9 @@ const isReason = (error: unknown, ...reasons: string[]): boolean => error instan
 const isRangeError = (error: unknown): boolean => error instanceof RangeError || (error as { name?: unknown } | null)?.name === 'RangeError';
 
 /**
- * Remet Discord d'accord avec la base : purge, messages du board, alertes, prochaine échéance. Tout se fait sous un
- * verrou par board et relit l'état à chaque fois, donc deux exécutions (deux répliques, un clic et le planificateur)
- * ne se marchent jamais dessus et une exécution interrompue se rattrape à la suivante.
+ * Reconcile Discord with the database: purge, board messages, alerts and next deadline. Hold a per-board
+ * lock and reread state each time, preventing overlap between replicas, clicks and the scheduler. The next
+ * pass recovers interrupted work.
  */
 export class BoardMaintenance {
   readonly #deps: BoardMaintenanceDeps;
@@ -123,7 +124,7 @@ export class BoardMaintenance {
           await messaging.edit(board.channelId, existing.messageId, page.view);
           messageId = existing.messageId;
         } catch (error) {
-          // Message supprimé par un humain : on le republie, l'état n'a jamais dépendu de lui.
+          // Message deleted by a human: repost it; state never depended on the message.
           if (!isReason(error, 'unknown_message')) throw error;
           messageId = await messaging.send(board.channelId, page.view);
         }
@@ -131,7 +132,7 @@ export class BoardMaintenance {
       await store.savePage(board.guildId, board.id, { page: index, messageId, contentHash: page.hash });
     }
 
-    // Jamais plus de messages que de pages, mais toujours au moins une page : le dernier message n'est jamais supprimé.
+    // Never more messages than pages, but always at least one page: never delete the last message.
     const extra = stored.filter((candidate) => candidate.page >= rendered.length);
     for (const page of extra) {
       try {
@@ -145,7 +146,7 @@ export class BoardMaintenance {
 
   async #abandon(board: BoardRecord): Promise<MaintenanceOutcome> {
     const { store, messaging, logger } = this.#deps;
-    // Le ménage du canal est facultatif : un message déjà supprimé ou un droit retiré ne doit pas garder le board.
+    // Channel cleanup is optional: a deleted message or lost permission must not prevent board deletion.
     for (const page of await store.pages(board.guildId, board.id)) {
       await messaging.delete(board.channelId, page.messageId).catch(() => undefined);
     }
@@ -170,7 +171,7 @@ export class BoardMaintenance {
       return { kind: 'retry', reason: error.reason, retryAt };
     }
     if (isRangeError(error)) {
-      // Une page que Discord ne peut pas accepter ne s'arrangera pas toute seule : on le dit et on espace les essais.
+      // Discord cannot accept this page; report the error and space out retries rather than expect it to fix itself.
       const retryAt = new Date(now.getTime() + RENDER_RETRY_MS);
       await store.markSyncFailed(board.guildId, board.id, 'render');
       await store.schedule(board.guildId, board.id, retryAt);
@@ -180,7 +181,7 @@ export class BoardMaintenance {
     throw error;
   }
 
-  /** `true` si une alerte doit être retentée bientôt. */
+  /** `true` if an alert should be retried soon. */
   async #alerts(board: BoardRecord, assets: readonly TimerAsset[], t: Translator['t'], now: Date): Promise<boolean> {
     const { store, messaging, logger } = this.#deps;
     let retry = false;
@@ -193,10 +194,13 @@ export class BoardMaintenance {
         const asset = assets.find((candidate) => candidate.id === claim.assetId);
         if (asset === undefined) continue;
         try {
-          const messageId = await messaging.send(board.channelId, buildAlertView(asset, claim.thresholdMin, board.settings, t));
+          // Keep the same nonce if Discord accepted the send before SQL could
+          // confirm it. Discord deduplicates recent sends with this nonce.
+          const nonce = `ta${contentHash(JSON.stringify([board.id, asset.id, claim.dueAt.toISOString(), claim.thresholdMin]))}`;
+          const messageId = await messaging.send(board.channelId, { ...buildAlertView(asset, claim.thresholdMin, board.settings, t), nonce });
           await store.setAlertMessage(guildId, { ...claim, messageId: null, ackedAt: null }, messageId);
         } catch (error) {
-          // Réclamation rendue : un autre passage réessaiera, sans jamais avoir envoyé deux fois.
+          // Retry with the same nonce even if the send succeeded but SQL failed.
           await store.releaseAlert(guildId, { ...claim, messageId: null, ackedAt: null });
           retry = true;
           logger.warn({ err: error, guild_id: guildId, board_id: board.id, asset_id: claim.assetId }, 'alert could not be sent');

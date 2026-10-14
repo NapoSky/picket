@@ -125,7 +125,8 @@ services:
         condition: service_healthy
     volumes:
       - voice-buffer:/app/data/voice-buffer
-    stop_grace_period: 45s
+    # 15 s proxy drainage + 75 s work/reply allowance, with Docker margin.
+    stop_grace_period: 100s
     networks:
       - internal
       - edge

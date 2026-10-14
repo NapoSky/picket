@@ -24,30 +24,30 @@ export interface EmbedView {
   readonly description?: string;
   readonly fields?: readonly EmbedFieldView[];
   readonly footer?: string;
-  /** Date ISO affichée à côté du pied de page. */
+  /** ISO date displayed beside the footer. */
   readonly timestamp?: string;
   readonly color?: number;
 }
 
 export interface ButtonView {
   readonly customId: string;
-  /** Emoji Unicode ; le bouton n'a pas de libellé. */
+  /** Unicode emoji; the button has no label. */
   readonly emoji: string;
 }
 
-/** Contenu d'un message du bot : les boutons sont répartis par lignes de 5 par l'adaptateur. */
+/** Bot message content: the adapter arranges buttons in rows of 5. */
 export interface MessageView {
-  /** Clé de déduplication à la création (Discord conserve les nonces quelques minutes). */
+  /** Creation deduplication key (Discord retains nonces for a few minutes). */
   readonly nonce?: string;
   readonly embeds: readonly EmbedView[];
   readonly buttons: readonly ButtonView[];
-  /** Texte hors embed (par exemple une alerte qui mentionne des rôles). */
+  /** Text outside embeds (for example, an alert mentioning roles). */
   readonly content?: string;
-  /** Seuls rôles qui seront réellement notifiés ; aucune autre mention n'est jamais résolue. */
+  /** Only roles actually notified; no other mention is ever resolved. */
   readonly mentionRoleIds?: readonly RoleId[];
-  /** Sans notification push, même pour les rôles mentionnés. */
+  /** No push notification, even for mentioned roles. */
   readonly silent?: boolean;
-  /** Désactive les aperçus de liens pour les messages d'une seule ligne. */
+  /** Suppress link previews for single-line messages. */
   readonly suppressEmbeds?: boolean;
 }
 
@@ -59,10 +59,10 @@ export const MAX_EMBED_FIELDS = 25;
 export const MAX_FIELD_NAME = 256;
 export const MAX_FIELD_VALUE = 1024;
 export const MAX_MESSAGE_CONTENT = 2000;
-/** Total de caractères (titre, description, champs, pied de page) de tous les embeds d'un même message. */
+/** Total characters (title, description, fields and footer) across all embeds in a message. */
 export const MAX_EMBEDS_TOTAL_LENGTH = 6000;
 
-/** Caractères que Discord compte dans la limite des 6 000 d'un message. */
+/** Characters Discord counts towards a message's 6,000-character limit. */
 export function embedsLength(embeds: readonly EmbedView[]): number {
   let total = 0;
   for (const embed of embeds) {
@@ -95,14 +95,14 @@ export type DiscordErrorReason =
   | 'unavailable'
   | 'unknown';
 
-/** Erreur de l'API Discord ramenée à une raison de domaine (codes 10003, 10008, 50001, 50007, 50013, 429, 5xx). */
+/** Discord API error mapped to a domain reason (codes 10003, 10008, 50001, 50007, 50013, 429, 5xx). */
 export class DiscordApiError extends DomainError {
   readonly code = 'discord_api_error';
   readonly reason: DiscordErrorReason;
   readonly status: number | undefined;
   readonly discordCode: number | string | undefined;
 
-  /** Pas de `cause` : l'erreur d'origine peut contenir un jeton d'interaction dans son URL. */
+  /** No `cause`: the original error may include an interaction token in its URL. */
   constructor(reason: DiscordErrorReason, message: string, details: { status?: number; discordCode?: number | string } = {}) {
     super(message);
     this.reason = reason;
@@ -111,7 +111,7 @@ export class DiscordApiError extends DomainError {
   }
 }
 
-/** Messages du bot. Toute méthode lève `DiscordApiError` ; le message est toujours envoyé sans aucune mention. */
+/** Bot messages. Every method throws `DiscordApiError`; messages are always sent without mentions. */
 export interface Messaging {
   send(channelId: ChannelId, message: MessageView): Promise<MessageId>;
   fetch(channelId: ChannelId, messageId: MessageId): Promise<StoredMessage>;
@@ -124,10 +124,10 @@ export interface ReplyTarget {
   readonly token: Secret;
 }
 
-/** Suites d'une interaction déjà acquittée (le jeton reste valable 15 minutes). */
+/** Follow-ups for an acknowledged interaction (the token remains valid for 15 minutes). */
 export interface InteractionReplies {
   editOriginal(target: ReplyTarget, content: ReplyContent): Promise<void>;
   deleteOriginal(target: ReplyTarget): Promise<void>;
-  /** Toujours éphémère. */
+  /** Always ephemeral. */
   followUp(target: ReplyTarget, content: ReplyContent): Promise<void>;
 }

@@ -5,7 +5,10 @@ export interface HealthServerOptions {
   readonly metrics?: { readonly contentType: string; render(): Promise<string> };
 }
 
-/** `/healthz` : le processus répond (liveness). `/readyz` : prêt à recevoir du trafic (503 en drain ou base HS). */
+/**
+ * `/healthz`: the process responds (liveness). `/readyz`: ready for traffic (503 during drainage or a
+ * database outage).
+ */
 export function createHealthServer(options: HealthServerOptions): Server {
   return createServer((request, response) => {
     const respond = (status: number, body: string): void => {

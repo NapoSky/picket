@@ -22,7 +22,7 @@ class FakeStore implements LeaseStore {
     this.releases += 1;
     if (this.holder === lease.holder) this.holder = null;
   }
-  /** Un autre processus prend le verrou après expiration. */
+  /** Another process acquires the lease after expiry. */
   stealBy(other: string): void {
     this.holder = other;
     this.token += 1n;
@@ -96,7 +96,7 @@ describe('LeaderElector', () => {
     await elector.step();
     expect(elector.isLeader).toBe(true);
 
-    // 10 s sans renouvellement sur un bail de 15 s : on cède avant toute prise par un autre.
+    // 10 s without renewal on a 15 s lease: relinquish before another holder can acquire it.
     advance(5_000);
     await elector.step();
     expect(elector.isLeader).toBe(false);

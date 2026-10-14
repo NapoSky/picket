@@ -20,7 +20,7 @@ export class ResolveAccess {
   }
 
   async execute(request: AccessRequest): Promise<AccessLevel | null> {
-    // Une interaction sans permissions calculées est refusée sans même consulter la base.
+    // Reject an interaction without computed permissions before even querying the database.
     if (request.permissions === null) return null;
     const config = await this.#repository.load(request.guildId);
     return resolveAccessLevel({ ...request, config });
@@ -74,7 +74,7 @@ export class ShowPermissions {
   }
 }
 
-/** Réaction à la suppression d'un rôle Discord : retrait automatique des niveaux (XCT-EC-01). */
+/** Respond to Discord role deletion: automatically remove it from access levels (XCT-EC-01). */
 export class HandleRoleDeleted {
   readonly #repository: PermissionRepository;
 

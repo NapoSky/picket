@@ -7,7 +7,7 @@ export interface GuildChannels {
   inspect(guildId: GuildId, channelId: ChannelId, options?: { readonly textOnly: boolean }): Promise<AuditChannelAccess>;
 }
 
-/** Algorithme Discord : base, everyone, union des rôles, puis surcharge du membre. */
+/** Discord algorithm: base, everyone, role union, then member overwrite. */
 export function channelPermissions(
   guildId: string, userId: string, memberRoles: readonly string[],
   roles: readonly { readonly id: string; readonly permissions: string }[],

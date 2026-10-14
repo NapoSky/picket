@@ -8,9 +8,9 @@ interface Pending {
 }
 
 /**
- * Une rafale de refresh sur un même board ne produit pas une édition de message par clic : pendant qu'un rendu est
- * en cours, toutes les demandes suivantes partagent un seul rendu, lancé juste après. Le rendu relit toujours
- * l'état le plus récent, donc aucun clic n'est perdu ; entre répliques, c'est le verrou du board qui sérialise.
+ * A refresh burst on one board does not edit messages for every click: while rendering, subsequent requests
+ * share one follow-up render. Reread current state so no click is lost; the board lock serializes across
+ * replicas.
  */
 export class RenderCoalescer {
   readonly #maintenance: BoardMaintenance;

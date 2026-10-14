@@ -26,17 +26,17 @@ interface Stored {
   view: MessageView;
 }
 
-/** Adaptateur de messagerie en mémoire : mêmes erreurs typées que l'adaptateur REST, pannes et latence injectables. */
+/** In-memory messaging adapter: same typed errors as REST, with injectable failures and latency. */
 export class InMemoryMessaging implements Messaging {
   readonly #messages = new Map<string, Stored>();
   readonly #failures: { operation: Operation; reason: DiscordErrorReason; remaining: number }[] = [];
   #counter = 0;
-  /** Appels reçus, dans l'ordre (`send`, `fetch:<id>`, `edit:<id>`, `delete:<id>`). */
+  /** Received calls in order (`send`, `fetch:<id>`, `edit:<id>`, `delete:<id>`). */
   readonly calls: string[] = [];
-  /** Latence de lecture et d'écriture : ouvre la fenêtre de course que le verrou doit fermer. */
+  /** Read/write latency: opens the race window the lock must prevent. */
   latencyMs = 0;
 
-  /** Fait échouer les `count` prochains appels de `operation`. */
+  /** Fail the next `count` calls to `operation`. */
   failNext(operation: Operation, reason: DiscordErrorReason, count = 1): void {
     this.#failures.push({ operation, reason, remaining: count });
   }
@@ -59,7 +59,7 @@ export class InMemoryMessaging implements Messaging {
     return stored;
   }
 
-  /** Messages encore présents dans un canal, dans l'ordre de publication. */
+  /** Messages still present in a channel, in publication order. */
   list(channelId: ChannelId): readonly {
     id: MessageId;
     description: string;
@@ -78,7 +78,7 @@ export class InMemoryMessaging implements Messaging {
       }));
   }
 
-  /** Simule une suppression faite par un humain. */
+  /** Simulate deletion by a human. */
   remove(channelId: ChannelId, messageId: MessageId): void {
     this.#messages.delete(this.#key(channelId, messageId));
   }
@@ -96,7 +96,7 @@ export class InMemoryMessaging implements Messaging {
     this.calls.push(`fetch:${messageId}`);
     this.#check('fetch');
     const stored = this.#stored(channelId, messageId);
-    // Instantané pris avant la latence : c'est ce que verrait un client concurrent.
+    // Snapshot taken before latency: what a concurrent client would see.
     const snapshot = stored.message;
     if (this.latencyMs > 0) await sleep(this.latencyMs);
     return snapshot;
@@ -162,13 +162,13 @@ export class InMemoryInteractionReplies implements InteractionReplies {
     this.replies.push(reply);
   }
 
-  /** Contenus livrés, dans l'ordre. */
+  /** Delivered content in order. */
   get contents(): readonly (ReplyContent | null)[] {
     return this.replies.map((reply) => reply.content);
   }
 }
 
-/** Verrou par clé en mémoire : les appels d'une même clé s'exécutent l'un après l'autre. */
+/** In-memory keyed lock: calls for the same key execute sequentially. */
 export class InMemoryKeyedLock {
   readonly #tails = new Map<string, Promise<unknown>>();
 

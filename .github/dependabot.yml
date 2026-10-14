@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    # Même politique que minimumReleaseAge de pnpm : pas de version publiée depuis moins de 3 jours.
+    # Same policy as pnpm minimumReleaseAge: exclude releases less than 3 days old.
     cooldown:
       default-days: 3
     groups:
@@ -15,7 +15,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    # Une seule pull request pour toutes les actions, plutôt qu'une par action.
+    # One pull request for all actions, instead of one per action.
     groups:
       github-actions:
         patterns: ["*"]
@@ -27,7 +27,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    # On reste sur la version LTS de Node (24) ; les mises à jour de version majeure se décident à la main.
+    # Stay on Node LTS (24); decide major-version upgrades manually.
     ignore:
       - dependency-name: node
         update-types: ["version-update:semver-major"]

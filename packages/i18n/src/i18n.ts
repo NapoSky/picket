@@ -12,7 +12,7 @@ export interface Translator {
   t(key: MessageKey, params?: MessageParams): string;
 }
 
-/** Texte d'une commande : valeur par défaut (anglais) et traductions indexées par code de langue Discord. */
+/** Command text: default value (English) and translations indexed by Discord locale code. */
 export interface LocalizedText {
   readonly default: string;
   readonly localizations: Readonly<Record<string, string>>;
@@ -21,7 +21,7 @@ export interface LocalizedText {
 export interface I18n {
   readonly defaultLocale: string;
   readonly locales: readonly string[];
-  /** Premier candidat pris en charge (exact, langue seule, variante unique), sinon la langue par défaut. */
+  /** First supported candidate (exact, language only, unique variant), otherwise the default locale. */
   resolve(...candidates: readonly (string | null | undefined)[]): string;
   translator(locale: string): Translator;
   text(key: MessageKey): LocalizedText;
@@ -29,12 +29,12 @@ export interface I18n {
 
 export const DEFAULT_LOCALE = 'en';
 
-// Le dossier `locales` est un frère de `src` et de `dist`.
+// The `locales` directory is a sibling of `src` and `dist`.
 export const LOCALES_DIR = join(__dirname, '..', 'locales');
 
 export type Catalogs = Readonly<Record<string, unknown>>;
 
-/** Toute langue ajoutée (par exemple via Weblate) est découverte ici sans toucher au code. */
+/** Discover every added locale here (for example through Weblate) without changing code. */
 export function loadCatalogs(directory: string = LOCALES_DIR): Catalogs {
   const catalogs: Record<string, unknown> = {};
   for (const file of readdirSync(directory).filter((name) => name.endsWith('.json')).sort()) {
@@ -55,7 +55,7 @@ export function createI18n(catalogs: Catalogs = loadCatalogs()): I18n {
     resources: Object.fromEntries(
       Object.entries(catalogs).map(([locale, translation]) => [locale, { translation }]),
     ) as unknown as Resource,
-    // Le contenu part dans Discord (pas du HTML) ; les mentions sont neutralisées par allowed_mentions.
+    // Content goes to Discord, not HTML; allowed_mentions neutralizes mentions.
     interpolation: { escapeValue: false },
     nsSeparator: false,
     returnNull: false,
@@ -63,8 +63,8 @@ export function createI18n(catalogs: Catalogs = loadCatalogs()): I18n {
 
   const locales = Object.keys(catalogs);
   const known = new Map(locales.map((locale) => [locale.toLowerCase(), locale]));
-  // Par exemple, `es` et `es-419` utilisent `es-ES` tant qu'il s'agit de notre seule variante espagnole.
-  // Avec plusieurs variantes, on exige une correspondance exacte ou un catalogue de langue seul.
+  // For example, `es` and `es-419` use `es-ES` while it is our only Spanish variant.
+  // With multiple variants, require an exact match or a language-only catalog.
   const variants = new Map<string, string[]>();
   for (const locale of locales) {
     const language = locale.toLowerCase().split('-')[0]!;

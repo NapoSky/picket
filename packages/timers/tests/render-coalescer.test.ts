@@ -4,7 +4,7 @@ import { RenderCoalescer, type BoardMaintenance, type MaintenanceOutcome } from 
 const guild = GuildId.assert('700000000000000001');
 const ok: MaintenanceOutcome = { kind: 'ok' };
 
-/** Faux entretien : chaque appel attend qu'on le termine à la main. */
+/** Fake maintenance: each call waits for manual completion. */
 function fakeMaintenance() {
   const runs: { board: string; finish: (outcome?: MaintenanceOutcome) => void; fail: (error: unknown) => void }[] = [];
   const maintenance = {

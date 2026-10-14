@@ -100,7 +100,7 @@ describe('tenant isolation (RLS, integration)', () => {
 describe('schema conventions (integration)', () => {
   let database: TestDatabase;
 
-  // Tables portant `guild_id` sans contenu de tenant : enumérées par des tâches système.
+  // Tables with `guild_id` but no tenant content: enumerated by system tasks.
   const NOT_TENANT_CONTENT = ['guild_registry', 'interaction_receipts', 'timer_schedule', 'guild_audit_schedule', 'warlog_schedule'];
 
   beforeAll(async () => {

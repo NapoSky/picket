@@ -1,7 +1,7 @@
 import type { AccessPolicy } from '@picket/discord';
 import type { ResolveAccess } from '../../application/permissions-use-cases';
 
-/** Adapte le cas d'usage d'accès au port attendu par le pipeline d'interactions. */
+/** Adapt the access use case to the interaction pipeline's port. */
 export function createGuildAccessPolicy(resolveAccess: ResolveAccess): AccessPolicy {
   return {
     levelOf: (interaction, guildId) =>

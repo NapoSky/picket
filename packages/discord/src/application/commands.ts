@@ -10,9 +10,9 @@ export interface CommandContext {
   readonly interaction: IncomingInteraction;
   readonly guildId: GuildId;
   readonly logger: Logger;
-  /** Niveau d'accès de l'utilisateur, déjà vérifié par le pipeline (utile aux règles propres à une fonctionnalité). */
+  /** User access level, already checked by the pipeline (useful for feature-specific rules). */
   readonly level: AccessLevel;
-  /** Traducteur : langue du serveur si elle est imposée, sinon celle de l'utilisateur, puis l'anglais. */
+  /** Translator: forced guild locale, otherwise the user's locale, then English. */
   readonly t: Translator['t'];
 }
 
@@ -28,16 +28,16 @@ export interface AutocompleteChoice {
 }
 
 export interface AutocompleteContext extends CommandContext {
-  /** Option en cours de saisie et son texte partiel ; les autres options déjà remplies sont dans `interaction.options`. */
+  /** Currently focused option and its partial text; other completed options are in `interaction.options`. */
   readonly focused: { readonly name: string; readonly value: string };
 }
 
-/** Discord n'affiche que 25 suggestions ; la réponse doit arriver en moins de 3 s, sans accusé différé. */
+/** Discord displays at most 25 suggestions; respond within 3 s, without a deferred acknowledgement. */
 export type AutocompleteHandler = (context: AutocompleteContext) => Promise<readonly AutocompleteChoice[]>;
 
 export type ChannelKind = 'text' | 'announcement';
 
-/** Libellé traduit (clé de catalogue) ou littéral (par exemple le nom d'une langue dans sa propre langue). */
+/** Translated label (catalog key) or literal text (for example, a language name in its own language). */
 export type ChoiceDescriptor =
   | { readonly name: MessageKey; readonly prefix?: string; readonly value: string }
   | { readonly label: string; readonly value: string };
@@ -47,36 +47,39 @@ export interface OptionDescriptor {
   readonly name: string;
   readonly description: MessageKey;
   readonly required?: boolean;
-  /** Uniquement pour `string` : liste fermée de valeurs proposées par Discord. */
+  /** For `string` only: fixed choices offered by Discord. */
   readonly choices?: readonly ChoiceDescriptor[];
-  /** Uniquement pour `string` : suggestions calculées au fil de la saisie (voir `CommandEntry.autocomplete`). */
+  /** For `string` only: suggestions computed while typing (see `CommandEntry.autocomplete`). */
   readonly autocomplete?: boolean;
-  /** Uniquement pour `integer`. */
+  /** For `integer` only. */
   readonly minValue?: number;
   readonly maxValue?: number;
-  /** Uniquement pour `channel` : types de canaux proposés (tous les canaux de texte par défaut). */
+  /** For `channel` only: offered channel types (all text channels by default). */
   readonly channelKinds?: readonly ChannelKind[];
 }
 
 export interface RootDescriptor {
   readonly name: string;
   readonly description: MessageKey;
-  /** Groupes de sous-commandes : nom -> clé de description. */
+  /** Subcommand groups: name -> description key. */
   readonly groups?: Readonly<Record<string, MessageKey>>;
 }
 
 export interface CommandEntry {
-  /** `[racine, sous-commande]` ou `[racine, groupe, sous-commande]` (2 niveaux maximum côté Discord). */
+  /** `[root, subcommand]` or `[root, group, subcommand]` (at most 2 levels in Discord). */
   readonly path: readonly [string, string] | readonly [string, string, string];
   readonly description: MessageKey;
-  /** Niveau minimal requis : explicite pour chaque commande, jamais de valeur par défaut permissive. */
+  /** Minimum required access level: explicit for every command, never a permissive default. */
   readonly level: AccessLevel;
-  /** Par défaut une commande est refusée pendant la suspension d'une guilde (suppression programmée). */
+  /** By default, reject commands while the guild is suspended (deletion scheduled). */
   readonly availableWhenSuspended?: boolean;
-  /** Fonctionnalité de la guilde qui doit être activée (par exemple `todolists`). */
+  /** Guild feature that must be enabled (for example, `todolists`). */
   readonly feature?: string;
   readonly options?: readonly OptionDescriptor[];
-  /** Suggestions des options `autocomplete: true`, par nom d'option (même niveau et même fonctionnalité que la commande). */
+  /**
+   * Suggestions for `autocomplete: true` options, indexed by option name (same access and feature as the
+   * command).
+   */
   readonly autocomplete?: Readonly<Record<string, AutocompleteHandler>>;
   readonly handler: CommandHandler;
 }
@@ -92,7 +95,7 @@ function assertName(kind: string, value: string): void {
   if (!NAME_PATTERN.test(value)) throw new RegistryError(`Invalid ${kind} name "${value}"`);
 }
 
-/** Discord impose 1 à 100 caractères, dans chaque langue. */
+/** Discord requires 1 to 100 characters in each language. */
 function assertText(label: string, text: LocalizedText, prefix = ''): void {
   for (const [locale, value] of [['default', text.default], ...Object.entries(text.localizations)] as [string, string][]) {
     const length = prefix.length + value.length;
@@ -100,7 +103,7 @@ function assertText(label: string, text: LocalizedText, prefix = ''): void {
   }
 }
 
-/** Valide l'ensemble des commandes au démarrage : un conflit ne doit jamais atteindre la production. */
+/** Validate all commands at startup: conflicts must never reach production. */
 export class CommandRegistry {
   readonly #roots: readonly RootDescriptor[];
   readonly #entries: readonly CommandEntry[];
@@ -153,7 +156,7 @@ export class CommandRegistry {
 
     this.#roots = roots;
     this.#entries = entries;
-    // Routage de transition uniquement : ces chemins ne font jamais partie du payload publié.
+    // Transition routing only: these paths never appear in the published payload.
     for (const entry of aliases) {
       const label = entry.path.join(' ');
       if (!rootsByName.has(entry.path[0]) || this.#byPath.has(label)) throw new RegistryError(`Invalid command alias "${label}"`);
@@ -171,7 +174,7 @@ export class CommandRegistry {
       assertText(`${label} option ${option.name}`, this.#i18n.text(option.description));
       if (seen.has(option.name)) throw new RegistryError(`Duplicate option "${option.name}" for ${label}`);
       seen.add(option.name);
-      // Discord rejette une commande dont une option requise suit une option facultative.
+      // Discord rejects commands with a required option after an optional option.
       if (option.required === true && optionalSeen) {
         throw new RegistryError(`Required option "${option.name}" must precede optional ones in ${label}`);
       }
@@ -212,7 +215,7 @@ export class CommandRegistry {
     }
   }
 
-  /** Chaque option `autocomplete` a un gestionnaire, et chaque gestionnaire une option : un oubli n'atteint jamais la production. */
+  /** Every `autocomplete` option needs a handler and vice versa: omissions must never reach production. */
   #assertAutocomplete(label: string, entry: CommandEntry): void {
     const declared = new Set((entry.options ?? []).filter((option) => option.autocomplete === true).map((option) => option.name));
     const handled = new Set(Object.keys(entry.autocomplete ?? {}));

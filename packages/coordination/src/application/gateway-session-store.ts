@@ -1,6 +1,6 @@
 import type { Lease } from './lease-store';
 
-/** Session Gateway reprenable (RESUME) ; mêmes champs que celle de la bibliothèque `@discordjs/ws`. */
+/** Resumable Gateway session (RESUME); same fields as the `@discordjs/ws` library. */
 export interface GatewaySession {
   readonly resumeURL: string;
   readonly sequence: number;
@@ -13,7 +13,7 @@ export interface GatewaySession {
 
 export interface GatewaySessionStore {
   load(shardId: number): Promise<GatewaySession | null>;
-  /** Écriture protégée par le jeton de fencing : `false` si le bail n'est plus celui de l'appelant. */
+  /** Fencing-token-protected write: `false` if the caller no longer holds the lease. */
   save(lease: Lease, session: GatewaySession): Promise<boolean>;
   clear(lease: Lease, shardId: number): Promise<void>;
 }

@@ -1,6 +1,6 @@
 import { createPublicKey, verify } from 'node:crypto';
 
-// Préfixe DER (SPKI) d'une clé publique Ed25519 brute de 32 octets.
+// DER (SPKI) prefix for a raw 32-byte Ed25519 public key.
 const ED25519_SPKI_PREFIX = Buffer.from('302a300506032b6570032100', 'hex');
 
 const PUBLIC_KEY_HEX = /^[0-9a-f]{64}$/i;
@@ -25,7 +25,7 @@ export function createSignatureVerifier(publicKeyHex: string) {
   };
 }
 
-/** Rejette les horodatages hors tolérance pour limiter le rejeu d'une requête signée capturée. */
+/** Reject timestamps outside the tolerance window to limit replay of captured signed requests. */
 export function isTimestampFresh(timestamp: string, nowMs: number, toleranceSeconds: number): boolean {
   if (!TIMESTAMP.test(timestamp)) return false;
   return Math.abs(nowMs / 1000 - Number(timestamp)) <= toleranceSeconds;

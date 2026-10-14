@@ -191,15 +191,15 @@ class DiscordWsShardConnection implements ShardConnection {
     this.#timer = null;
     const manager = this.#manager;
     this.#manager = null;
-    // Un code autre que 1000/1001 laisse la session valide côté Discord, donc reprenable.
+    // A code other than 1000/1001 keeps the session valid in Discord, allowing resumption.
     await manager?.destroy({ code: CloseCodes.Resuming, reason: 'handoff' });
   }
 
-  /** La bibliothèque appelle ceci à chaque paquet : on mémorise et on écrit en base par lots. */
+  /** The library calls this for each packet: keep it in memory and batch database writes. */
   #remember(info: SessionInfo | null): void {
     if (info === null) {
       if (this.#preserving) return;
-      // Session invalidée par Discord : ne jamais tenter de la reprendre.
+      // Session invalidated by Discord: never try to resume it.
       this.#latest = null;
       this.#delivered = null;
       this.#dirty = false;

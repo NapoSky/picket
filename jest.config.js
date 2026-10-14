@@ -16,9 +16,9 @@ const common = {
       },
     ],
   },
-  // Dépendances publiées en ESM seul (Node 24 sait les `require`, pas le runtime de Jest).
+  // ESM-only dependencies (Node 24 supports `require`, but the Jest runtime does not).
   transformIgnorePatterns: ['/node_modules/(?!\\.pnpm/kysely@|kysely/)'],
-  // Les tests lisent les sources, pas dist (équivalent de la condition @picket/source).
+  // Tests read sources, not dist (equivalent to the @picket/source condition).
   moduleNameMapper: {
     '^@picket/([^/]+)$': '<rootDir>/packages/$1/src/index.ts',
   },
@@ -40,7 +40,7 @@ module.exports = {
       testMatch: ['**/tests/**/*.int.test.ts'],
       // Benchmarks run only through stats:test:load, never in correctness suites or CI.
       testPathIgnorePatterns: ['/node_modules/', '/packages/stats/tests/load\\.int\\.test\\.ts$'],
-      // Un Postgres jetable (Testcontainers) partagé par toutes les suites.
+      // One disposable PostgreSQL instance (Testcontainers) shared by all suites.
       globalSetup: '<rootDir>/packages/testing/src/global-setup.ts',
       globalTeardown: '<rootDir>/packages/testing/src/global-teardown.ts',
       setupFilesAfterEnv: ['<rootDir>/packages/testing/tests/integration-setup.ts'],

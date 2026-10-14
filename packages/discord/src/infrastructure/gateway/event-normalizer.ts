@@ -2,7 +2,7 @@ import { ChannelType, GatewayDispatchEvents, type GatewayDispatchPayload } from 
 import { ChannelId, GuildId, RoleId, UserId } from '@picket/kernel';
 import type { GatewayEvent } from '../../application/gateway-events';
 
-/** Retourne `null` pour tout ce qui n'intéresse pas l'application ou qui est mal formé. */
+/** Return `null` for malformed events or events irrelevant to the application. */
 export function normalizeDispatch(
   payload: GatewayDispatchPayload,
   shardId: number,
@@ -49,7 +49,7 @@ export function normalizeDispatch(
       return guildId.ok && userId.ok ? {type:'voice_member_removed',guildId:guildId.value,userId:userId.value} : null;
     }
     case GatewayDispatchEvents.GuildDelete: {
-      // `unavailable: true` = panne Discord, pas un départ du bot.
+      // `unavailable: true` means a Discord outage, not removal of the bot.
       const guildId = GuildId.parse(payload.d.id);
       if (payload.d.unavailable === true) return guildId.ok ? {type:'guild_voice_unavailable',guildId:guildId.value} : null;
       return guildId.ok ? { type: 'guild_removed', guildId: guildId.value } : null;

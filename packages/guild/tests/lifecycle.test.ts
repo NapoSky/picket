@@ -162,7 +162,7 @@ describe('Gateway-driven lifecycle', () => {
     const repository = new FakeLifecycleRepository();
     await new RequestGuildDeletion(repository, clock, 30).execute(guild, actor);
 
-    // Discord renvoie un événement de création pour chaque serveur à chaque connexion.
+    // Discord sends a creation event for every guild on each connection.
     await new HandleGuildAvailable(repository).execute(guild);
 
     expect(repository.inactive.get(guild)?.reason).toBe('requested');
@@ -205,7 +205,7 @@ describe('ReconcileGuilds', () => {
   it('treats a guild reported unavailable by Discord as present (no false departure)', async () => {
     const repository = new FakeLifecycleRepository();
     await new HandleGuildAvailable(repository).execute(guild);
-    // `ready` liste aussi les serveurs indisponibles : ils figurent dans presentGuildIds.
+    // `ready` also lists unavailable guilds: they appear in presentGuildIds.
     expect(await setup(repository).execute({ shardId: 0, shardCount: 1, presentGuildIds: [guild] })).toEqual([]);
   });
 

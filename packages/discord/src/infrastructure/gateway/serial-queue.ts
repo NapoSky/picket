@@ -1,6 +1,6 @@
 import type { Logger } from '@picket/kernel';
 
-/** Exécute les tâches une à une dans l'ordre d'arrivée ; une erreur est journalisée et ne bloque pas la suite. */
+/** Run tasks sequentially in arrival order; log errors without blocking subsequent tasks. */
 export class SerialQueue {
   readonly #logger: Logger;
   #tail: Promise<void> = Promise.resolve();
@@ -15,7 +15,7 @@ export class SerialQueue {
     });
   }
 
-  /** Attend que tout ce qui a été mis en file soit terminé. */
+  /** Wait for all queued work to finish. */
   drain(): Promise<void> {
     return this.#tail;
   }

@@ -20,7 +20,7 @@ describe('durable audit publication (PostgreSQL)', () => {
     await queryAsAdmin(database, 'TRUNCATE guild_audit_delivery, guild_audit_schedule, guild_audit_log, guild_application_logs, timer_events, guild_settings, guild_permission_roles, guild_registry CASCADE');
     const store = new PostgresGuildSettingsRepository(database.handle.db);
     await store.findOrCreate(guild); await store.findOrCreate(otherGuild);
-    // Ancienne préférence déjà stockée : pas de reprise de l'historique antérieur à la migration.
+    // Previously stored preference: never replay history from before the migration.
     await queryAsAdmin(database, 'UPDATE guild_settings SET audit_channel_id = $2, locale = $3 WHERE guild_id = $1', [guild, channel, 'fr']);
     repository = new PostgresGuildAuditRepository(database.handle.db);
     settings = new UpdateGuildSettings(store, testI18n.locales);

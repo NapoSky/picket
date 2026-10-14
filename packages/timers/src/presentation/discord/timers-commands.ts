@@ -87,7 +87,7 @@ function validationText(error: ValidationError, t: T): string {
   }
 }
 
-/** Le rendu a pu échouer alors que l'état est enregistré : on le dit sans inquiéter, le rendu sera retenté. */
+/** Rendering can fail after state is saved: explain calmly that rendering will be retried. */
 function syncNote(sync: SyncStatus, t: T): string {
   if (sync.synced) return '';
   return `\n${sync.reason === 'unknown_channel' ? t('timers.errors.boardDisabled') : t('timers.errors.syncPending', { reason: sync.reason })}`;
@@ -177,7 +177,7 @@ export function timersCommands(deps: TimersCommandDeps): CommandEntry[] {
       if (parsedOwner !== null && !parsedOwner.ok) return ephemeral(t('timers.errors.unknownType'));
       const ownerId = parsedOwner === null ? interaction.userId : (parsedOwner as { value: UserId }).value;
 
-      // Refus avant d'ouvrir la modale : inutile de faire saisir un timer qui ne pourra pas être ajouté.
+      // Reject before opening the modal: do not request input for a timer that cannot be added.
       const current = await deps.getSettings.execute(guildId, channelId);
       if (current === null) return ephemeral(t('timers.errors.noBoard'));
       if (current.activeCount >= MAX_ACTIVE_PER_BOARD) {
@@ -333,7 +333,7 @@ export function timersFamily(deps: TimersFamilyDeps): ComponentFamily {
       run: async () => {
         const result = await deps.refresh.execute({ guildId, channelId: message.channelId, userId: interaction.userId, level, assetId: parsed.assetId });
         logger.info({ user_id: interaction.userId, asset_id: parsed.assetId, outcome: result.kind }, 'timer refresh');
-        // Succès : le board se met à jour sous les yeux de l'utilisateur, aucun message de plus.
+        // Success: the board updates in view; no additional message.
         return changeReply(result, t, () => null);
       },
     };

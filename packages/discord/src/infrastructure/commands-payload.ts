@@ -18,7 +18,7 @@ export type CommandsPayload = RESTPostAPIChatInputApplicationCommandsJSONBody[];
 
 const byName = <T extends { readonly name: string }>(a: T, b: T): number => a.name.localeCompare(b.name);
 
-/** Les noms de fichiers de langue sont des codes de langue Discord (contrôlé en CI). */
+/** Locale file names are Discord locale codes (checked in CI). */
 const localizationMap = (text: LocalizedText): LocalizationMap | undefined =>
   Object.keys(text.localizations).length > 0 ? (text.localizations as LocalizationMap) : undefined;
 
@@ -33,7 +33,7 @@ function toApiOption(registry: CommandRegistry, option: OptionDescriptor): APIAp
   const common = { name: option.name, required, ...describe(registry, option.description) };
   switch (option.type) {
     case 'string':
-      // Discord interdit de combiner choix fermés et autocomplete.
+      // Discord forbids combining fixed choices with autocomplete.
       if (option.autocomplete === true) {
         return { type: ApplicationCommandOptionType.String, ...common, autocomplete: true };
       }
@@ -96,7 +96,7 @@ function subcommand(registry: CommandRegistry, entry: CommandEntry): APIApplicat
   };
 }
 
-/** Sortie déterministe : la même définition produit toujours le même JSON (et le même hash). */
+/** Deterministic output: the same definition always produces the same JSON (and hash). */
 export function buildCommandsPayload(registry: CommandRegistry): CommandsPayload {
   return [...registry.roots()].sort(byName).map((root) => {
     const entries = registry.entries().filter((entry) => entry.path[0] === root.name);

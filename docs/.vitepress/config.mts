@@ -1,6 +1,6 @@
 import { defineConfig, type DefaultTheme } from 'vitepress';
 
-// Sur GitHub Pages le site vit sous /<dépôt>/ ; le workflow fournit la valeur exacte.
+// GitHub Pages serves under /<repository>/; the workflow supplies the exact value.
 const base = process.env['DOCS_BASE'] ?? '/picket/';
 const supportDiscord = 'https://discord.gg/EUnVfq5EYs';
 

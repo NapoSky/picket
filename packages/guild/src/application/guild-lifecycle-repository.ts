@@ -3,19 +3,19 @@ import type { DeactivationReason } from '../domain/lifecycle';
 import type { AuditActor } from './permission-repository';
 
 export interface DeactivationResult {
-  /** `false` si la guilde était déjà inactive (date et raison d'origine conservées) ou inconnue. */
+  /** `false` if the guild was already inactive (preserving the original date and reason) or unknown. */
   readonly changed: boolean;
   readonly inactiveSince: Date;
 }
 
 export interface GuildLifecycleRepository {
-  /** Crée les réglages par défaut d'une guilde ; idempotent. */
+  /** Initialize default guild settings; idempotent. */
   initialize(guildId: GuildId): Promise<void>;
-  /** `null` si la guilde est active ou inconnue. */
+  /** `null` if the guild is active or unknown. */
   inactiveSince(guildId: GuildId): Promise<Date | null>;
   /**
-   * Pour `left`, ne fait rien si la guilde est inconnue (rien à protéger ni à purger).
-   * Pour `requested`, initialise la guilde au besoin.
+   * For `left`, do nothing if the guild is unknown (nothing to protect or purge). For `requested`, initialize
+   * the guild if necessary.
    */
   markInactive(
     guildId: GuildId,
@@ -24,7 +24,7 @@ export interface GuildLifecycleRepository {
     now: Date,
     reason: DeactivationReason,
   ): Promise<DeactivationResult>;
-  /** `true` si la guilde était inactive (pour la raison demandée, si précisée) et vient d'être réactivée. */
+  /** `true` if the previously inactive guild (with the requested reason, if specified) was reactivated. */
   reactivate(
     guildId: GuildId,
     actor: AuditActor,

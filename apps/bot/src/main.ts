@@ -7,12 +7,15 @@ import { createI18n } from '@picket/i18n';
 import { systemClock } from '@picket/kernel';
 import { createGuildLogDestination, createHealthServer, createLogger, createMetrics, createMonitoringDestination } from '@picket/observability';
 import { createDatabase, PostgresGuildApplicationLogs } from '@picket/persistence';
-import { PostgresDiscordBudget,startLeasedLoop } from '@picket/coordination';
+import { PostgresDiscordBudget, PostgresKeyedLock, startLeasedLoop } from '@picket/coordination';
 import { DiskVoiceBuffer,PostgresStatsStore,VoiceCollector } from '@picket/stats';
 import { buildJobRunner, buildPipeline, buildShardRunner, buildWarLogRunner } from './composition';
 import { PostgresWarStore } from '@picket/warlog';
+import { drainBot } from './shutdown';
 
-const FORCE_EXIT_AFTER_MS = 30_000;
+// Allow the 60 s deferred-work deadline plus reply delivery after proxy drainage.
+const SHUTDOWN_WORK_GRACE_MS = 75_000;
+const LOCK_POOL_MAX = 2;
 const IMPLEMENTED_ROLES: ReadonlySet<Role> = new Set(['http-ingress', 'shard-runner', 'job-runner', 'warlog-poller']);
 
 async function run(): Promise<void> {
@@ -40,6 +43,13 @@ async function run(): Promise<void> {
     onPoolError: (error) => logger.error({ err: error }, 'database pool error'),
     metrics,
   });
+  const lockDatabase = createDatabase({
+    connectionString: config.database.url,
+    maxConnections: LOCK_POOL_MAX,
+    applicationName: 'picket-locks',
+    onPoolError: (error) => logger.error({ err: error }, 'lock pool error'),
+    metrics, metricsComponent: 'locks',
+  });
   const guildLogs = new PostgresGuildApplicationLogs(database.db);
   const logDestination = createGuildLogDestination({ version: config.version, append: (entries) => guildLogs.append(entries), monitoring, diagnostics: { write: () => undefined } });
   logger = createLogger({ level: config.logLevel, service: 'picket', version: config.version, destination: logDestination.destination });
@@ -63,12 +73,14 @@ async function run(): Promise<void> {
     i18n: createI18n(),
     discord,
     metrics,
+    locks: new PostgresKeyedLock(lockDatabase.db),
     flushGuildLogs: () => logDestination.flush(),
     stats:{store:statsStore,buffer:voiceBuffer,collector:voiceCollector,dashboardUrl:config.dashboard.origin},
   };
 
   let draining = false;
   const isReady = async () => {
+    if (draining) return false;
     let ready = false;
     try { await database.ping(); ready = !draining && logDestination.healthy; } catch { /* measured below */ }
     metrics.set('ready', Number(ready));
@@ -108,6 +120,7 @@ async function run(): Promise<void> {
   }
   metrics.collect(async () => {
     database.collectMetrics();
+    lockDatabase.collectMetrics();
     await Promise.all([isReady(), voiceBuffer.collectMetrics()]);
     metrics.set('role_leader', Number(jobs?.isLeader ?? false), 'job-runner');
     metrics.set('role_leader', Number(warlog?.isLeader ?? false), 'warlog-poller');
@@ -129,7 +142,7 @@ async function run(): Promise<void> {
   const stopVoice=startLeasedLoop({tick:()=>voiceCollector.tick(),intervalMs:10_000,logger,metrics,component:'voice'});
   const stopVoiceNames=startLeasedLoop({tick:()=>voiceCollector.refreshMetadata(),intervalMs:10_000,logger,metrics,component:'voice-metadata'});
   logger.info(
-    { roles: config.roles, port: config.http.port, healthPort: config.http.healthPort, shardCount: config.shardCount, restGlobalRps: config.discord.restGlobalRps, databasePoolMax: config.database.poolMax },
+    { roles: config.roles, port: config.http.port, healthPort: config.http.healthPort, shardCount: config.shardCount, restGlobalRps: config.discord.restGlobalRps, databasePoolMax: config.database.poolMax, lockPoolMax: LOCK_POOL_MAX },
     'picket started',
   );
 
@@ -140,26 +153,36 @@ async function run(): Promise<void> {
       process.exit(1);
     }
     stopping = true;
-    setTimeout(() => process.exit(1), FORCE_EXIT_AFTER_MS).unref();
-
-    // Cède d'abord les baux Gateway : une autre réplique reprend la session pendant que celle-ci se vide.
-    await shards?.stop();
-    await stopVoice();
-    await stopVoiceNames();
-    await voiceCollector.shutdown();
-    // Les passes périodiques s'achèvent avant la fermeture de la base : le bail est rendu à la réplique suivante.
-    await jobs?.stop();
-    await warlog?.stop();
-
-    // Laisse le reverse proxy retirer cette réplique (readiness KO) avant de refuser des connexions.
-    draining = true;
-    logger.info({ signal, drainMs: config.shutdownDrainMs }, 'draining');
-    await sleep(config.shutdownDrainMs);
-    await interactions?.close();
-    await new Promise<void>((resolve) => health.close(() => resolve()));
-    await logDestination.close();
-    await database.close();
-    metrics.close();
+    setTimeout(() => process.exit(1), config.shutdownDrainMs + SHUTDOWN_WORK_GRACE_MS).unref();
+    await drainBot({
+      beginDrain: () => {
+        draining = true;
+        metrics.set('ready', 0);
+        metrics.set('draining', 1);
+        logger.info({ signal, drainMs: config.shutdownDrainMs }, 'draining');
+      },
+      stopBackground: async () => {
+        // Release shard ownership promptly, while HTTP independently drains.
+        const results = await Promise.allSettled([
+          (async () => {
+            await shards?.stop();
+            await Promise.all([stopVoice(), stopVoiceNames()]);
+            await voiceCollector.shutdown();
+          })(),
+          jobs?.stop(), warlog?.stop(),
+        ]);
+        const errors = results.flatMap((result) => result.status === 'rejected' ? [result.reason] : []);
+        if (errors.length) throw new AggregateError(errors, 'Background shutdown failed');
+      },
+      waitForProxy: () => sleep(config.shutdownDrainMs),
+      closeInteractions: async () => { await interactions?.close(); },
+      closeInfrastructure: async () => {
+        await new Promise<void>((resolve) => health.close(() => resolve()));
+        await logDestination.close();
+        await Promise.all([database.close(), lockDatabase.close()]);
+        metrics.close();
+      },
+    });
     logger.info({}, 'stopped');
     process.exit(0);
   };

@@ -6,12 +6,12 @@ const UNIT_SECONDS = { d: 86_400, h: 3_600, m: 60 } as const;
 type UnitLetter = keyof typeof UNIT_SECONDS;
 
 const MAX_INPUT_LENGTH = 40;
-// Balayage séquentiel et non une seule expression répétée : pas de retour arrière exponentiel sur une saisie hostile.
+// Scan sequentially rather than with one repeated regex: avoid exponential backtracking on hostile input.
 const TOKEN = /\s*(\d+(?:[.,]\d+)?)\s*([dhm])?/iyu;
 
 /**
- * `50`, `1.5`, `1,5h`, `90m`, `2d`, `1d 12h`, `2h30m` : un nombre seul prend l'unité par défaut, plusieurs
- * morceaux exigent chacun leur unité (« 2h30 » est ambigu). Résultat en secondes entières.
+ * `50`, `1.5`, `1,5h`, `90m`, `2d`, `1d 12h`, `2h30m`: a lone number uses the default unit; multiple pieces
+ * each require their own unit (2h30 is ambiguous). Return whole seconds.
  */
 export function parseDuration(input: string, defaultUnit: DurationUnit): Result<number, 'invalid'> {
   const text = input.trim();
@@ -42,7 +42,7 @@ export function parseDuration(input: string, defaultUnit: DurationUnit): Result<
   return Number.isFinite(total) ? ok(total) : err('invalid');
 }
 
-/** `1d 12h`, `50h`, `2h 30m` : le plus court qui reste exact. */
+/** `1d 12h`, `50h`, `2h 30m`: shortest exact representation. */
 export function formatDuration(totalSeconds: number): string {
   let rest = Math.max(0, Math.round(totalSeconds));
   const parts: string[] = [];
@@ -55,7 +55,7 @@ export function formatDuration(totalSeconds: number): string {
   return parts.length === 0 ? '0m' : parts.join(' ');
 }
 
-/** `6h, 2h, 30m` (virgules ou points-virgules) : minutes entières ; un nombre seul est en minutes. */
+/** `6h, 2h, 30m` (commas or semicolons): whole minutes; a lone number is in minutes. */
 export function parseThresholds(input: string): Result<number[], 'invalid'> {
   const parts = input.split(/[,;]/u).map((part) => part.trim()).filter((part) => part !== '');
   if (parts.length === 0 || parts.length > 20) return err('invalid');

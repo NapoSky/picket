@@ -77,7 +77,7 @@ describe('validateAssetInput', () => {
     expect(invalid({ name: 'a'.repeat(16) })).toEqual({ code: 'name_too_long', max: 15 });
     expect(valid({ name: '🇦'.repeat(15) }).name).toBe('🇦'.repeat(15));
     expect(invalid({ name: '🇦'.repeat(16) })).toEqual({ code: 'name_too_long', max: 15 });
-    // Les espaces multiples comptent pour un seul : « a    b » tient en 3 caractères.
+    // Multiple spaces count as one: a    b fits in 3 characters.
     expect(valid({ name: `a${' '.repeat(40)}b` }).name).toBe('a b');
   });
 

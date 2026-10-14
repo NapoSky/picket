@@ -26,7 +26,7 @@ export interface TimerSettingsPanelDependencies {
   readonly guildRoles?: GuildRoles;
 }
 
-/** UUID en base 36 : lie les interactions au tableau, même si son canal est réutilisé après suppression. */
+/** Base-36 UUID: binds interactions to the board even if its channel is reused after deletion. */
 const boardKey = (id: string) => BigInt(`0x${id.replace(/-/gu, '')}`).toString(36);
 const text = (value: string): PanelContent => ({ kind: 'text', text: value });
 
@@ -126,7 +126,7 @@ export function createTimerSettingsPanel(deps: TimerSettingsPanelDependencies): 
       if (denied) return denied;
       const current = await currentFor(context);
       if (!current) return ephemeral(context.t('timers.errors.noBoard'));
-      // Les options d'une ancienne définition Discord ouvrent le panneau sans exécuter leur modification.
+      // Options from an old Discord definition open the panel without applying their changes.
       return render(context, current, 'home', Object.keys(context.interaction.options).length ? context.t('timers.panel.legacy') : undefined);
     } }),
   };

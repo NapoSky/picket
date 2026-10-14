@@ -34,7 +34,7 @@ export interface DeployResult {
   readonly commands: number;
 }
 
-/** Idempotent : n'appelle Discord (remplacement global) que si la définition générée a changé. */
+/** Idempotent: call Discord (global replacement) only when the generated definition changes. */
 export async function deployCommands(options: {
   readonly registry: CommandRegistry;
   readonly api: CommandsApi;

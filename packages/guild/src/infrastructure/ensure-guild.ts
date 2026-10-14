@@ -2,8 +2,8 @@ import type { GuildId } from '@picket/kernel';
 import type { Tx } from '@picket/persistence';
 
 /**
- * Enregistre la guilde puis crée ses réglages et, pour le seul créateur, le niveau `member` par défaut (@everyone).
- * Sûr en concurrence : un second insert attend le premier, puis ne fait rien.
+ * Register the guild, then create settings and, only for the first creator, the default `member` level
+ * (@everyone). Safe under concurrency: a second insert waits for the first, then does nothing.
  */
 export async function ensureGuildInitialized(trx: Tx, guildId: GuildId): Promise<void> {
   await trx

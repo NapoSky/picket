@@ -21,14 +21,14 @@ export class PostgresInteractionReceipts implements InteractionReceipts {
     return inserted !== undefined;
   }
 
-  /** Les reçus ne servent qu'à dédoublonner les rejeux : au-delà du délai de validité d'une interaction, ils sont inutiles. */
+  /** Receipts only deduplicate replays; they are unnecessary beyond an interaction's validity window. */
   async deleteOlderThan(cutoff: Date): Promise<number> {
     const result = await this.#db.deleteFrom('interaction_receipts').where('received_at', '<', cutoff).executeTakeFirst();
     return Number(result.numDeletedRows);
   }
 }
 
-/** Durée de conservation des reçus d'interactions (Discord n'en rejoue pas au-delà de quelques minutes). */
+/** Interaction receipt retention (Discord does not replay interactions after a few minutes). */
 export const INTERACTION_RECEIPT_RETENTION_DAYS = 7;
 
 export class PostgresDeployedHashStore implements DeployedHashStore {

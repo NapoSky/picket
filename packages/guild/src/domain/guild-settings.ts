@@ -6,7 +6,7 @@ export type GuildFeatures = Readonly<Record<Exclude<Feature,'stats'>, boolean> &
 
 export interface GuildSettings {
   readonly guildId: GuildId;
-  /** `null` : automatique (langue de l'utilisateur Discord) ; sinon langue imposée à tout le serveur. */
+  /** `null`: automatic (Discord user's locale); otherwise force this locale for the entire guild. */
   readonly locale: string | null;
   readonly timezone: string;
   readonly auditChannelId: ChannelId | null;
@@ -32,16 +32,16 @@ export type SettingsDecision =
   | { readonly kind: 'unchanged' }
   | { readonly kind: 'rejected'; readonly reason: SettingsRejection };
 
-// Noms IANA uniquement : `Intl` accepte aussi des décalages (« +01:00 ») qui n'ont pas de règles d'heure d'été.
+// IANA names only: `Intl` also accepts offsets (+01:00), which have no daylight-saving rules.
 const IANA_NAME = /^[A-Za-z][A-Za-z0-9_+-]*(\/[A-Za-z0-9_+-]+){0,2}$/;
 
-/** Nom IANA valide (casse corrigée : « europe/paris » donne « Europe/Paris »), ou `null` s'il est inconnu. */
+/** Valid IANA name (case corrected: europe/paris becomes Europe/Paris), or `null` if unknown. */
 export function normalizeTimeZone(input: string): string | null {
   const candidate = input.trim();
   if (candidate.length > 64 || !IANA_NAME.test(candidate)) return null;
   try {
     const resolved = new Intl.DateTimeFormat('en-US', { timeZone: candidate }).resolvedOptions().timeZone;
-    // Pour un alias (« Asia/Kolkata » devient « Asia/Calcutta »), on garde le nom saisi, plus parlant.
+    // For aliases (Asia/Kolkata becomes Asia/Calcutta), keep the entered, more recognizable name.
     return resolved.toLowerCase() === candidate.toLowerCase() ? resolved : candidate;
   } catch {
     return null;
@@ -77,7 +77,7 @@ export function decideSettingsChange(
   }
 }
 
-/** Contenu des colonnes avant/après du journal d'audit. */
+/** Audit log before/after column content. */
 export function settingsSnapshot(settings: GuildSettings): Record<string, unknown> {
   return {
     language: settings.locale,

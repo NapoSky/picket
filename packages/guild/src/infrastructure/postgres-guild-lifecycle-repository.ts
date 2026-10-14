@@ -54,7 +54,7 @@ export class PostgresGuildLifecycleRepository implements GuildLifecycleRepositor
         if (!known) return { changed: false, inactiveSince: now };
       }
 
-      // Conditionnel : un second appel (ou une réémission d'événement) ne repousse jamais la date d'origine.
+      // Conditional: a repeated call or event never postpones the original date.
       const updated = await trx
         .updateTable('guild_registry')
         .set({ inactive_since: now, inactive_reason: reason })

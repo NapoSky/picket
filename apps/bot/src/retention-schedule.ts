@@ -1,6 +1,6 @@
 import { latestCronSchedule } from '@picket/config';
 
-/** Dernière échéance de 3 h dans le fuseau de l’instance, changements d’heure compris. */
+/** Most recent 03:00 deadline in the instance timezone, including daylight-saving changes. */
 export function latestRetentionSchedule(now: Date, timeZone = 'Europe/Paris'): Date {
   return latestCronSchedule('0 3 * * *', now, timeZone);
 }

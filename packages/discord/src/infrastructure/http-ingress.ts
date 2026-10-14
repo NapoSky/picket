@@ -30,11 +30,11 @@ export function createInteractionServer(options: InteractionServerOptions): Fast
     logger: false,
     bodyLimit: BODY_LIMIT_BYTES,
     requestTimeout: 10_000,
-    // Plus long que le délai d'inactivité des connexions du reverse proxy (Traefik : 90 s), sinon 502 intermittents.
+    // Longer than the reverse proxy's connection idle timeout (Traefik: 90 s), avoiding intermittent 502s.
     keepAliveTimeout: 120_000,
   });
 
-  // Corps brut indispensable : la signature porte sur les octets reçus.
+  // The raw body is essential: the signature covers the received bytes.
   app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (_request, body, done) => {
     done(null, body);
   });
@@ -77,8 +77,8 @@ export function createInteractionServer(options: InteractionServerOptions): Fast
 
     const response = await options.pipeline.handle(interaction.value);
     if (response.kind === 'deferred') {
-      // Livrer avant que Discord ait reçu l'accusé échouerait : on attend la fin de la réponse HTTP. Le travail
-      // continue ensuite sans elle ; l'arrêt de la réplique l'attend (hook `onClose`).
+      // Delivery before Discord receives the acknowledgement fails: wait for the HTTP response to finish. Work
+      // then continues independently; replica shutdown waits for it in the `onClose` hook.
       const acknowledged = new Promise<void>((resolve) => reply.raw.once('close', resolve));
       const work: Promise<void> = acknowledged
         .then(() =>

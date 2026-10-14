@@ -62,7 +62,7 @@ function app(h: TimerHarness) {
   });
 
   let counter = 0;
-  /** Comme le serveur HTTP : réponse immédiate, puis travail différé livré par l'adaptateur. */
+  /** Match the HTTP server: immediate response, then deferred work delivered by the adapter. */
   async function handle(overrides: Overrides): Promise<Reply> {
     counter += 1;
     const interaction = makeInteraction({
@@ -87,7 +87,7 @@ function app(h: TimerHarness) {
   const click = (customId: string, extra: Overrides = {}) =>
     handle({ kind: 'component', componentKind: 'button', customId, message: { id: MessageId.assert('900000000000000099'), channelId: h.ids.channel }, ...extra });
   const text = (reply: Reply) => (reply.kind === 'message' ? reply.content : '');
-  /** Texte livré à l'utilisateur après le travail différé, ou le message immédiat. */
+  /** Text delivered to the user after deferred work, or the immediate message. */
   const said = async (action: Promise<Reply>) => {
     const before = replies.contents.length;
     const reply = await action;

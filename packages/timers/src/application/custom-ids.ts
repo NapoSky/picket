@@ -23,18 +23,18 @@ export type TimersPayload =
       readonly ownerId: UserId;
     };
 
-/** Bouton de remise à zéro d'un asset : l'identifiant suffit, aucun état n'est porté par le message. */
+/** Asset reset button: its identifier is sufficient; the message carries no state. */
 export const refreshCustomId = (assetId: string): string => encodeCustomId(TIMERS_NAMESPACE, TIMERS_VERSION, `r:${assetId}`);
 
-/** Bouton d'acquittement d'une alerte : l'asset et le seuil ; l'échéance concernée est celle de l'asset à cet instant. */
+/** Alert acknowledgement button: asset and threshold; use the asset's current deadline. */
 export const ackCustomId = (assetId: string, thresholdMin: number): string =>
   encodeCustomId(TIMERS_NAMESPACE, TIMERS_VERSION, `k:${assetId}:${thresholdMin}`);
 
-/** Modale d'ajout : ce que la commande a déjà choisi (type, lieu, propriétaire) voyage dans l'identifiant. */
+/** Add modal: carry the command's previous choices (type, location, owner) in the identifier. */
 export const addModalCustomId = (type: AssetTypeId, regionKey: string, locationKey: string, ownerId: UserId): string =>
   encodeCustomId(TIMERS_NAMESPACE, TIMERS_VERSION, `a:${ASSET_TYPES[type].short}:${regionKey}:${locationKey}:${ownerId}`);
 
-/** Valide tout ce qui vient du `custom_id` : il est contrôlé par l'utilisateur, pas par nous. */
+/** Validate everything from `custom_id`: it is controlled by the user, not us. */
 export function parseTimersPayload(payload: string): TimersPayload | null {
   const parts = payload.split(':');
   const [kind, ...rest] = parts;

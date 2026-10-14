@@ -4,7 +4,7 @@ import { GuildId, type GuildApplicationLog } from '@picket/kernel';
 
 export interface GuildLogDestinationOptions {
   readonly append: (entries: readonly GuildApplicationLog[]) => Promise<void>;
-  /** Diagnostics globaux uniquement : aucune copie des lignes contenant des données de serveur. */
+  /** Global diagnostics only: no copies of lines containing guild data. */
   readonly diagnostics?: DestinationStream;
   readonly version?: string;
   /** Separate, sanitized operational stream; never appended to tenant storage. */
@@ -14,7 +14,7 @@ export interface GuildLogDestinationOptions {
 const BATCH_SIZE = 100;
 const MAX_PENDING_BYTES = 10 * 1024 * 1024;
 
-/** Destination des lignes déjà sérialisées/masquées par Pino ; les journaux de serveur vont uniquement en base. */
+/** Destination for lines already serialized/redacted by Pino; guild journals go only to the database. */
 export function createGuildLogDestination(options: GuildLogDestinationOptions) {
   const diagnostics = options.diagnostics ?? process.stdout;
   const pending: { entry: GuildApplicationLog; bytes: number }[] = [];
@@ -45,7 +45,7 @@ export function createGuildLogDestination(options: GuildLogDestinationOptions) {
       }
       unavailable = false;
     }).catch(() => {
-      // Le lot reste en mémoire pour une nouvelle tentative ; jamais de contenu de serveur dans les diagnostics.
+      // Keep the batch in memory for retry; never put guild content in diagnostics.
       reportFailure();
       unavailable = true;
       if (!closed) {
@@ -69,7 +69,7 @@ export function createGuildLogDestination(options: GuildLogDestinationOptions) {
         const at = new Date(record.time as string | number);
         const bytes = Buffer.byteLength(line, 'utf8');
         if (!Number.isFinite(at.getTime()) || pendingBytes + bytes > MAX_PENDING_BYTES) {
-          // En cas de panne prolongée, borner la mémoire et refuser ensuite un export prétendument complet.
+          // Bound memory during prolonged outages, then reject exports that would falsely claim completeness.
           overflow = true;
           reportFailure();
           continue;
@@ -90,7 +90,7 @@ export function createGuildLogDestination(options: GuildLogDestinationOptions) {
 
   return {
     destination,
-    /** Appelée avant l'export et à l'arrêt ; les lots en échec sont aussi retentés automatiquement. */
+    /** Called before export and at shutdown; failed batches are also retried automatically. */
     flush,
     get healthy(): boolean { return !unavailable && !overflow; },
     async close(): Promise<void> {

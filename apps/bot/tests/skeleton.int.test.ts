@@ -23,7 +23,7 @@ const OFFICER_ROLE = '400000000000000011';
 const ADMINISTRATOR = '8';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// Horloge métier pilotable ; l'ingress garde l'horloge système (les signatures sont générées en temps réel).
+// Controllable business clock; ingress keeps the system clock (signatures are generated in real time).
 let businessNow = new Date('2026-10-05T12:00:00Z');
 const messaging = new InMemoryMessaging();
 const replies = new InMemoryInteractionReplies();
@@ -303,7 +303,7 @@ describe('todolists end to end: signed HTTP -> pipeline -> Postgres lock -> Disc
       ...extra,
     });
 
-  /** Comme à l'arrêt d'une réplique : attend le travail différé avant d'inspecter. */
+  /** As during replica shutdown: wait for deferred work before inspecting state. */
   const drain = (app: ReturnType<typeof replica>) => app.close();
   const posted = () => messaging.list(channel);
 

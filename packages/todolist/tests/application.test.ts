@@ -65,13 +65,13 @@ describe('CreateTodolist', () => {
     const messaging = new InMemoryMessaging();
     const create = new CreateTodolist(messaging);
     messaging.failNext('send', 'missing_permissions');
-    // La première page échoue.
+    // The first page fails.
     expect(await create.publish(channel, prepare(create, numbered(60)))).toEqual({ ok: false, error: { reason: 'missing_permissions', rolledBack: 0 } });
 
     const second = new InMemoryMessaging();
     const secondCreate = new CreateTodolist(second);
     const prepared = prepare(secondCreate, numbered(90));
-    // La deuxième page échoue : la première est retirée.
+    // The second page fails: remove the first one.
     const original = second.send.bind(second);
     let sent = 0;
     second.send = async (target, message) => {

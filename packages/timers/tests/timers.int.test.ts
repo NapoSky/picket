@@ -1,4 +1,4 @@
-import { purgeGuildData } from '@picket/persistence';
+import { purgeGuildData, sql } from '@picket/persistence';
 import { queryAsAdmin, type TestDatabase } from '@picket/testing';
 import { DEFAULT_BOARD_SETTINGS, ackCustomId, refreshCustomId } from '@picket/timers';
 import { HOUR_MS, NOW, makeAsset, unix } from './fixtures';
@@ -75,6 +75,63 @@ describe('board creation', () => {
     const before = sends(h);
     expect(await h.createBoard.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, locale: null })).toEqual({ kind: 'quota', max: 10 });
     expect(sends(h)).toBe(before);
+  });
+
+  it('keeps the last quota slot exclusive when two replicas create boards in different channels', async () => {
+    const h = timerHarness(database);
+    const second = createProcess(database, h.messaging, h.clock);
+    // A small fixture, with no Discord publication or repeated use-case calls.
+    await queryAsAdmin(database, `INSERT INTO timer_boards(guild_id,channel_id,created_by)
+      SELECT $1, (600000000000000000::bigint + n)::text, $2 FROM generate_series(1,9) n`, [h.ids.guild, h.ids.user]);
+    let unlock!: () => void;
+    let tableLocked!: () => void;
+    const held = new Promise<void>((resolve) => { tableLocked = resolve; });
+    const release = new Promise<void>((resolve) => { unlock = resolve; });
+    // Hold inserts while allowing reads, to make the original count/insert race
+    // deterministic. The fixed implementation serializes before the count.
+    const blocker = database.handle.db.transaction().execute(async (trx) => {
+      await sql`LOCK TABLE timer_boards IN SHARE MODE`.execute(trx);
+      tableLocked();
+      await release;
+    });
+    await held;
+    const create = (store: typeof h.store, channelId: typeof h.ids.channel) => store.createBoard({
+      guildId: h.ids.guild, channelId, createdBy: h.ids.user, locale: null,
+      settings: DEFAULT_BOARD_SETTINGS, maxBoards: 10,
+    }, h.clock.now());
+    const attempts = Promise.all([create(h.store, h.ids.channel), create(second.store, h.ids.otherChannel)]);
+    try {
+      let waiting = 0;
+      for (let poll = 0; poll < 100 && waiting < 2; poll += 1) {
+        const rows = await queryAsAdmin<{ n: number }>(database, `SELECT count(*)::int AS n FROM pg_stat_activity
+          WHERE datname=current_database() AND wait_event_type='Lock' AND state='active'`);
+        waiting = rows[0]!.n;
+        if (waiting < 2) await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      expect(waiting).toBe(2);
+      unlock();
+      await blocker;
+      expect((await attempts).map((result) => result.kind).sort()).toEqual(['created', 'quota']);
+      expect(await count('SELECT count(*) AS n FROM timer_boards WHERE guild_id=$1', [h.ids.guild])).toBe('10');
+      expect(await count("SELECT count(*) AS n FROM timer_events WHERE guild_id=$1 AND action='board_create'", [h.ids.guild])).toBe('1');
+    } finally { unlock(); await blocker; await attempts; }
+  });
+
+  it('reposts an existing board at the guild quota without creating another board', async () => {
+    const h = timerHarness(database);
+    const boardId = await h.boardWithMessage();
+    await h.add();
+    await queryAsAdmin(database, `INSERT INTO timer_boards(guild_id,channel_id,created_by)
+      SELECT $1, (600000000000000000::bigint + n)::text, $2 FROM generate_series(1,9) n`, [h.ids.guild, h.ids.user]);
+    h.messaging.remove(h.ids.channel, h.boardMessages()[0]!.id);
+
+    expect(await h.createBoard.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, locale: null }))
+      .toMatchObject({ kind: 'exists', sync: { synced: true } });
+    expect(h.boardMessages()).toHaveLength(1);
+    expect(h.lines()).toHaveLength(1);
+    expect((await h.store.boardByChannel(h.ids.guild, h.ids.channel))?.id).toBe(boardId);
+    expect(await count('SELECT count(*) AS n FROM timer_boards WHERE guild_id=$1', [h.ids.guild])).toBe('10');
+    expect(await count("SELECT count(*) AS n FROM timer_events WHERE guild_id=$1 AND action='board_create'", [h.ids.guild])).toBe('1');
   });
 
   it('snapshots the language of the channel, used when the server imposes none', async () => {
@@ -357,7 +414,7 @@ describe('resilience (TIM-RQ-15)', () => {
     expect(h.lines()).toEqual([]);
     expect(await h.store.boardByChannel(h.ids.guild, h.ids.channel)).toMatchObject({ needsSync: true, syncError: 'missing_permissions' });
 
-    // Pas avant l'heure de nouvelle tentative : on n'insiste pas auprès de Discord.
+    // Not before the retry time: avoid repeatedly requesting Discord.
     expect(await h.sweep.tick()).toBe(0);
     h.clock.advance(5 * MINUTE_MS);
     expect(await h.sweep.tick()).toBe(1);
@@ -384,7 +441,7 @@ describe('resilience (TIM-RQ-15)', () => {
     const boardId = await h.boardWithMessage();
     const board = await h.store.state(h.ids.guild, boardId);
     await h.store.mutate(h.ids.guild, boardId, () => ({ result: null, events: [{ actor: h.ids.user, action: 'repair' }] }), h.clock.now());
-    // Un rendu qui avait lu l'ancienne révision ne peut pas déclarer le board à jour.
+    // A render that read the old revision cannot mark the board synchronized.
     expect(await h.store.markSynced(h.ids.guild, boardId, { rev: board?.board.rev ?? 0, syncError: null })).toBe(false);
     expect((await h.store.boardByChannel(h.ids.guild, h.ids.channel))?.needsSync).toBe(true);
   });
@@ -451,6 +508,43 @@ describe('alerts (TIM-RQ-09)', () => {
     expect(await count('SELECT count(*) AS n FROM timer_alerts')).toBe('1');
   });
 
+  it('a replacement replica sends an alert reserved before a crash, then never sends it again', async () => {
+    const { h, boardId, asset } = await alertSetup();
+    toRemaining(h, 100);
+    const claim = { assetId: asset.id, dueAt: new Date(NOW.getTime() + 10 * HOUR_MS), thresholdMin: 120, send: true };
+    expect(await h.store.claimAlert(h.ids.guild, boardId, claim, h.clock.now())).toBe(true);
+    expect(h.alertMessages()).toHaveLength(0);
+    expect(await h.store.alerts(h.ids.guild, boardId)).toEqual([expect.objectContaining({ pending: true, messageId: null })]);
+    const replacement = createProcess(database, h.messaging, h.clock);
+    await replacement.maintenance.run(h.ids.guild, boardId);
+    expect(h.alertMessages()).toHaveLength(1);
+    expect(h.alertMessages()[0]?.view.nonce?.length).toBeLessThanOrEqual(25);
+    expect(await h.store.alerts(h.ids.guild, boardId)).toEqual([expect.objectContaining({ pending: false, messageId: expect.any(String) })]);
+    await replacement.maintenance.run(h.ids.guild, boardId);
+    expect(h.alertMessages()).toHaveLength(1);
+  });
+
+  it('reuses the send nonce if Discord accepted an alert before its SQL confirmation failed', async () => {
+    const { h, boardId } = await alertSetup();
+    toRemaining(h, 100);
+    const sent = new Map<string, Awaited<ReturnType<typeof h.messaging.send>>>();
+    const originalSend = h.messaging.send.bind(h.messaging);
+    const attempts: string[] = [];
+    jest.spyOn(h.messaging, 'send').mockImplementation(async (channel, view) => {
+      if (!view.nonce) return originalSend(channel, view);
+      attempts.push(view.nonce);
+      if (!sent.has(view.nonce)) sent.set(view.nonce, await originalSend(channel, view));
+      return sent.get(view.nonce)!;
+    });
+    jest.spyOn(h.store, 'setAlertMessage').mockRejectedValueOnce(new Error('SQL connection lost after Discord accepted'));
+    await h.maintenance.run(h.ids.guild, boardId);
+    await createProcess(database, h.messaging, h.clock).maintenance.run(h.ids.guild, boardId);
+    expect(attempts).toHaveLength(2);
+    expect(attempts[0]).toBe(attempts[1]);
+    expect(h.alertMessages()).toHaveLength(1);
+    expect(await h.store.alerts(h.ids.guild, boardId)).toEqual([expect.objectContaining({ pending: false, messageId: expect.any(String) })]);
+  });
+
   it('after an interruption, sends only the closest threshold and records the others as caught up', async () => {
     const { h, boardId } = await alertSetup();
     await h.updateSettings.execute({ guildId: h.ids.guild, channelId: h.ids.channel, actor: h.ids.user, patch: { alertThresholdsMin: [360, 120, 30] } });
@@ -506,7 +600,7 @@ describe('alerts (TIM-RQ-09)', () => {
     await h.refresh.execute({ guildId: h.ids.guild, channelId: h.ids.channel, userId: h.ids.user, level: 'member', assetId: asset.id });
     expect(h.alertMessages()).toHaveLength(0);
 
-    // Nouvelle échéance : 10 h après le refresh, donc le seuil se rejoue 8 h après lui.
+    // New deadline: 10 h after refresh, so replay the threshold 8 h after refresh.
     h.clock.advance(8 * HOUR_MS);
     await h.sweep.tick();
     expect(h.alertMessages()).toHaveLength(1);
@@ -531,11 +625,11 @@ describe('alerts (TIM-RQ-09)', () => {
     h.clock.set(new Date(NOW.getTime() + 10 * HOUR_MS));
     expect(await h.sweep.tick()).toBe(1);
     expect(h.alertMessages()).toHaveLength(0);
-    // Le tableau n'a pas à être modifié : `<t:…:R>` devient « il y a… » côté client.
+    // No board edit needed: the client renders `<t:...:R>` as elapsed time.
     expect(h.messaging.calls.filter((call) => call.startsWith("edit:")).length).toBe(edited);
     expect(h.lines()).toHaveLength(1);
     expect(await count("SELECT count(*) AS n FROM timer_assets WHERE status = 'active'")).toBe('1');
-    // Reste à purger : 24 h après l'échéance (10 h).
+    // Purge remains due 24 h after the deadline (10 h).
     expect(await queryAsAdmin(database, 'SELECT wake_at FROM timer_schedule')).toEqual([{ wake_at: new Date(NOW.getTime() + 34 * HOUR_MS) }]);
   });
 

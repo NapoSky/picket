@@ -7,17 +7,17 @@ import {
   MIN_THRESHOLD_MIN,
 } from './constants';
 
-/** Réglages propres à chaque board. */
+/** Per-board settings. */
 export interface BoardSettings {
   readonly alertsEnabled: boolean;
-  /** Minutes avant l'échéance, du plus lointain au plus proche. */
+  /** Minutes before the deadline, from farthest to closest. */
   readonly alertThresholdsMin: readonly number[];
   readonly alertRoleIds: readonly RoleId[];
-  /** Sans notification push, même pour les rôles mentionnés. */
+  /** No push notification, even for mentioned roles. */
   readonly alertSilent: boolean;
-  /** Barrer et rafraîchir réservés au propriétaire de l'asset et aux officiers. */
+  /** Restrict strike and refresh to the asset owner and officers. */
   readonly restrictChanges: boolean;
-  /** Heures après lesquelles un asset barré ou expiré est supprimé ; `null` : jamais. */
+  /** Hours after which a struck or expired asset is deleted; `null` means never. */
   readonly purgeAfterHours: number | null;
   readonly resetOnNewWar: boolean;
 }
@@ -43,7 +43,7 @@ function isThresholdList(value: unknown): value is number[] {
   );
 }
 
-/** Lecture tolérante d'un JSON stocké : un champ absent ou invalide retombe sur sa valeur par défaut. */
+/** Tolerant stored-JSON parsing: missing or invalid fields fall back to defaults. */
 export function parseBoardSettings(raw: unknown): BoardSettings {
   const source = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
   const defaults = DEFAULT_BOARD_SETTINGS;
@@ -75,7 +75,7 @@ export interface SettingsPatch {
   readonly alertRole?: { readonly action: 'add' | 'remove' | 'clear'; readonly roleId?: RoleId };
   readonly alertSilent?: boolean;
   readonly restrictChanges?: boolean;
-  /** 0 : jamais. */
+  /** 0 means never. */
   readonly purgeAfterHours?: number;
   readonly resetOnNewWar?: boolean;
 }
@@ -90,7 +90,7 @@ export function applySettingsPatch(current: BoardSettings, patch: SettingsPatch)
   let next: BoardSettings = { ...current };
 
   if (patch.alertThresholdsMin !== undefined) {
-    // Une liste valide à un doublon près (« 2h, 2h ») est acceptée et dédoublonnée.
+    // Accept and deduplicate an otherwise valid list with duplicate thresholds (2h, 2h).
     const sorted = sortThresholds(patch.alertThresholdsMin);
     if (!isThresholdList(sorted)) return err('invalid_thresholds');
     next = { ...next, alertThresholdsMin: sorted };

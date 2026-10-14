@@ -4,8 +4,11 @@ export class LockTimeoutError extends DomainError {
   readonly code = 'lock_timeout';
 }
 
-/** Exclusion mutuelle entre répliques, sans aucune donnée stockée : la clé n'existe que le temps du verrou. */
+/** Mutual exclusion across replicas, without persistent data: the key exists only while locked. */
 export interface KeyedLock {
-  /** Attend le verrou (au plus le délai configuré, sinon `LockTimeoutError`), exécute `work`, puis le libère. */
+  /**
+   * Wait for the lock (up to the configured timeout, otherwise `LockTimeoutError`), run `work`, then release
+   * it.
+   */
   withLock<T>(key: string, work: () => Promise<T>): Promise<T>;
 }

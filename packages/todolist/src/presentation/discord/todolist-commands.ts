@@ -32,7 +32,7 @@ const PERMISSION_KEYS: Readonly<Record<BotPermission, MessageKey>> = {
   embed_links: 'discordPermissions.embedLinks',
 };
 
-/** Limite d'un message Discord. */
+/** Discord message length limit. */
 const MESSAGE_LIMIT = 2000;
 
 const pageTexts = (t: T): PageTexts => ({
@@ -63,12 +63,12 @@ function prepareErrorText(error: PrepareError, t: T): string {
   }
 }
 
-/** Une modale refusée se ferme : on rend la saisie pour qu'elle puisse être recopiée, au plus ce que Discord accepte. */
+/** A rejected modal closes: return input for copying, up to Discord's accepted size. */
 function withEcho(message: string, text: string, t: T): string {
   const header = `${message}\n\n${t('todolist.errors.yourText')}\n\`\`\`\n`;
   const footer = '\n```';
   const room = MESSAGE_LIMIT - header.length - footer.length;
-  // Une suite de trois accents graves fermerait le bloc : on les sépare par un caractère de largeur nulle.
+  // Three consecutive backticks would close the block: separate them with a zero-width character.
   const safe = text.replace(/```/gu, '`\u200b``').slice(0, Math.max(0, room));
   return room > 0 ? `${header}${safe}${footer}` : message;
 }
@@ -77,7 +77,7 @@ function tickReply(result: TickResult, t: T): Reply | null {
   switch (result.kind) {
     case 'updated':
     case 'gone':
-      // Rien à dire : le message a changé sous les yeux, ou n'existe plus.
+      // Nothing to say: the message updated in view or no longer exists.
       return null;
     case 'completed':
       return ephemeral(
@@ -132,13 +132,13 @@ export function todolistFamily(deps: { create: CreateTodolist; tick: TickTodolis
     if (payload !== CREATE_MODAL_PAYLOAD) return ephemeral(t('errors.expired'));
     const channelId = interaction.channelId;
     if (channelId === null) return ephemeral(t('todolist.errors.noChannel'));
-    // Les droits ont pu changer depuis l'ouverture de la modale.
+    // Permissions may have changed since the modal opened.
     const missing = missingPermissionsReply(interaction.appPermissions, t);
     if (missing) return missing;
 
     const text = interaction.fields[CONTENT_FIELD_ID] ?? '';
     const prepared = deps.create.prepare(text, pageTexts(t));
-    // Refus immédiat : pas d'attente différée pour une saisie invalide.
+    // Reject immediately: no deferred waiting for invalid input.
     if (!prepared.ok) return ephemeral(prepared.error.code === 'empty' ? prepareErrorText(prepared.error, t) : withEcho(prepareErrorText(prepared.error, t), text, t));
 
     return {

@@ -23,8 +23,7 @@ export function boardTexts(t: T): BoardTexts {
 export const ALERT_ACK_EMOJI = '✅';
 
 /**
- * Message d'alerte : seuls les rôles configurés du board sont mentionnés (jamais autre chose), et sans notification
- * push si le board est en mode silencieux.
+ * Alert message: mention only configured board roles, with no push notification when the board is silent.
  */
 export function buildAlertView(asset: TimerAsset, thresholdMin: number, settings: BoardSettings, t: T): MessageView {
   const end = deadline(asset);

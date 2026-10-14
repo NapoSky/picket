@@ -7,7 +7,7 @@ import { toWireReplyContent } from './panel-mapper';
 import { instrumentRestOptions } from './bot-rest';
 import type { OperationalMetrics } from '@picket/kernel';
 
-/** Les routes de webhook portent le jeton d'interaction : pas d'en-tête d'autorisation, et aucune erreur d'origine conservée. */
+/** Webhook routes include the interaction token: no authorization header and no original errors retained. */
 export class DiscordRestInteractionReplies implements InteractionReplies {
   readonly #rest: REST;
 

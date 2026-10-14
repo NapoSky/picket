@@ -2,29 +2,31 @@ import { deadline, type TimerAsset } from './asset';
 import type { BoardSettings } from './board-settings';
 import { ABANDONED_AFTER_DAYS } from './constants';
 
-/** Une alerte déjà réclamée en base pour (asset, échéance, seuil). */
+/** Alert already reserved in the database for (asset, deadline, threshold). */
 export interface AlertRow {
   readonly assetId: string;
   readonly dueAt: Date;
   readonly thresholdMin: number;
-  /** `null` : seuil rattrapé sans message, ou message déjà retiré. */
+  /** `null`: threshold caught up without sending, or message already removed. */
   readonly messageId: string | null;
   readonly ackedAt: Date | null;
+  /** Unconfirmed send, recoverable under the board lock after a restart. */
+  readonly pending?: boolean;
 }
 
 export interface AlertClaim {
   readonly assetId: string;
   readonly dueAt: Date;
   readonly thresholdMin: number;
-  /** Seul le seuil le plus proche de l'échéance envoie un message ; les plus lointains sont rattrapés en silence. */
+  /** Only the threshold closest to the deadline sends a message; catch up farther thresholds silently. */
   readonly send: boolean;
 }
 
 const MINUTE_MS = 60_000;
 
 /**
- * Seuils atteints et pas encore réclamés. Après une interruption, on n'envoie qu'une alerte (le seuil le plus
- * proche de l'échéance) au lieu de tout rejouer d'un coup. Un refresh change l'échéance : tout est ré-armé.
+ * Reached thresholds not yet reserved. After interruption, send only the alert closest to the deadline
+ * rather than replaying every threshold. Refresh changes the deadline and rearms all thresholds.
  */
 export function planAlerts(
   assets: readonly TimerAsset[],
@@ -43,7 +45,7 @@ export function planAlerts(
     const closest = reached[0];
     if (closest === undefined) continue;
     const known = new Set(
-      existing.filter((row) => row.assetId === asset.id && row.dueAt.getTime() === end.getTime()).map((row) => row.thresholdMin),
+      existing.filter((row) => row.assetId === asset.id && row.dueAt.getTime() === end.getTime() && !row.pending).map((row) => row.thresholdMin),
     );
     for (const threshold of reached) {
       if (!known.has(threshold)) claims.push({ assetId: asset.id, dueAt: end, thresholdMin: threshold, send: threshold === closest });
@@ -53,8 +55,8 @@ export function planAlerts(
 }
 
 /**
- * Messages d'alerte à retirer : asset barré, supprimé ou rafraîchi (échéance changée), échéance passée, ou alerte
- * remplacée par une plus proche de l'échéance.
+ * Alert messages to remove: asset struck, deleted or refreshed (deadline changed), deadline elapsed, or
+ * alert superseded by a closer threshold.
  */
 export function staleAlerts(assets: readonly TimerAsset[], existing: readonly AlertRow[], now: Date): AlertRow[] {
   const byId = new Map(assets.map((asset) => [asset.id, asset]));
@@ -69,7 +71,7 @@ export function staleAlerts(assets: readonly TimerAsset[], existing: readonly Al
   });
 }
 
-/** Assets à supprimer : barrés ou expirés depuis plus longtemps que le délai de purge du board. */
+/** Assets to delete: struck or expired longer than the board's purge delay. */
 export function purgeCandidates(assets: readonly TimerAsset[], settings: BoardSettings, now: Date): TimerAsset[] {
   if (settings.purgeAfterHours === null) return [];
   const delay = settings.purgeAfterHours * 3_600_000;
@@ -81,10 +83,10 @@ export function purgeCandidates(assets: readonly TimerAsset[], settings: BoardSe
 
 const DAY_MS = 24 * 3_600_000;
 
-/** Instant où un board sans timer est supprimé, faute d'activité. */
+/** Time at which an empty board is deleted for inactivity. */
 export const abandonedAt = (lastActivityAt: Date): Date => new Date(lastActivityAt.getTime() + ABANDONED_AFTER_DAYS * DAY_MS);
 
-/** Board vide, sans modification depuis `ABANDONED_AFTER_DAYS` : plus personne ne s'en sert. */
+/** Empty board with no changes for `ABANDONED_AFTER_DAYS`: no longer in use. */
 export const isAbandoned = (assets: readonly TimerAsset[], lastActivityAt: Date, now: Date): boolean =>
   assets.length === 0 && abandonedAt(lastActivityAt).getTime() <= now.getTime();
 
@@ -97,8 +99,8 @@ export interface WakeInput {
 }
 
 /**
- * Prochain instant où ce board demande du travail : rendu en attente, seuil d'alerte, échéance (le board affiche
- * alors « expiré »), purge, suppression d'un board vide inactif. `null` : rien à planifier.
+ * Next board work time: pending rendering, alert threshold, deadline (display expired), purge or deletion of
+ * an inactive empty board. `null` means nothing to schedule.
  */
 export function nextWake(input: WakeInput): Date | null {
   const { assets, settings, now } = input;

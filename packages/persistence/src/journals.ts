@@ -14,7 +14,7 @@ export class PostgresGuildApplicationLogs {
     }
     for (const [guildId, batch] of guilds) {
       await withTenant(this.db, guildId, async (trx) => {
-        // Ne jamais recréer des données après une purge. Le verrou et la FK protègent aussi les répliques concurrentes.
+        // Never recreate data after a purge. The lock and foreign key also protect against concurrent replicas.
         const guild = await trx.selectFrom('guild_registry').select('guild_id').where('guild_id', '=', guildId).forKeyShare().executeTakeFirst();
         if (guild === undefined) return;
         const { rows: [row] } = await sql<{ cutoff: Date }>`SELECT CURRENT_TIMESTAMP - INTERVAL '30 days' AS cutoff`.execute(trx);
@@ -34,7 +34,7 @@ export interface JournalPurgeReport {
   readonly applicationLogsDeleted: number;
 }
 
-/** La fonction privilégiée ne permet que la suppression des entrées âgées d'au moins 30 jours. */
+/** The privileged function only permits deletion of entries at least 30 days old. */
 export async function purgeExpiredJournals(db: Db, guildId?: GuildId): Promise<JournalPurgeReport> {
   const { rows: [row] } = await sql<{ audit_deleted: string; timer_events_deleted: string; application_logs_deleted: string }>`SELECT * FROM purge_expired_journals(${guildId ?? null}::text)`.execute(db);
   return { auditDeleted: Number(row!.audit_deleted), timerEventsDeleted: Number(row!.timer_events_deleted), applicationLogsDeleted: Number(row!.application_logs_deleted) };

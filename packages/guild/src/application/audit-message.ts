@@ -38,7 +38,7 @@ export function auditMessage(event: AuditEvent, t: Translator['t']): MessageView
     if (key === 'language') return raw === null ? t('status.languageAuto') : escape(raw);
     if (key === 'perspective' && (raw === 'NONE' || raw === 'WARDENS' || raw === 'COLONIALS')) return t(`warlog.factions.${raw}`);
     if ((key === 'auditChannelId' || key === 'channelId') && snowflake(raw)) return `<#${raw}>`;
-    // L'abonnement stocke une pause ; présenter l'état du journal, pas le booléen inversé.
+    // The subscription stores a paused flag: show the journal state, not the inverted boolean.
     if (key === 'paused' && typeof raw === 'boolean') return t(raw ? 'panel.disabled' : 'panel.enabled');
     if (key === 'confirmedWar') return typeof raw === 'number' ? t('audit.warNumber', { war: raw }) : t('audit.warUnconfirmed');
     if (key === 'zones' && Array.isArray(raw)) {
@@ -80,7 +80,7 @@ export function auditMessage(event: AuditEvent, t: Translator['t']): MessageView
   const heading = `${icon} **${singleLine(t(TITLES[event.action] ?? 'audit.configuration'))}**`;
   const tail = ` · ${singleLine(t('audit.actor', { actor: snowflake(event.actor) ? `<@${event.actor}>` : t('audit.system') }))} · <t:${Math.floor(event.at.getTime() / 1000)}:f>`;
   let content = heading;
-  // Garder l'auteur et l'heure ; omettre les derniers détails plutôt que couper un lien ou une mention.
+  // Keep the author and timestamp; omit trailing details rather than truncate a link or mention.
   for (const part of parts) {
     const addition = ` · ${singleLine(part)}`;
     if (content.length + addition.length + tail.length + 4 > MAX_MESSAGE_CONTENT) { content += ' · …'; break; }

@@ -18,23 +18,23 @@ export interface TimerAsset {
   readonly startedAt: Date;
   readonly status: AssetStatus;
   readonly struckAt: Date | null;
-  /** Échéance affichée au moment du barrage ; la durée d'origine reste intacte. */
+  /** Deadline displayed when struck; preserve the original duration. */
   readonly frozenAt: Date | null;
   readonly rev: number;
 }
 
-/** Échéance d'un compte à rebours actif ; `null` pour une ancienneté ou un asset barré. */
+/** Active countdown deadline; `null` for an age or struck asset. */
 export function deadline(asset: TimerAsset): Date | null {
   return asset.status === 'active' && asset.direction === 'down' ? new Date(asset.startedAt.getTime() + asset.durationS * 1000) : null;
 }
 
-/** Instant affiché dans le board : l'échéance, l'ancienneté, ou l'instant figé d'un asset barré. */
+/** Instant displayed on the board: deadline, age or a struck asset's frozen instant. */
 export function displayedMoment(asset: TimerAsset): Date {
   if (asset.status === 'struck') return asset.frozenAt ?? asset.startedAt;
   return deadline(asset) ?? asset.startedAt;
 }
 
-/** Expiré : informatif seulement, l'asset reste affiché jusqu'à ce qu'on le barre ou qu'il soit purgé. */
+/** Expired is informational only: keep the asset displayed until struck or purged. */
 export function isExpired(asset: TimerAsset, now: Date): boolean {
   const end = deadline(asset);
   return end !== null && end.getTime() <= now.getTime();
@@ -44,12 +44,12 @@ export function strikeAsset(asset: TimerAsset, now: Date): TimerAsset {
   return { ...asset, status: 'struck', struckAt: now, frozenAt: displayedMoment(asset), rev: asset.rev + 1 };
 }
 
-/** Remet le compte à zéro : un compte à rebours repart de sa durée, une ancienneté repart de 0. */
+/** Reset the timer: countdowns restart with their duration, ages restart at 0. */
 export function refreshAsset(asset: TimerAsset, now: Date): TimerAsset {
   return { ...asset, startedAt: now, rev: asset.rev + 1 };
 }
 
-/** Un asset barré qu'on ajoute à nouveau reprend sa place : même identifiant, nouveau départ. */
+/** Re-adding a struck asset restores its position: same identifier, new start. */
 export function reactivateAsset(
   asset: TimerAsset,
   request: { readonly ownerId: UserId; readonly durationS: number; readonly now: Date },
@@ -66,7 +66,7 @@ export function reactivateAsset(
   };
 }
 
-/** Même ressource : type, nom (casse ignorée), lieu et code. */
+/** Same resource: type, case-insensitive name, location and code. */
 export function sameResource(a: Pick<TimerAsset, 'type' | 'name' | 'code' | 'regionKey' | 'locationKey'>, b: typeof a): boolean {
   return (
     a.type === b.type &&
@@ -79,7 +79,7 @@ export function sameResource(a: Pick<TimerAsset, 'type' | 'name' | 'code' | 'reg
 
 export const activeAssets = (assets: readonly TimerAsset[]): TimerAsset[] => assets.filter((asset) => asset.status === 'active');
 
-/** Région, lieu, type, nom : l'ordre d'affichage, identique partout. */
+/** Region, location, type, name: display order, identical everywhere. */
 export function compareAssets(a: TimerAsset, b: TimerAsset): number {
   const regionA = findRegion(a.regionKey)?.order ?? Number.MAX_SAFE_INTEGER;
   const regionB = findRegion(b.regionKey)?.order ?? Number.MAX_SAFE_INTEGER;

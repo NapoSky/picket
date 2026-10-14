@@ -38,10 +38,11 @@ describe('migrate (integration)', () => {
       '012_stats',
       '013_instance_overview',
       '014_stats_admin_snapshot',
+      '015_timer_alert_delivery',
     ]);
 
     const second = await run();
-    expect(second).toEqual({ applied: [], alreadyApplied: 14 });
+    expect(second).toEqual({ applied: [], alreadyApplied: 15 });
   });
 
   it('serialises concurrent runs with the advisory lock', async () => {
@@ -62,6 +63,29 @@ describe('migrate (integration)', () => {
       '012_stats',
       '013_instance_overview',
       '014_stats_admin_snapshot',
+      '015_timer_alert_delivery',
+    ]);
+  });
+
+  it('adds recoverable alert delivery without changing legacy rows or breaking old inserts', async () => {
+    for (const file of (await readdir(MIGRATIONS_DIR)).filter((name) => /^0(?:0\d|1[0-4])_.*\.sql$/.test(name))) {
+      await writeFile(join(directory, file), await readFile(join(MIGRATIONS_DIR, file)));
+    }
+    await run(directory);
+    const guild = '700000000000000099';
+    const board = '00000000-0000-4000-8000-000000000099';
+    await queryAsAdmin(database, `
+      INSERT INTO timer_boards(id,guild_id,channel_id,created_by) VALUES ($1,$2,'600000000000000099','500000000000000099');
+    `, [board, guild]);
+    await queryAsAdmin(database, `INSERT INTO timer_assets(id,board_id,guild_id,type,name,region_key,location_key,owner_user_id,direction,duration_s,started_at)
+      VALUES ('legacyalert',$1,$2,'bunker','Alpha','region','place','500000000000000099','down',3600,now())`, [board, guild]);
+    const insert = `INSERT INTO timer_alerts(asset_id,board_id,guild_id,due_at,threshold_min) VALUES ('legacyalert',$1,$2,now()+interval '1 hour',$3)`;
+    await queryAsAdmin(database, insert, [board, guild, 120]);
+    expect((await run()).applied).toEqual(['015_timer_alert_delivery']);
+    // The previous replica knows neither the new column nor a new INSERT shape.
+    await queryAsAdmin(database, insert, [board, guild, 30]);
+    expect(await queryAsAdmin(database, 'SELECT delivery_pending, message_id FROM timer_alerts')).toEqual([
+      { delivery_pending: false, message_id: null }, { delivery_pending: false, message_id: null },
     ]);
   });
 
@@ -75,7 +99,7 @@ describe('migrate (integration)', () => {
     await queryAsAdmin(database, `INSERT INTO timer_events (guild_id, board_id, actor_id, action, at)
       VALUES ($1, '00000000-0000-4000-8000-000000000001', 'system', 'expired', now() - interval '31 days'),
              ($1, '00000000-0000-4000-8000-000000000001', 'system', 'recent', now())`, [guild]);
-    expect((await run()).applied).toEqual(['008_journal_retention', '009_audit_delivery', '010_warlog', '011_warlog_perspective', '012_stats', '013_instance_overview', '014_stats_admin_snapshot']);
+    expect((await run()).applied).toEqual(['008_journal_retention', '009_audit_delivery', '010_warlog', '011_warlog_perspective', '012_stats', '013_instance_overview', '014_stats_admin_snapshot', '015_timer_alert_delivery']);
     expect(await queryAsAdmin(database, 'SELECT action FROM guild_audit_log')).toEqual([{ action: 'recent' }]);
     expect(await queryAsAdmin(database, 'SELECT action FROM timer_events')).toEqual([{ action: 'recent' }]);
   });
@@ -94,7 +118,7 @@ describe('migrate (integration)', () => {
     await queryAsAdmin(database, 'INSERT INTO guild_registry(guild_id) VALUES($1)', [guild]);
     await queryAsAdmin(database, `INSERT INTO warlog_subscriptions(guild_id, channel_id, zones, paused, confirmed_war)
       VALUES($1, '600000000000000001', '["west_coast"]', false, 100)`, [guild]);
-    expect((await run()).applied).toEqual(['011_warlog_perspective', '012_stats', '013_instance_overview', '014_stats_admin_snapshot']);
+    expect((await run()).applied).toEqual(['011_warlog_perspective', '012_stats', '013_instance_overview', '014_stats_admin_snapshot', '015_timer_alert_delivery']);
     expect(await queryAsAdmin(database, 'SELECT perspective, channel_id, zones, paused, confirmed_war FROM warlog_subscriptions')).toEqual([
       { perspective: 'NONE', channel_id: '600000000000000001', zones: ['west_coast'], paused: false, confirmed_war: 100 },
     ]);

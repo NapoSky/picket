@@ -16,7 +16,7 @@ export type ValidationError =
   | { readonly code: 'duration_too_short'; readonly minSeconds: number }
   | { readonly code: 'duration_too_long'; readonly maxSeconds: number };
 
-/** Saisie brute : tout vient d'un utilisateur, rien n'est supposé valide. */
+/** Raw input: everything comes from a user; assume nothing is valid. */
 export interface AssetInput {
   readonly type: string;
   readonly regionKey: string;
@@ -37,8 +37,8 @@ export interface ValidAsset {
 }
 
 /**
- * Espaces réduits, caractères de contrôle retirés. Le nom est stocké tel quel : l'échappement Markdown et des mentions
- * se fait au rendu, et la longueur se mesure ici sur ce qui sera réellement affiché.
+ * Collapse spaces and remove control characters. Store the name as-is; escape Markdown and mentions when
+ * rendering. Measure length here against what will actually be displayed.
  */
 export function normalizeName(raw: string): string {
   return raw
@@ -59,7 +59,7 @@ function validateCode(type: AssetType, raw: string): Result<string | null, Valid
   return ok(rule.uppercase ? code.toUpperCase() : code);
 }
 
-/** Une seule règle pour tous les chemins d'entrée : la même saisie donne toujours le même résultat. */
+/** One rule for every entry path: the same input always gives the same result. */
 export function validateAssetInput(input: AssetInput): Result<ValidAsset, ValidationError> {
   if (!isAssetTypeId(input.type)) return err({ code: 'unknown_type' });
   const type = ASSET_TYPES[input.type];
@@ -74,7 +74,7 @@ export function validateAssetInput(input: AssetInput): Result<ValidAsset, Valida
   const code = validateCode(type, input.code);
   if (!code.ok) return code;
 
-  // Une ancienneté (`up`) n'a pas de durée : on ignore la saisie plutôt que de la refuser.
+  // An age (`up`) has no duration: ignore input rather than reject it.
   let durationS = type.defaultDurationS;
   if (type.direction === 'down') {
     const parsed = parseDuration(input.duration, 'hours');

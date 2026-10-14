@@ -7,15 +7,15 @@ const ADMINISTRATOR = 1n << 3n;
 export type BotPermission = 'view_channel' | 'send_messages' | 'embed_links';
 
 /**
- * Droits du bot qui manquent pour publier une todolist dans le canal de l'interaction (`app_permissions`).
- * `null` (non fourni par Discord) : on tente, et une erreur de l'API sera expliquée.
+ * Bot permissions missing to publish a todolist in the interaction channel (`app_permissions`). If `null`
+ * (not provided by Discord), attempt the request and explain any API error.
  */
 export function missingBotPermissions(appPermissions: bigint | null): readonly BotPermission[] {
   if (appPermissions === null || (appPermissions & ADMINISTRATOR) !== 0n) return [];
   const has = (bit: bigint): boolean => (appPermissions & bit) !== 0n;
   const missing: BotPermission[] = [];
   if (!has(VIEW_CHANNEL)) missing.push('view_channel');
-  // Dans un fil, c'est « Envoyer des messages dans les fils » qui compte.
+  // In a thread, Send Messages in Threads is the relevant permission.
   if (!has(SEND_MESSAGES) && !has(SEND_MESSAGES_IN_THREADS)) missing.push('send_messages');
   if (!has(EMBED_LINKS)) missing.push('embed_links');
   return missing;

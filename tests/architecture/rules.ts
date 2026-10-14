@@ -35,7 +35,7 @@ function isNodeBuiltin(specifier: string): boolean {
   return specifier.startsWith('node:') || NODE_BUILTINS.has(specifier.split('/')[0] ?? specifier);
 }
 
-/** `kernel`, `domain/` et `application/` : aucune dépendance technique (Discord, base, HTTP, Node). */
+/** `kernel`, `domain/` and `application/`: no technical dependencies (Discord, database, HTTP, Node). */
 export function isPureLayer(relativePath: string): boolean {
   const normalized = relativePath.split(sep).join('/');
   return (
@@ -47,7 +47,7 @@ export function isPureLayer(relativePath: string): boolean {
 const LAYER_ORDER = ['domain', 'application', 'infrastructure', 'presentation'] as const;
 type Layer = (typeof LAYER_ORDER)[number];
 
-// Couches que chaque couche a le droit d'importer au sein d'un même package.
+// Allowed import layers within the same package.
 const ALLOWED_LAYER_IMPORTS: Record<Layer, readonly Layer[]> = {
   domain: ['domain'],
   application: ['domain', 'application'],

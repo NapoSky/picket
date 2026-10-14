@@ -1,14 +1,14 @@
 export interface Lease {
   readonly name: string;
   readonly holder: string;
-  /** Jeton de fencing : strictement croissant à chaque changement de détenteur. */
+  /** Fencing token: strictly increases whenever ownership changes. */
   readonly token: bigint;
 }
 
 export interface LeaseStore {
-  /** `null` si le verrou est détenu par un autre et n'a pas expiré. */
+  /** `null` if another holder owns the unexpired lease. */
   acquire(name: string, holder: string, ttlMs: number): Promise<Lease | null>;
-  /** `false` si le verrou a changé de main (le détenteur doit cesser immédiatement). */
+  /** `false` if ownership changed (the holder must stop immediately). */
   renew(lease: Lease, ttlMs: number): Promise<boolean>;
   release(lease: Lease): Promise<void>;
 }

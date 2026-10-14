@@ -1,7 +1,7 @@
 import type { GuildId, RoleId, UserId } from '@picket/kernel';
 import type { PermissionConfig, PermissionDecision } from '../domain/permissions';
 
-/** Auteur d'un changement : un utilisateur, ou le système (réaction à un événement Discord). */
+/** Change author: a user or the system (responding to a Discord event). */
 export type AuditActor = UserId | 'system';
 
 export interface ModifyResult {
@@ -10,12 +10,12 @@ export interface ModifyResult {
 }
 
 export interface PermissionRepository {
-  /** Initialise la guilde (réglages et rôle `member` par défaut) au premier accès, puis lit la configuration. */
+  /** Initialize the guild (default settings and `member` role) on first access, then read its configuration. */
   load(guildId: GuildId): Promise<PermissionConfig>;
 
   /**
-   * Applique une décision de façon atomique et sérialisée par guilde : `decide` voit la configuration
-   * courante, et un changement effectif est journalisé (avant/après) dans la même transaction.
+   * Apply a decision atomically and serially per guild: `decide` sees current configuration, and actual
+   * changes are logged (before/after) in the same transaction.
    */
   modify(
     guildId: GuildId,

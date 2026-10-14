@@ -18,7 +18,7 @@ import type { BoardMaintenance, MaintenanceOutcome } from './board-maintenance';
 import type { BoardRecord, Mutation, TimerStore } from './ports';
 import type { RenderCoalescer } from './render-coalescer';
 
-/** Ce que l'utilisateur doit savoir du rendu : l'état est enregistré dans tous les cas, Discord peut suivre plus tard. */
+/** Rendering status for the user: state is always saved; Discord may catch up later. */
 export type SyncStatus = { readonly synced: true } | { readonly synced: false; readonly reason: string };
 
 export function syncStatusOf(outcome: MaintenanceOutcome): SyncStatus {
@@ -44,7 +44,7 @@ export interface TimerUseCaseDeps {
   readonly ids: IdGenerator;
 }
 
-/** Une opération sur un asset est refusée à un simple membre quand le board réserve les changements. */
+/** Reject member operations on an asset when the board restricts changes. */
 export function mayChange(board: BoardRecord, asset: TimerAsset, userId: UserId, level: AccessLevel): boolean {
   return !board.settings.restrictChanges || asset.ownerId === userId || level !== 'member';
 }
@@ -69,9 +69,9 @@ export class CreateBoard {
       { ...input, createdBy: input.actor, settings: DEFAULT_BOARD_SETTINGS, maxBoards: MAX_BOARDS_PER_GUILD },
       clock.now(),
     );
-    // Le tableau existe en base : créer le republie, car ses messages ont pu être supprimés à la main.
+    // The board exists in the database: create reposts it, since its messages may have been deleted manually.
     if (created.kind === 'exists') {
-      // Compte comme une activité : un board qu'on vient de réclamer n'est pas un board abandonné.
+      // Count as activity: a freshly requested board is not abandoned.
       await store.mutate(input.guildId, created.board.id, () => ({ result: null, events: [{ actor: input.actor, action: 'repair' }] }), clock.now());
       return { kind: 'exists', sync: syncStatusOf(await maintenance.run(input.guildId, created.board.id, { force: true })) };
     }
@@ -120,7 +120,7 @@ export class AddAsset {
       input.guildId,
       board.id,
       (state): Mutation<AddDecision> => {
-        // Vérifier l'identité et le quota sous le verrou : deux ajouts simultanés ne créent pas de doublon.
+        // Check identity and quota under the lock: concurrent additions cannot create duplicates.
         const active = activeAssets(state.assets);
         const identical = active.find((asset) => sameResource(asset, candidate));
         if (identical !== undefined) return { result: { kind: 'duplicate' } };
@@ -228,8 +228,8 @@ export class StrikeAsset {
 }
 
 /**
- * Le bouton d'un asset : l'asset suffit à retrouver son board (et la RLS borne la recherche à la guilde). Le message
- * cliqué doit être dans le canal du board : un identifiant forgé ne permet pas d'agir sur un autre board.
+ * Asset button: the asset identifies its board (RLS scopes the lookup to the guild). The clicked message
+ * must be in the board channel; a forged identifier cannot act on another board.
  */
 export class RefreshAsset {
   readonly #deps: TimerUseCaseDeps;
@@ -252,7 +252,7 @@ export type CleanupResult =
   | { readonly kind: 'nothing' }
   | { readonly kind: 'cleaned'; readonly removed: number; readonly sync: SyncStatus };
 
-/** Supprime les assets barrés. Le board garde toujours au moins un message : rien n'est jamais « recréé » après coup. */
+/** Delete struck assets. Keep at least one board message: never recreate it afterwards. */
 export class CleanupBoard {
   readonly #deps: TimerUseCaseDeps;
 
@@ -286,7 +286,7 @@ export class CleanupBoard {
 
 export type RepairResult = { readonly kind: 'no_board' } | { readonly kind: 'repaired'; readonly sync: SyncStatus };
 
-/** Republie tous les messages du board depuis la base : message supprimé, pages incohérentes, rendu resté en attente. */
+/** Repost all board messages from the database: deleted messages, inconsistent pages or pending rendering. */
 export class RepairBoard {
   readonly #deps: TimerUseCaseDeps;
 
@@ -370,7 +370,7 @@ export class UpdateBoardSettings {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-/** Acquitte une alerte : son message disparaît, et le même seuil ne se redéclenchera pas pour cette échéance. */
+/** Acknowledge an alert: remove its message and never retrigger the same threshold for that deadline. */
 export class AcknowledgeAlert {
   readonly #deps: TimerUseCaseDeps;
 
@@ -380,7 +380,7 @@ export class AcknowledgeAlert {
 
   async execute(input: { guildId: GuildId; channelId: ChannelId; assetId: string; thresholdMin: number; actor: UserId }): Promise<{ readonly kind: 'acked' | 'unknown' }> {
     const { store, messaging, clock } = this.#deps;
-    // Le message cliqué doit être dans le canal du board de l'asset.
+    // The clicked message must be in the asset's board channel.
     const board = await store.boardOfAsset(input.guildId, input.assetId);
     if (board === null || board.channelId !== input.channelId) return { kind: 'unknown' };
     const row = await store.acknowledgeAlert(input.guildId, input.assetId, input.thresholdMin, input.actor, clock.now());
@@ -389,7 +389,7 @@ export class AcknowledgeAlert {
       try {
         await messaging.delete(board.channelId, row.messageId as MessageId);
       } catch {
-        // Déjà supprimé, ou plus de droits : l'acquittement est enregistré dans tous les cas.
+        // Already deleted or permissions lost: record the acknowledgement either way.
       }
       await store.setAlertMessage(input.guildId, row, null);
     }
@@ -398,8 +398,8 @@ export class AcknowledgeAlert {
 }
 
 /**
- * Contrat exposé au journal de guerre : à chaque nouvelle guerre, les boards de la guilde qui l'ont demandé repartent
- * à vide. Les assets disparaissent, l'historique (`timer_events`) est conservé.
+ * Contract exposed to the war log: on each new war, reset opted-in guild boards to empty. Remove assets
+ * while retaining history (`timer_events`).
  */
 export class ArchiveBoardsOnNewWar {
   readonly #deps: TimerUseCaseDeps;
@@ -439,7 +439,7 @@ export class ArchiveBoardsOnNewWar {
 
 const AUTOCOMPLETE_LIMIT = 25;
 
-/** Assets actifs du board du canal, filtrés par ce que l'utilisateur tape (nom, code ou lieu). */
+/** Active assets on the channel's board, filtered by user input (name, code or location). */
 export class ListActiveAssets {
   readonly #store: TimerStore;
 

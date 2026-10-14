@@ -4,7 +4,7 @@ import { FEATURES, type Feature } from '../../domain/guild-settings';
 
 const isFeature = (value: string): value is Feature => (FEATURES as readonly string[]).includes(value);
 
-/** Une fonctionnalité inconnue est toujours refusée. */
+/** Always reject an unknown feature. */
 export function createFeatureGate(settings: GuildSettingsRepository): FeatureGate {
   return {
     isEnabled: async (guildId, feature) => {

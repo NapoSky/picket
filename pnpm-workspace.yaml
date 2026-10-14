@@ -12,5 +12,5 @@ allowBuilds:
   ssh2: false
   unrs-resolver: true
 
-# Bloque toute version publiée depuis moins de 48 h (supply chain).
+# Block releases less than 48 h old (supply chain protection).
 minimumReleaseAge: 2880

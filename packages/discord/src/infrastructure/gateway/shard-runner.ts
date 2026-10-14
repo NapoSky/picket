@@ -2,9 +2,9 @@ import { LeaderElector, type Lease, type LeaseStore } from '@picket/coordination
 import type { Clock, Logger, OperationalMetrics } from '@picket/kernel';
 
 export interface ShardConnection {
-  /** Se connecte à Discord (reprend la session précédente si elle est valide). */
+  /** Connect to Discord (resume the previous session if valid). */
   start(): Promise<void>;
-  /** Ferme en conservant la session, pour que le prochain détenteur la reprenne sans IDENTIFY. */
+  /** Close while preserving the session, so the next holder resumes without IDENTIFY. */
   stop(): Promise<void>;
 }
 
@@ -30,8 +30,8 @@ export interface ShardRunnerOptions {
 export const shardLeaseName = (shardId: number): string => `gateway:shard:${shardId}`;
 
 /**
- * Chaque réplique tente d'obtenir le bail de chaque shard ; celle qui l'obtient tient la connexion Gateway,
- * les autres restent en attente et reprennent la session dès que le bail se libère.
+ * Each replica tries to acquire each shard's lease. The winner owns its Gateway connection; other replicas
+ * wait and resume the session as soon as the lease becomes available.
  */
 export class ShardRunner {
   readonly #electors: LeaderElector[];

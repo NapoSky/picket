@@ -1,4 +1,4 @@
-/** Valeur sensible : ne fuit ni par `toString`, ni par `JSON.stringify`, ni par `util.inspect`. */
+/** Sensitive value: never leaked by `toString`, `JSON.stringify` or `util.inspect`. */
 export class Secret<T extends string = string> {
   readonly #value: T;
 

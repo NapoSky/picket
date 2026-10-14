@@ -6,7 +6,7 @@ export interface GuildApplicationLog {
   readonly id: string;
   readonly guildId: GuildId;
   readonly at: Date;
-  /** Ligne JSON après sérialisation des erreurs et masquage des secrets. */
+  /** JSON line after error serialization and secret redaction. */
   readonly record: Readonly<Record<string, unknown>>;
 }
 

@@ -11,7 +11,7 @@ function isSubsequence(query: string, target: string): boolean {
   return query.length === 0;
 }
 
-/** 0 : ne correspond pas. Plus c'est grand, plus la correspondance est directe. */
+/** 0 means no match. Larger values indicate a more direct match. */
 function score(query: string, name: string): number {
   if (query === '') return 1;
   const target = normalizeText(name);
@@ -20,7 +20,7 @@ function score(query: string, name: string): number {
   const words = name.split(/[^\p{L}\p{N}]+/u).map(normalizeText).filter((word) => word !== '');
   if (words.some((word) => word.startsWith(query))) return 60;
   if (target.includes(query)) return 40;
-  // Une saisie un peu approximative (lettres dans l'ordre) reste proposée, jamais appliquée d'office.
+  // Offer approximate input (letters in sequence) as a suggestion, never apply it automatically.
   return query.length >= 3 && isSubsequence(query, target) ? 20 : 0;
 }
 
@@ -34,7 +34,7 @@ function rank<T extends { readonly name: string; readonly order: number }>(items
     .map((entry) => entry.item);
 }
 
-/** Suggestions pour l'autocomplete : les mieux classées d'abord, `limit` au plus (25 chez Discord). */
+/** Autocomplete suggestions: best matches first, at most `limit` (25 in Discord). */
 export function searchRegions(query: string, limit: number = DEFAULT_SEARCH_LIMIT): GameRegion[] {
   return rank(allRegions(), query, limit);
 }
@@ -49,15 +49,15 @@ export interface GamePlace {
   readonly location: GameLocation;
 }
 
-/** Un nom de lieu existe parfois dans plusieurs régions : le libellé les distingue. */
+/** Some location names exist in multiple regions: labels distinguish them. */
 export const placeLabel = (place: GamePlace): string => `${place.location.name} (${place.region.name})`;
 
-/** Identifiant d'un lieu dans une option de commande : `<région>.<lieu>`. */
+/** Location identifier in a command option: `<region>.<location>`. */
 export const placeValue = (place: GamePlace): string => `${place.region.key}.${place.location.key}`;
 
 /**
- * Recherche d'un lieu sans connaître sa région : le nom du lieu compte d'abord, puis celui de la région (qui propose
- * alors tous ses lieux), puis les deux ensemble (« mercy allods »).
+ * Search for a location without knowing its region: first match the location name, then the region (offering
+ * all its locations), then both together (mercy allods).
  */
 export function searchPlaces(query: string, limit: number = DEFAULT_SEARCH_LIMIT): GamePlace[] {
   const normalized = normalizeText(query);
@@ -79,8 +79,8 @@ export function searchPlaces(query: string, limit: number = DEFAULT_SEARCH_LIMIT
 }
 
 /**
- * Accepte l'identifiant `<région>.<lieu>` d'une suggestion, ou un nom de lieu exact s'il n'existe que dans une région.
- * Jamais de correction approximative, jamais de choix au hasard entre deux régions.
+ * Accept a suggestion's `<region>.<location>` identifier or an exact location name unique to one region.
+ * Never apply fuzzy correction or choose arbitrarily between two regions.
  */
 export function resolvePlace(input: string): GamePlace | undefined {
   const trimmed = input.trim();

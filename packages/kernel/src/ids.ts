@@ -4,7 +4,7 @@ import { err, ok, type Result } from './result';
 declare const brand: unique symbol;
 export type Brand<T, B extends string> = T & { readonly [brand]: B };
 
-// Un snowflake Discord est un entier 64 bits non signé, transporté en chaîne.
+// A Discord snowflake is an unsigned 64-bit integer transported as a string.
 const SNOWFLAKE = /^\d{15,25}$/;
 
 interface SnowflakeFactory<T extends string> {

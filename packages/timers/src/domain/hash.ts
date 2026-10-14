@@ -1,6 +1,6 @@
 /**
- * Empreinte non cryptographique (cyrb53) : sert seulement à savoir si un message publié doit être modifié.
- * Pure et sans dépendance, pour rester utilisable dans les couches domaine et application.
+ * Non-cryptographic hash (cyrb53), used only to decide whether a published message needs editing. Pure and
+ * dependency-free for use in domain and application layers.
  */
 export function contentHash(text: string): string {
   let h1 = 0xdeadbeef;

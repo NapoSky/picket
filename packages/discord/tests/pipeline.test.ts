@@ -36,6 +36,8 @@ interface Options {
   readonly access?: AccessPolicy;
   readonly gate?: GuildGate;
   readonly language?: GuildLanguage;
+  readonly features?: FeatureGate;
+  readonly feature?: string;
   readonly required?: AccessLevel;
   readonly availableWhenSuspended?: boolean;
 }
@@ -49,6 +51,7 @@ function pipelineWith(handler: CommandEntry['handler'], options: Options = {}) {
       path: ['picket', 'status'],
       description: 'commands.picket.status.description',
       level: options.required ?? 'member',
+      ...(options.feature ? { feature: options.feature } : {}),
       ...(options.availableWhenSuspended !== undefined ? { availableWhenSuspended: options.availableWhenSuspended } : {}),
       handler,
     },
@@ -60,7 +63,7 @@ function pipelineWith(handler: CommandEntry['handler'], options: Options = {}) {
     gate: options.gate ?? openGate,
     language: options.language ?? { localeOf: async () => null },
     components: noComponents,
-    features: allFeaturesEnabled,
+    features: options.features ?? allFeaturesEnabled,
     logger,
     ...(options.timeoutMs !== undefined ? { handlerTimeoutMs: options.timeoutMs } : {}),
   });
@@ -141,6 +144,43 @@ describe('InteractionPipeline', () => {
     const reply = await pipeline.handle(makeInteraction());
     expect(reply).toMatchObject({ kind: 'message', ephemeral: true });
     expect(logger.records.some((record) => record.message === 'handler timeout')).toBe(true);
+  });
+
+  it.each(['language', 'receipts', 'access', 'features', 'gate'] as const)('times out a stalled %s check and never invokes the handler after it completes', async (stage) => {
+    jest.useFakeTimers();
+    let release!: () => void;
+    const blocked = new Promise<void>((resolve) => { release = resolve; });
+    const handler = jest.fn(async () => ephemeral('late mutation'));
+    const options: Options = { timeoutMs: 50,
+      ...(stage === 'language' ? { language: { localeOf: async () => { await blocked; return null; } } } : {}),
+      ...(stage === 'receipts' ? { receipts: { claim: async () => { await blocked; return true; } } } : {}),
+      ...(stage === 'access' ? { access: { levelOf: async () => { await blocked; return 'admin' as const; } } } : {}),
+      ...(stage === 'features' ? { feature: 'todolists', features: { isEnabled: async () => { await blocked; return true; } } } : {}),
+      ...(stage === 'gate' ? { gate: { suspensionOf: async () => { await blocked; return null; } } } : {}),
+    };
+    try {
+      const { pipeline } = pipelineWith(handler, options);
+      const reply = pipeline.handle(makeInteraction());
+      await jest.advanceTimersByTimeAsync(50);
+      expect(await reply).toMatchObject({ kind: 'message', ephemeral: true, content: expect.stringContaining('too long') });
+      release();
+      await jest.advanceTimersByTimeAsync(1);
+      expect(handler).not.toHaveBeenCalled();
+    } finally { jest.useRealTimers(); }
+  });
+
+  it('shares one deadline across authorization and the handler', async () => {
+    jest.useFakeTimers();
+    try {
+      const { pipeline } = pipelineWith(() => new Promise(() => undefined), {
+        timeoutMs: 50,
+        access: { levelOf: async () => { await new Promise((resolve) => setTimeout(resolve, 40)); return 'admin'; } },
+      });
+      const reply = pipeline.handle(makeInteraction());
+      await jest.advanceTimersByTimeAsync(50);
+      expect(await reply).toMatchObject({ kind: 'message', ephemeral: true });
+      expect(jest.getTimerCount()).toBe(0);
+    } finally { jest.useRealTimers(); }
   });
 
   it('survives a failing receipt store', async () => {

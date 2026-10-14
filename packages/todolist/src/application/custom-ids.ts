@@ -8,7 +8,7 @@ export const CONTENT_FIELD_ID = 'content';
 const ITEM_PAYLOAD = /^i(\d{1,2})$/;
 const MAX_LETTER_INDEX = 25;
 
-/** Un seul format de `custom_id`, sans page ni lettre saisie : `td:1:i<index de l'item sur la page>`. */
+/** One `custom_id` format, without a page or entered letter: `td:1:i<item index on the page>`. */
 export const itemCustomId = (index: number): string => encodeCustomId(TODOLIST_NAMESPACE, TODOLIST_VERSION, `i${index}`);
 
 export function parseItemPayload(payload: string): number | null {

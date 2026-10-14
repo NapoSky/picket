@@ -13,7 +13,7 @@ export interface CreateLoggerOptions {
   readonly destination?: DestinationStream;
 }
 
-// Les champs portant un jeton ou une URL de connexion ne sortent jamais en clair.
+// Fields containing tokens or connection URLs are never emitted in plaintext.
 const REDACTED_PATHS = [
   'token',
   '*.token',

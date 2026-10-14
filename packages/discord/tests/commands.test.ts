@@ -14,7 +14,7 @@ import { testI18n } from '@picket/testing';
 
 const handler: CommandEntry['handler'] = async () => ephemeral('ok');
 
-// Catalogue minimal : les textes de commandes sont ici contrôlés par chaque test.
+// Minimal catalog: each test controls its command text.
 const key = (value: string) => value as MessageKey;
 const i18n = createI18n({
   en: { d: 'Description', root: 'Root', group: 'Group', long: 'x'.repeat(101), empty: '', choice: 'Choice' },

@@ -4,7 +4,7 @@ import type { IdGenerator } from '@picket/kernel';
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const LENGTH = 10;
 
-/** Identifiants courts d'assets (10 caractères, 36^10 possibilités) : portés par les `custom_id` des boutons. */
+/** Short asset identifiers (10 characters, 36^10 possibilities), carried in button `custom_id` values. */
 export class RandomAssetIds implements IdGenerator {
   next(): string {
     let id = '';

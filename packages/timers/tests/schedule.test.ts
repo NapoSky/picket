@@ -4,7 +4,7 @@ import { HOUR_MS, NOW, makeAsset } from './fixtures';
 const MINUTE_MS = 60_000;
 const at = (ms: number) => new Date(NOW.getTime() + ms);
 const settings = (patch: Partial<BoardSettings> = {}): BoardSettings => ({ ...DEFAULT_BOARD_SETTINGS, alertThresholdsMin: [360, 120, 30], ...patch });
-/** Un countdown de 10 h démarré à NOW : échéance à +10 h. */
+/** A 10 h countdown started at NOW: deadline at +10 h. */
 const asset = makeAsset({ durationS: 10 * 3_600 });
 const due = at(10 * HOUR_MS);
 const row = (thresholdMin: number, extra: Partial<AlertRow> = {}): AlertRow => ({ assetId: asset.id, dueAt: due, thresholdMin, messageId: null, ackedAt: null, ...extra });
@@ -32,10 +32,22 @@ describe('planAlerts (TIM-RQ-09)', () => {
     expect(planAlerts([asset], existing, settings(), remaining(25))).toEqual([]);
   });
 
+  it('recovers an unconfirmed send and silently settles it if a closer threshold is now due', () => {
+    const pending = row(120, { pending: true });
+    expect(planAlerts([asset], [pending], settings(), remaining(100))).toEqual([
+      { assetId: asset.id, dueAt: due, thresholdMin: 120, send: true },
+      { assetId: asset.id, dueAt: due, thresholdMin: 360, send: false },
+    ]);
+    expect(planAlerts([asset], [pending, row(360)], settings(), remaining(25))).toEqual([
+      { assetId: asset.id, dueAt: due, thresholdMin: 30, send: true },
+      { assetId: asset.id, dueAt: due, thresholdMin: 120, send: false },
+    ]);
+  });
+
   it('re-arms after a refresh: the new deadline has no alert yet', () => {
     const refreshed = { ...asset, startedAt: at(2 * HOUR_MS) };
     const existing = [row(360), row(120), row(30, { messageId: '3' })];
-    // Échéance maintenant à +12 h : le seuil de 360 min est atteint à +6 h.
+    // Deadline is now +12 h: reach the 360 min threshold at +6 h.
     expect(planAlerts([refreshed], existing, settings(), at(6 * HOUR_MS))).toEqual([
       { assetId: asset.id, dueAt: at(12 * HOUR_MS), thresholdMin: 360, send: true },
     ]);

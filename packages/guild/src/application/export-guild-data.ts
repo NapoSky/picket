@@ -5,7 +5,7 @@ export const MAX_GUILD_EXPORT_BYTES = 10 * 1024 * 1024;
 export type GuildDataRows = Readonly<Record<string, readonly unknown[]>>;
 
 export interface GuildDataExportRepository {
-  /** Instantané cohérent et limité au serveur ; aucun export partiel en cas de dépassement. */
+  /** Consistent guild-scoped snapshot; never return a partial export when the size limit is exceeded. */
   read(guildId: GuildId, maxBytes: number): Promise<GuildDataRows | null>;
 }
 
@@ -13,7 +13,7 @@ export type GuildDataExportResult =
   | { readonly kind: 'exported'; readonly filename: string; readonly bytes: Uint8Array }
   | { readonly kind: 'too_large'; readonly maxBytes: number };
 
-/** Export à la demande, sans conserver une copie du fichier dans PICKET. */
+/** On-demand export without retaining a copy of the file in PICKET. */
 export class ExportGuildData {
   constructor(private readonly repository: GuildDataExportRepository, private readonly clock: Clock) {}
 

@@ -3,7 +3,7 @@ import type { MetricComponent, MetricOperation, MetricOutcome, MetricSignal, Ope
 
 const COMPONENTS = new Set<MetricComponent>(['default', 'interactions', 'dashboard', 'bot', 'webhook', 'oauth',
   'gateway', 'job-runner', 'warlog-poller', 'timers', 'retention', 'audit', 'voice', 'voice-metadata',
-  'stats-maintenance', 'stats-refresh', 'war-publish', 'war-hooks']);
+  'stats-maintenance', 'stats-refresh', 'war-publish', 'war-hooks', 'locks']);
 const OPERATIONS = new Set<MetricOperation>(['interaction', 'acknowledgement', 'deferred', 'deferred_delivery',
   'discord_rest', 'discord_budget', 'database_acquire', 'database_query', 'lease_acquire', 'lease_renew',
   'loop', 'war_poll', 'http', 'diagnostic']);

@@ -41,7 +41,7 @@ async function runDeployCommands(force: boolean): Promise<void> {
   }
 }
 
-/** Nettoyage ponctuel ; également exécuté automatiquement par le job-runner. */
+/** One-off cleanup; also executed automatically by the job runner. */
 async function runPurge(): Promise<number> {
   const config = loadConfig(process.env);
   const logger = createLogger({ level: config.logLevel, service: 'picket-cli', version: config.version });

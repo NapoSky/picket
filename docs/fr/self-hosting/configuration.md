@@ -12,7 +12,7 @@ en suffixant le nom par `_FILE` (Docker secrets) ; fournir les deux est une erre
 | `DISCORD_BOT_TOKEN` / `_FILE` | obligatoire | Token du bot. Jamais journalisé. |
 | `DISCORD_REST_GLOBAL_RPS` | `20` | Plafond partagé des appels REST authentifiés par processus (1 à 40). Inclut messages, rôles, salons et Gateway ; les réponses d’interaction utilisent un client distinct. |
 | `DATABASE_URL` / `_FILE` | obligatoire | Chaîne de connexion PostgreSQL du **rôle applicatif** (ne possède rien, soumis à la sécurité par ligne). |
-| `DATABASE_POOL_MAX` | `10` | Connexions maximales par réplica (1 à 100). |
+| `DATABASE_POOL_MAX` | `10` | Connexions maximales du pool principal par réplica bot (1 à 100), plus un pool distinct fixe de 2 connexions pour les verrous de messages/tableaux. |
 | `ROLES` | `http-ingress` | Rôles du processus, séparés par des virgules : `http-ingress` (reçoit les interactions), `shard-runner` (connexion Gateway) et `job-runner` (alertes de timers, mise à jour des tableaux et purges). Chaque réplica peut tous les exécuter : les shards et les tâches sont tenus par une seule réplique à la fois, grâce à un bail. |
 | `SHARD_COUNT` | `1` | Nombre total de shards Gateway (1 à 256). Un shard suffit jusqu'à environ 2 500 serveurs. |
 | `GUILD_RETENTION_DAYS` | `30` | Jours entre le moment où un serveur devient inactif et l'effacement de ses données (1 à 365). |
@@ -69,6 +69,12 @@ droits du dossier.
 | `HTTP_PORT` | `8080` | Port du point d'accès des interactions. |
 | `HEALTH_PORT` | `8081` | Port de `/healthz` et `/readyz`. À garder interne. |
 | `SHUTDOWN_DRAIN_MS` | `10000` | Durée pendant laquelle le processus se déclare « non prêt » avant de s'arrêter, pour que le reverse proxy le retire (0 à 120000). |
+
+Le bot retire sa disponibilité dès SIGTERM. Le drainage HTTP se déroule indépendamment de l'arrêt des jobs ;
+la base reste ouverte jusqu'à la fin des interactions et workers en cours. L'arrêt forcé intervient après
+le drainage du proxy plus 75 secondes. Compose prévoit 15 secondes de drainage et 100 secondes de grâce ;
+avec un autre superviseur, prévoyez au moins le drainage plus 75 secondes et une marge. Un job dépassant
+ce délai est interrompu après le drainage de l'écoute HTTP.
 
 ## Migrations
 
@@ -190,7 +196,7 @@ Cookies de session opaques, Secure/HttpOnly/SameSite=Lax en HTTPS. État OAuth �
 
 En production, le dashboard tourne dans **son propre processus Node.js et conteneur** (`apps/stats`), avec sa boucle événementielle et sa mémoire. Il ne démarre ni shard Gateway, ni collecteur vocal, ni job de maintenance. La collecte reste dans `picket` ; PostgreSQL et le volume privé du tampon vocal sont partagés. Le service HTTP doit pouvoir écrire dans ce volume pour les marqueurs de confidentialité et l’effacement des faits en attente. Sans domaine de dashboard, il lance uniquement sa santé interne, sans pool SQL ni écoute HTTP publique. Le secret OAuth est monté uniquement dans `picket-stats`.
 
-Comptez **réplicas bot × pool principal + réplicas stats × pool dashboard**, puis CLI, sauvegardes et administration. Un bot et un service HTTP activé utilisent par défaut 10 + 2 connexions. Les appels authentifiés avec le token du bot partagent le budget Discord PostgreSQL ; le dashboard borne aussi son débit local à 5 RPS. Les rapports utilisent les segments précis indexés et la RLS transactionnelle ; aucun Superset, Grafana, ClickHouse, Redis ou service de métadonnées BI. Les vues membre et officier calculent les totaux horaires et journaliers à la lecture. Le rapport admin global et ses exports utilisent des vues matérialisées PostgreSQL privées, reconstruites par défaut à minuit et midi. L’interface affiche la date de l’instantané ; les personnes en vocal correspondent à cette date. `STATS_ADMIN_REFRESH_CRON` et `TZ` règlent le calendrier. Le job existant avec bail gère les rafraîchissements, le rattrapage après panne et les tentatives suivantes ; le service HTTP ne rafraîchit jamais une vue. La première alimentation utilise `REFRESH` ; les suivantes utilisent `CONCURRENTLY` et publient les vues atomiquement. Un rafraîchissement peut occuper une connexion du pool principal pendant au maximum dix minutes ; mesurez et surveillez la charge réelle.
+Comptez **réplicas bot × (pool principal + 2 connexions de verrouillage) + réplicas stats × pool dashboard**, puis CLI, sauvegardes et administration. Un bot et un service HTTP activé utilisent par défaut 10 + 2 + 2 connexions. Les appels authentifiés avec le token du bot partagent le budget Discord PostgreSQL ; le dashboard borne aussi son débit local à 5 RPS. Les rapports utilisent les segments précis indexés et la RLS transactionnelle ; aucun Superset, Grafana, ClickHouse, Redis ou service de métadonnées BI. Les vues membre et officier calculent les totaux horaires et journaliers à la lecture. Le rapport admin global et ses exports utilisent des vues matérialisées PostgreSQL privées, reconstruites par défaut à minuit et midi. L’interface affiche la date de l’instantané ; les personnes en vocal correspondent à cette date. `STATS_ADMIN_REFRESH_CRON` et `TZ` règlent le calendrier. Le job existant avec bail gère les rafraîchissements, le rattrapage après panne et les tentatives suivantes ; le service HTTP ne rafraîchit jamais une vue. La première alimentation utilise `REFRESH` ; les suivantes utilisent `CONCURRENTLY` et publient les vues atomiquement. Un rafraîchissement peut occuper une connexion du pool principal pendant au maximum dix minutes ; mesurez et surveillez la charge réelle.
 
 La lecture borne tout l’historique à 60 jours. Le job avec bail nettoie les lignes expirées par lots bornés, environ toutes les deux minutes ; un gros retard ou une panne peut retarder l’effacement physique. Le tampon purge les événements expirés pendant sa maintenance même si le rejeu SQL échoue. Surveillez les jobs et rétablissez les pannes rapidement. PostgreSQL reste nécessaire aux baux de shards ; le tampon ne garantit pas une collecte continue pendant une panne de la base.
 

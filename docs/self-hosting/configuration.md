@@ -12,7 +12,7 @@ suffixing the name with `_FILE` (Docker secrets); giving both is an error.
 | `DISCORD_BOT_TOKEN` / `_FILE` | required | Bot token. Never logged. |
 | `DISCORD_REST_GLOBAL_RPS` | `20` | Shared authenticated REST request limit per process (1 to 40). Covers messages, roles, channels and Gateway; interaction replies use a separate client. |
 | `DATABASE_URL` / `_FILE` | required | PostgreSQL connection string of the **application role** (no ownership, subject to row security). |
-| `DATABASE_POOL_MAX` | `10` | Maximum connections per replica (1 to 100). |
+| `DATABASE_POOL_MAX` | `10` | Maximum main-pool connections per bot replica (1 to 100), plus a separate fixed pool of 2 for message/board locks. |
 | `ROLES` | `http-ingress` | Comma-separated roles of this process: `http-ingress` (receives interactions), `shard-runner` (Gateway connection) and `job-runner` (timer alerts, board updates and purges). Every replica can run all of them: shards and jobs are held by one replica at a time, through a lease. |
 | `SHARD_COUNT` | `1` | Total number of Gateway shards (1 to 256). One shard is enough up to roughly 2,500 servers. |
 | `GUILD_RETENTION_DAYS` | `30` | Days between a server becoming inactive and the erasure of its data (1 to 365). |
@@ -69,6 +69,12 @@ See [installation](./install#_3-prepare-backups) for key setup and directory per
 | `HTTP_PORT` | `8080` | Port of the interactions endpoint. |
 | `HEALTH_PORT` | `8081` | Port of `/healthz` and `/readyz`. Keep it internal. |
 | `SHUTDOWN_DRAIN_MS` | `10000` | Time spent reporting "not ready" before stopping, so the reverse proxy can remove the replica (0 to 120000). |
+
+The bot withdraws readiness immediately on SIGTERM. HTTP drainage proceeds independently of background jobs;
+SQL stays open until existing interactions and workers finish. The final exit deadline is the proxy drain plus
+75 seconds. Compose uses a 15-second drain and a 100-second stop grace; allow at least the drain plus 75 seconds
+and margin if configuring another supervisor. A background job exceeding this deadline is interrupted after
+the HTTP listener has drained.
 
 ## Migrations
 
@@ -189,7 +195,7 @@ Session cookies are opaque, Secure/HttpOnly/SameSite=Lax on HTTPS. OAuth state i
 
 In production, the dashboard runs in **its own Node.js process and container** (`apps/stats`), with its own event loop and memory. It starts no Gateway shard, voice collector or maintenance jobs. Collection stays in `picket`; PostgreSQL and the private voice-buffer volume are shared. The HTTP service needs writable access to that volume for privacy markers and erasure of pending facts. With no dashboard host, it runs only internal health and opens no SQL pool or public dashboard listener. The OAuth secret is mounted only into `picket-stats`.
 
-Budget **bot replicas × main pool + stats replicas × dashboard pool**, plus CLI, backup and administrative connections. One bot plus one enabled HTTP service defaults to 10 + 2 connections. Bot-authenticated requests from both services share the PostgreSQL Discord budget; the dashboard additionally caps its local rate at 5 RPS. Reports use indexed, exact presence segments with transaction-scoped RLS; no Superset, Grafana, ClickHouse, Redis or BI metadata service is required. Member and officer reports derive hourly and daily figures at read time. The global admin report and its exports read private native PostgreSQL materialized views, rebuilt at midnight and noon by default. The UI states the snapshot timestamp; connected people refer to that snapshot, not the current moment. Change `STATS_ADMIN_REFRESH_CRON` and `TZ` to set the instance schedule. The existing leased job runner performs refreshes, catches up after outages and retries failures; the HTTP service never refreshes a view. Initial population uses ordinary `REFRESH`; later updates use `CONCURRENTLY` and publish all views atomically. A refresh can consume one main-pool connection for up to ten minutes; test and monitor the actual workload.
+Budget **bot replicas × (main pool + 2 lock connections) + stats replicas × dashboard pool**, plus CLI, backup and administrative connections. One bot plus one enabled HTTP service defaults to 10 + 2 + 2 connections. Bot-authenticated requests from both services share the PostgreSQL Discord budget; the dashboard additionally caps its local rate at 5 RPS. Reports use indexed, exact presence segments with transaction-scoped RLS; no Superset, Grafana, ClickHouse, Redis or BI metadata service is required. Member and officer reports derive hourly and daily figures at read time. The global admin report and its exports read private native PostgreSQL materialized views, rebuilt at midnight and noon by default. The UI states the snapshot timestamp; connected people refer to that snapshot, not the current moment. Change `STATS_ADMIN_REFRESH_CRON` and `TZ` to set the instance schedule. The existing leased job runner performs refreshes, catches up after outages and retries failures; the HTTP service never refreshes a view. Initial population uses ordinary `REFRESH`; later updates use `CONCURRENTLY` and publish all views atomically. A refresh can consume one main-pool connection for up to ten minutes; test and monitor the actual workload.
 
 All history is bounded to 60 days at read time. The leased maintenance job cleans expired rows in bounded batches approximately every two minutes; a large expired backlog or outage can delay physical cleanup. Expired disk records are removed during buffer maintenance, including when SQL replay fails. Monitor job health and recover outages promptly. The database remains necessary for shard leases; a disk buffer cannot guarantee uninterrupted collection throughout a PostgreSQL outage.
 

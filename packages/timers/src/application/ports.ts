@@ -8,16 +8,16 @@ export interface BoardRecord {
   readonly id: string;
   readonly guildId: GuildId;
   readonly channelId: ChannelId;
-  /** Langue du canal à la création ; la langue imposée au serveur, si elle existe, prime. */
+  /** Channel locale at creation; a forced guild locale takes precedence. */
   readonly locale: string | null;
   readonly settings: BoardSettings;
   readonly rev: number;
-  /** Vrai tant que les messages publiés ne reflètent pas l'état. */
+  /** True while published messages do not reflect the stored state. */
   readonly needsSync: boolean;
   readonly syncError: string | null;
   readonly createdBy: UserId;
   readonly createdAt: Date;
-  /** Dernière mutation du board : au-delà de `ABANDONED_AFTER_DAYS` sans timer, il est supprimé. */
+  /** Last board mutation: delete after `ABANDONED_AFTER_DAYS` without timers. */
   readonly lastActivityAt: Date;
   readonly archivedAt: Date | null;
 }
@@ -64,7 +64,7 @@ export type AssetChange =
   | { readonly kind: 'update'; readonly asset: TimerAsset }
   | { readonly kind: 'delete'; readonly assetId: string };
 
-/** Décision d'une mutation : sans changement, réglage ni événement, rien n'est écrit et le board reste tel quel. */
+/** Mutation decision: with no changes, settings or events, write nothing and leave the board unchanged. */
 export interface Mutation<T> {
   readonly result: T;
   readonly changes?: readonly AssetChange[];
@@ -83,14 +83,17 @@ export interface DueBoard {
 }
 
 export interface SyncResult {
-  /** Rév du board lue avant le rendu : si elle a changé depuis, une mutation est arrivée et le rendu reste à faire. */
+  /**
+   * Board revision read before rendering; if it changes, another mutation arrived and rendering remains
+   * pending.
+   */
   readonly rev: number;
   readonly syncError: string | null;
 }
 
 /**
- * Persistance des timers. Chaque méthode est une transaction du tenant ; `mutate` verrouille la ligne du board, ce
- * qui sérialise toutes les mutations d'un board, et déclenche le rendu en même temps qu'elle écrit (`needs_sync`).
+ * Timer persistence. Each method uses a tenant transaction; `mutate` locks the board row, serializing its
+ * mutations and scheduling rendering in the same write (`needs_sync`).
  */
 export interface TimerStore {
   createBoard(
@@ -108,35 +111,37 @@ export interface TimerStore {
   boardOfAsset(guildId: GuildId, assetId: string): Promise<BoardRecord | null>;
   boardsOfGuild(guildId: GuildId): Promise<readonly BoardRecord[]>;
   state(guildId: GuildId, boardId: string): Promise<BoardState | null>;
-  /** `null` : board inconnu ou archivé. */
+  /** `null`: unknown or archived board. */
   mutate<T>(guildId: GuildId, boardId: string, decide: (state: BoardState) => Mutation<T>, now: Date): Promise<T | null>;
 
   pages(guildId: GuildId, boardId: string): Promise<readonly PageRecord[]>;
   savePage(guildId: GuildId, boardId: string, page: PageRecord): Promise<void>;
   removePages(guildId: GuildId, boardId: string, pages: readonly number[]): Promise<void>;
-  /** Marque le board à jour si aucune mutation n'est arrivée depuis `result.rev` ; `false` : un rendu reste à faire. */
+  /**
+   * Mark the board synchronized if no mutation followed `result.rev`; `false` means rendering remains pending.
+   */
   markSynced(guildId: GuildId, boardId: string, result: SyncResult): Promise<boolean>;
   markSyncFailed(guildId: GuildId, boardId: string, syncError: string): Promise<void>;
-  /** Supprime le board et tout ce qui en dépend (timers, messages, alertes) ; seul le journal d'audit reste. */
+  /** Delete the board and its dependencies (timers, messages, alerts); only the audit log remains. */
   deleteBoard(guildId: GuildId, boardId: string, reason: string): Promise<void>;
-  /** Désactive le board (canal disparu) : plus de rendu ni d'alerte, historique conservé. */
+  /** Disable the board (channel gone): stop rendering and alerts while retaining history. */
   archive(guildId: GuildId, boardId: string, reason: string, now: Date): Promise<void>;
 
   alerts(guildId: GuildId, boardId: string): Promise<readonly AlertRecord[]>;
-  /** `true` si la ligne vient d'être créée : un seul processus envoie une alerte donnée. */
+  /** Under the board lock: creates a reservation or resumes an unconfirmed send. */
   claimAlert(guildId: GuildId, boardId: string, claim: AlertClaim, now: Date): Promise<boolean>;
   setAlertMessage(guildId: GuildId, row: AlertRow, messageId: MessageId | null): Promise<void>;
   releaseAlert(guildId: GuildId, row: AlertRow): Promise<void>;
   acknowledgeAlert(guildId: GuildId, assetId: string, thresholdMin: number, actor: UserId, now: Date): Promise<AlertRecord | null>;
 
-  /** `null` : plus rien à planifier. */
+  /** `null`: nothing left to schedule. */
   schedule(guildId: GuildId, boardId: string, wakeAt: Date | null): Promise<void>;
   dueBoards(now: Date, limit: number): Promise<readonly DueBoard[]>;
 }
 
-/** Langue et traducteur des messages publics d'un board. */
+/** Locale and translator for a board's public messages. */
 export interface Localizer {
-  /** Langue imposée au serveur, sinon celle du board, sinon l'anglais. */
+  /** Forced guild locale, otherwise the board locale, then English. */
   localeFor(guildId: GuildId, boardLocale: string | null): Promise<string>;
   translator(locale: string): Translator['t'];
 }

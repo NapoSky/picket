@@ -6,13 +6,13 @@ import { itemButtons } from './create-todolist';
 
 export type TickResult =
   | { readonly kind: 'updated' }
-  /** Dernier item de la page : message supprimé. `page`/`total` viennent du pied de page (1/1 pour une liste simple). */
+  /** Last item on the page: delete the message. `page`/`total` come from its footer (1/1 for a single page). */
   | { readonly kind: 'completed'; readonly page: number; readonly total: number }
-  /** L'item n'est plus à faire : un autre clic l'a précédé, ou le bouton date d'avant. */
+  /** Item no longer open: another click got there first, or the button is stale. */
   | { readonly kind: 'already_done' }
-  /** Le message n'a plus d'embed lisible. */
+  /** The message no longer has a readable embed. */
   | { readonly kind: 'unreadable' }
-  /** Le message a été supprimé entre-temps. */
+  /** The message was deleted meanwhile. */
   | { readonly kind: 'gone' }
   | { readonly kind: 'busy' }
   | { readonly kind: 'discord_error'; readonly reason: DiscordErrorReason };
@@ -25,8 +25,8 @@ function footerPosition(footer: string | null): { page: number; total: number } 
 }
 
 /**
- * Un clic est une mutation du message lui-même, sans aucune donnée stockée : verrou par message, lecture fraîche
- * (jamais l'instantané de l'interaction, périmé en cas de clics simultanés), modification de la seule ligne cliquée.
+ * A click mutates the message itself without stored data: lock per message, reread fresh state (never the
+ * interaction snapshot, stale under concurrent clicks), then modify only the clicked line.
  */
 export class TickTodolistItem {
   readonly #messaging: Messaging;
@@ -65,7 +65,7 @@ export class TickTodolistItem {
       return { kind: 'completed', ...position };
     }
 
-    // Titre, pied de page et couleur sont ceux du message tel qu'il est, pas ceux de la langue du clic.
+    // Preserve the message's title, footer and color, regardless of the clicking user's locale.
     await this.#messaging.edit(channelId, messageId, {
       embeds: [
         {

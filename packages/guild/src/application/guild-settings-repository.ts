@@ -2,14 +2,14 @@ import type { GuildId, UserId } from '@picket/kernel';
 import type { GuildSettings, SettingsDecision } from '../domain/guild-settings';
 
 export interface GuildSettingsRepository {
-  /** Crée les réglages par défaut au premier accès ; idempotent et sûr en concurrence. */
+  /** Create default settings on first access; idempotent and safe under concurrency. */
   findOrCreate(guildId: GuildId): Promise<GuildSettings>;
 }
 
 export interface GuildSettingsWriter {
   /**
-   * Applique une décision de façon atomique et sérialisée par guilde : `decide` voit les réglages courants,
-   * et un changement effectif est journalisé (avant/après) dans la même transaction.
+   * Apply a decision atomically and serially per guild: `decide` sees current settings, and actual changes are
+   * logged (before/after) in the same transaction.
    */
   modify(
     guildId: GuildId,
@@ -20,6 +20,6 @@ export interface GuildSettingsWriter {
 }
 
 export interface GuildLocaleReader {
-  /** Langue imposée au serveur, ou `null` (automatique, ou serveur inconnu). Ne crée rien. */
+  /** Forced guild locale, or `null` (automatic or unknown guild). Creates nothing. */
   find(guildId: GuildId): Promise<string | null>;
 }

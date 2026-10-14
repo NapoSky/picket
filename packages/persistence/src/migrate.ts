@@ -8,7 +8,7 @@ export class MigrationError extends DomainError {
   readonly code = 'migration_failed';
 }
 
-// Verrou consultatif : deux `migrate` simultanés (deux déploiements) s'exécutent l'un après l'autre.
+// Advisory lock: concurrent `migrate` runs (two deployments) execute sequentially.
 const MIGRATION_LOCK_KEY = 727_001;
 const FILE_PATTERN = /^(\d{3}_[a-z0-9_]+)\.sql$/;
 const ROLE_PATTERN = /^[a-z_][a-z0-9_]{0,62}$/;
@@ -18,7 +18,7 @@ export const MIGRATIONS_DIR = join(__dirname, '..', 'migrations');
 export interface MigrateOptions {
   readonly connectionString: Secret;
   readonly migrationsDir?: string;
-  /** Rôle de l'application, destinataire des `GRANT` (`{{app_role}}` dans les fichiers SQL). */
+  /** Application role receiving the `GRANT` statements (`{{app_role}}` in SQL files). */
   readonly appRole: string;
 }
 

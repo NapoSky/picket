@@ -3,11 +3,11 @@ import { MAX_CATEGORY_NAME, MAX_FACTOR, MAX_INPUT_LENGTH, MAX_ITEMS, MAX_ITEM_TE
 
 export interface TodoItem {
   readonly text: string;
-  /** Nombre de clics nécessaires ; 1 par défaut. */
+  /** Required number of clicks; defaults to 1. */
   readonly factor: number;
 }
 
-/** Ligne de la liste, dans l'ordre de saisie : rien n'est jamais déplacé ni supprimé (sauf un doublon fusionné). */
+/** List line in input order: never move or remove it, except when merging a duplicate. */
 export type TodoLine =
   | { readonly kind: 'text'; readonly raw: string }
   | { readonly kind: 'category'; readonly raw: string }
@@ -25,8 +25,8 @@ export type ParseError =
   | { readonly code: 'too_many_items'; readonly max: number }
   | { readonly code: 'item_too_long'; readonly line: number; readonly max: number };
 
-// Marqueur : emoji lettre (tous séparateurs) ou lettre majuscule. Pour la lettre, `・` / `·` se collent au texte ;
-// `-` et `:` exigent une espace après, pour que `R-12 Hauler` ou `A-10` restent du texte libre.
+// Marker: emoji letter (all separators) or uppercase letter. For plain letters, `・` / `·` can touch the text;
+// `-` and `:` require a following space so `R-12 Hauler` and `A-10` remain free text.
 const MARKER = String.raw`(?:\p{Regional_Indicator}|:regional_indicator_[a-z]:)`;
 const EMOJI_ITEM = new RegExp(String.raw`^${MARKER}\s*[・·:-]\s*(.+)$`, 'u');
 const LETTER_ITEM = /^[A-Z]\s*(?:[・·]\s*|[:-]\s+)(.+)$/u;
@@ -38,8 +38,8 @@ const BOLD = /^\*\*(.+?)\*\*$/u;
 const FACTOR = /^(.+?)\s*\(x(\d+)\)\s*$/iu;
 
 /**
- * Sépare le texte et le facteur `(xN)`. Seuls 2 à 999 sont des facteurs ; `(x1)` est redondant et disparaît ;
- * `(x0)` ou plus de 999 restent du texte, et ne seront donc jamais décrémentés.
+ * Split text from its `(xN)` factor. Only 2 to 999 are factors; `(x1)` is redundant and removed. `(x0)` and
+ * values above 999 remain literal text and are never decremented.
  */
 export function splitFactor(text: string): TodoItem {
   const match = FACTOR.exec(text);
@@ -84,11 +84,10 @@ function classify(line: string, source: number): Draft {
 const categoryKey = (raw: string): string => raw.replace(/[_*]/gu, '').trim().toLowerCase();
 
 /**
- * Grammaire stricte, pure et déterministe : le même texte donne toujours la même liste.
- * - item : marqueur (🇦, `:regional_indicator_a:`, ou une lettre majuscule) puis séparateur (`・`, `·`, `-`, `:`) puis texte ;
- *   le marqueur saisi est ignoré (les lettres sont attribuées au rendu) ;
- * - catégorie : `__Nom__`, `__**Nom**__`, `**__Nom__**`, ou `**Nom**` quand un item suit ;
- * - tout le reste est du texte libre, conservé à sa place.
+ * Strict, pure, deterministic grammar: the same text always produces the same list. Item: marker (🇦,
+ * `:regional_indicator_a:` or uppercase letter), separator (`・`, `·`, `-`, `:`), then text; ignore the
+ * entered marker (assign letters during rendering). Category: `__Name__`, `__**Name**__`, `**__Name__**`, or
+ * `**Name**` followed by an item. Everything else is free text preserved in place.
  */
 export function parseTodolist(input: string): Result<Todolist, ParseError> {
   if (input.length > MAX_INPUT_LENGTH) return err({ code: 'input_too_long', max: MAX_INPUT_LENGTH });
@@ -97,7 +96,7 @@ export function parseTodolist(input: string): Result<Todolist, ParseError> {
 
   const drafts = sourceLines.map((line, index) => classify(line, index + 1));
 
-  // `**Titre**` n'est une catégorie que s'il introduit des items : sans liste de mots interdits dépendante d'une langue.
+  // `**Title**` is a category only when it introduces items; no locale-dependent blocklist.
   const resolved = drafts.map((draft, index): Draft => {
     if (draft.kind !== 'bold') return draft;
     const next = drafts.slice(index + 1).find((candidate) => candidate.kind !== 'blank');
@@ -125,7 +124,7 @@ export function parseTodolist(input: string): Result<Todolist, ParseError> {
       case 'item': {
         const item = splitFactor(draft.content);
         if (item.text.length > MAX_ITEM_TEXT) return err({ code: 'item_too_long', line: draft.source, max: MAX_ITEM_TEXT });
-        // Doublon dans la même catégorie : fusionné (facteurs additionnés) à la première position.
+        // Duplicate in the same category: merge at the first position, adding the factors.
         const key = `${currentCategory === null ? '' : categoryKey(currentCategory)}\u0000${item.text.toLowerCase()}`;
         const existingIndex = merged.get(key);
         const existing = existingIndex === undefined ? undefined : lines[existingIndex];
@@ -140,7 +139,7 @@ export function parseTodolist(input: string): Result<Todolist, ParseError> {
     }
   }
 
-  // Lignes vides : jamais deux d'affilée, jamais en tête ni en queue (mise en forme seulement).
+  // Blank lines: never consecutive, leading or trailing (formatting only).
   const cleaned: TodoLine[] = [];
   for (const line of lines) {
     const blank = line.kind === 'text' && line.raw === '';

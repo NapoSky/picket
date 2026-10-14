@@ -1,6 +1,6 @@
 import { Kysely, PostgresDialect, sql, type Transaction } from 'kysely';
 import { Pool } from 'pg';
-import type { GuildId, Secret, OperationalMetrics } from '@picket/kernel';
+import type { GuildId, Secret, OperationalMetrics, MetricComponent } from '@picket/kernel';
 import type { Schema } from './schema';
 
 export type Db = Kysely<Schema>;
@@ -19,9 +19,11 @@ export interface CreateDatabaseOptions {
   readonly applicationName?: string;
   readonly onPoolError?: (error: Error) => void;
   readonly metrics?: OperationalMetrics;
+  readonly metricsComponent?: MetricComponent;
 }
 
 export function createDatabase(options: CreateDatabaseOptions): DatabaseHandle {
+  const metricLabels: [] | [MetricComponent] = options.metricsComponent ? [options.metricsComponent] : [];
   const pool = new Pool({
     connectionString: options.connectionString.reveal(),
     max: options.maxConnections ?? 10,
@@ -31,7 +33,7 @@ export function createDatabase(options: CreateDatabaseOptions): DatabaseHandle {
     idle_in_transaction_session_timeout: 15_000,
     ...(options.applicationName !== undefined ? { application_name: options.applicationName } : {}),
   });
-  // Sans écouteur, une coupure sur une connexion inactive ferait tomber le processus.
+  // Without an error listener, a disconnection on an idle connection would crash the process.
   pool.on('error', (error) => options.onPoolError?.(error));
 
   const db = new Kysely<Schema>({ dialect: new PostgresDialect({ pool: {
@@ -41,15 +43,15 @@ export function createDatabase(options: CreateDatabaseOptions): DatabaseHandle {
       const started = Date.now();
       try {
         const client = await pool.connect();
-        options.metrics?.record('database_acquire', (Date.now() - started) / 1000, 'success');
+        options.metrics?.record('database_acquire', (Date.now() - started) / 1000, 'success', ...metricLabels);
         return client;
       } catch (error) {
-        options.metrics?.record('database_acquire', (Date.now() - started) / 1000, 'error');
+        options.metrics?.record('database_acquire', (Date.now() - started) / 1000, 'error', ...metricLabels);
         throw error;
       }
     },
   } }), log: event => {
-    options.metrics?.record('database_query', event.queryDurationMillis / 1000, event.level === 'error' ? 'error' : 'success');
+    options.metrics?.record('database_query', event.queryDurationMillis / 1000, event.level === 'error' ? 'error' : 'success', ...metricLabels);
   } });
   return {
     db,
@@ -58,17 +60,17 @@ export function createDatabase(options: CreateDatabaseOptions): DatabaseHandle {
     },
     close: () => db.destroy(),
     collectMetrics: () => {
-      options.metrics?.set('pool_total', pool.totalCount);
-      options.metrics?.set('pool_idle', pool.idleCount);
-      options.metrics?.set('pool_waiting', pool.waitingCount);
-      options.metrics?.set('pool_max', options.maxConnections ?? 10);
+      options.metrics?.set('pool_total', pool.totalCount, ...metricLabels);
+      options.metrics?.set('pool_idle', pool.idleCount, ...metricLabels);
+      options.metrics?.set('pool_waiting', pool.waitingCount, ...metricLabels);
+      options.metrics?.set('pool_max', options.maxConnections ?? 10, ...metricLabels);
     },
   };
 }
 
 /**
- * Toute lecture ou écriture de données de tenant passe par ici : la RLS Postgres
- * filtre sur `app.guild_id`, positionné pour la seule durée de la transaction.
+ * All tenant-data reads and writes go through here. PostgreSQL RLS filters on `app.guild_id`, set only for
+ * the transaction's duration.
  */
 export function withTenant<T>(db: Db, guildId: GuildId, work: (trx: Tx) => Promise<T>, options: { readonly readOnlySnapshot?: boolean } = {}): Promise<T> {
   const transaction = options.readOnlySnapshot ? db.transaction().setIsolationLevel('repeatable read') : db.transaction();
@@ -79,7 +81,7 @@ export function withTenant<T>(db: Db, guildId: GuildId, work: (trx: Tx) => Promi
   });
 }
 
-/** Suppression définitive de toutes les données d'une guilde (fonction SQL `purge_guild`, voir migration 003). */
+/** Permanently delete all guild data (SQL function `purge_guild`, see migration 003). */
 export async function purgeGuildData(db: Db, guildId: GuildId): Promise<void> {
   await sql`SELECT purge_guild(${guildId})`.execute(db);
 }

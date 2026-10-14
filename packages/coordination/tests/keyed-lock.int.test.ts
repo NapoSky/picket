@@ -1,4 +1,5 @@
-import { LockTimeoutError, PostgresKeyedLock } from '@picket/coordination';
+import { LockTimeoutError, PostgresKeyedLock, PostgresDiscordBudget } from '@picket/coordination';
+import { createDatabase } from '@picket/persistence';
 import { createTestDatabase, type TestDatabase } from '@picket/testing';
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -20,6 +21,26 @@ describe('PostgresKeyedLock (integration)', () => {
     expect(await lock.withLock('k', async () => 42)).toBe(42);
   });
 
+  it('completes SQL work and REST budget acquisition while every dedicated lock connection is held', async () => {
+    const locks = createDatabase({ connectionString: database.appUrl, maxConnections: 2 });
+    const work = createDatabase({ connectionString: database.appUrl, maxConnections: 1 });
+    try {
+      const isolated = new PostgresKeyedLock(locks.db);
+      const budget = new PostgresDiscordBudget(work.db);
+      let entered = 0;
+      let release!: () => void;
+      const bothLocked = new Promise<void>((resolve) => { release = resolve; });
+      await Promise.all(['one', 'two'].map((key) => isolated.withLock(key, async () => {
+        if (++entered === 2) release();
+        await bothLocked;
+        await work.ping();
+        await budget.acquire();
+      })));
+      expect(entered).toBe(2);
+      await locks.ping();
+    } finally { await Promise.all([locks.close(), work.close()]); }
+  });
+
   it('never lets two works of the same key overlap, whatever the number of contenders', async () => {
     const events: string[] = [];
     let running = 0;
@@ -37,7 +58,7 @@ describe('PostgresKeyedLock (integration)', () => {
       ),
     );
     expect(maxRunning).toBe(1);
-    // Chaque début est suivi de sa propre fin.
+    // Each start is followed by its corresponding end.
     for (let index = 0; index < events.length; index += 2) {
       expect(events[index]?.replace('start ', '')).toBe(events[index + 1]?.replace('end ', ''));
     }

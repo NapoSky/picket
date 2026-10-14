@@ -1,5 +1,5 @@
-// Noms des régions (cartes) et des lieux de Foxhole, tels qu'ils s'affichent dans le jeu.
-// Source : liste reprise de 11eForge (mars 2026). À rapprocher des cartes de la War API quand le war-log sera livré.
+// Foxhole region (map) and location names as displayed in the game.
+// Source: list imported from 11eForge (March 2026). Compare with War API maps when the war log ships.
 export interface RegionData {
   readonly name: string;
   readonly locations: readonly string[];

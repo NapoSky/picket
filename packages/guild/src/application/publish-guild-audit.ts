@@ -31,7 +31,7 @@ export interface AuditControl {
   test(guildId: GuildId, actor: UserId): Promise<'queued' | 'no_channel' | 'blocked' | 'unavailable'>;
 }
 
-/** Le résultat métier est déjà validé en base ; un échec Discord ne l'annule jamais. */
+/** The business result is already committed; a Discord failure never rolls it back. */
 export class PublishGuildAudit implements AuditControl {
   constructor(private readonly repository: GuildAuditRepository, private readonly channels: GuildChannels,
     private readonly messaging: Messaging, private readonly i18n: I18n, private readonly clock: Clock, private readonly logger: Logger) {}
@@ -49,7 +49,7 @@ export class PublishGuildAudit implements AuditControl {
 
   async tick(): Promise<void> {
     const guilds = await this.repository.due(this.clock.now(), 25);
-    // Chaque guilde est indépendante ; limiter les appels simultanés conserve des connexions pour les interactions.
+    // Each guild is independent; limiting concurrent calls preserves connections for interactions.
     for (let start = 0; start < guilds.length; start += 3) {
       await Promise.all(guilds.slice(start, start + 3).map(async (guildId) => {
         try {

@@ -15,7 +15,7 @@ export interface TestKeys {
   signRequest(timestamp: string, body: string): string;
 }
 
-/** Paire Ed25519 jetable jouant le rôle de la clé de l'application Discord. */
+/** Disposable Ed25519 key pair acting as the Discord application's key. */
 export function createTestKeys(): TestKeys {
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
   const publicKeyHex = publicKey.export({ format: 'der', type: 'spki' }).subarray(-32).toString('hex');

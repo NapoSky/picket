@@ -11,7 +11,7 @@ export const LOCATION = 'mercyswail';
 
 let counter = 0;
 
-/** Asset d'essai : un stockpile actif de 50 h démarré à `NOW`, sauf indication contraire. */
+/** Test asset: active 50 h stockpile started at `NOW`, unless overridden. */
 export function makeAsset(overrides: Partial<TimerAsset> = {}): TimerAsset {
   counter += 1;
   return {

@@ -55,7 +55,7 @@ function parseCommand(
   return { path, values, focused };
 }
 
-/** Champs texte d'une modale, qu'ils soient dans une rangée d'actions ou dans un libellé. */
+/** Modal text fields, whether inside an action row or a label. */
 function parseModalFields(components: unknown): Record<string, string> {
   const fields: Record<string, string> = {};
   const visit = (node: unknown): void => {

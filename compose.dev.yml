@@ -1,5 +1,5 @@
-# Postgres local pour le développement : `docker compose -f compose.dev.yml up -d --wait`
-# Mots de passe de développement uniquement ; ne jamais réutiliser en production.
+# Local development PostgreSQL: `docker compose -f compose.dev.yml up -d --wait`
+# Development passwords only; never reuse in production.
 name: picket-dev
 services:
   postgres:

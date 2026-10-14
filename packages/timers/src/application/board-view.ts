@@ -16,11 +16,11 @@ import { BOARD_COLOR, DEFAULT_LOCATION_EMOJI, DEFAULT_REGION_EMOJI, MAX_ACTIVE_P
 import { contentHash } from '../domain/hash';
 import { refreshCustomId } from './custom-ids';
 
-/** Textes déjà traduits par l'appelant : le rendu ne connaît aucune langue. */
+/** Text already translated by the caller: rendering is locale-independent. */
 export interface BoardTexts {
   readonly title: string;
   readonly empty: string;
-  /** Pied de page du premier message : date de la dernière modification du tableau. */
+  /** First message footer: board's last modification timestamp. */
   readonly updated: string;
   readonly assetColumn: string;
   readonly codeColumn: string;
@@ -35,38 +35,38 @@ export interface BoardIcons {
 export const DEFAULT_BOARD_ICONS: BoardIcons = { region: DEFAULT_REGION_EMOJI, location: DEFAULT_LOCATION_EMOJI };
 
 export const STRUCK_ICON = '❌';
-/** Espace fine : sépare l'icône du type de la lettre sans élargir la colonne. */
+/** Thin space: separate the type icon from the letter without widening the column. */
 const THIN_SPACE = '\u2009';
 const ZERO_WIDTH = '\u200b';
 
 export interface RenderedPage {
   readonly view: MessageView;
-  /** Empreinte du contenu sans la date de mise à jour : une page n'est modifiée que si son contenu change. */
+  /** Content hash excluding the update date: edit a page only when its content changes. */
   readonly hash: string;
-  /** Assets actifs de la page, dans l'ordre des boutons. */
+  /** Active assets on the page, in button order. */
   readonly activeAssetIds: readonly string[];
 }
 
-// Marge pour le titre, le pied de page et les textes traduits plus longs que prévu.
+// Margin for the title, footer and unexpectedly long translations.
 const RESERVED_CHARACTERS = 300;
 const FIELDS_BUDGET = MAX_EMBEDS_TOTAL_LENGTH - RESERVED_CHARACTERS;
-// Un lieu occupe 4 champs (en-tête et trois colonnes) : 6 lieux par embed, comme sur le serveur d'origine.
+// Each location uses 4 fields (header and three columns): 6 locations per embed, as on the original server.
 const FIELDS_PER_EMBED = 24;
 const COLUMN_LIMIT = MAX_FIELD_VALUE - 24;
 
-/** Texte d'un nom saisi par un utilisateur : ni mise en forme, ni lien, ni mention. */
+/** User-entered name text: no formatting, links or mentions. */
 export function escapeMarkdown(text: string): string {
   return text.replace(/([\\*_~`|>#[\]])/gu, '\\$1').replace(/@/gu, '@\u200b').replace(/</gu, '<\u200b');
 }
 
-/** Lettre régionale 🇦 à 🇾 : identifie un asset actif au sein de sa page, rien de plus. */
+/** Regional indicator 🇦 to 🇾: identifies an active asset within its page, nothing more. */
 export const indicatorEmoji = (index: number): string => String.fromCodePoint(0x1f1e6 + index);
 
 const unix = (date: Date): number => Math.floor(date.getTime() / 1000);
 
 interface Entry {
   readonly asset: TimerAsset;
-  /** Rang parmi les assets actifs de la page, `null` pour un asset barré. */
+  /** Rank among the page's active assets, `null` for a struck asset. */
   readonly index: number | null;
 }
 
@@ -98,9 +98,9 @@ function rowOf(entry: Entry): { name: string; code: string; timer: string } {
 const sameCity = (a: TimerAsset, b: TimerAsset): boolean => a.regionKey === b.regionKey && a.locationKey === b.locationKey;
 
 /**
- * Comme sur le serveur d'origine : pour chaque lieu un en-tête (la région n'est écrite que quand elle change) puis trois
- * colonnes côte à côte, Asset, Code et Timer. Un lieu trop chargé pour 1 024 caractères par colonne continue dans un
- * second groupe de colonnes, sans nouvel en-tête.
+ * Match the original server: each location has a header (show the region only when it changes), then three
+ * adjacent columns: Asset, Code and Timer. A location exceeding 1,024 characters per column continues in
+ * another column group without a repeated header.
  */
 function buildFieldGroups(entries: readonly Entry[], texts: BoardTexts, icons: BoardIcons): EmbedFieldView[][] {
   const groups: EmbedFieldView[][] = [];
@@ -154,7 +154,7 @@ function buildFieldGroups(entries: readonly Entry[], texts: BoardTexts, icons: B
     start = end;
   }
 
-  // Une ligne vide sépare visuellement les lieux, sauf après le dernier.
+  // An empty line separates locations visually, except after the last one.
   groups.forEach((group, position) => {
     if (position === groups.length - 1) return;
     const last = group[group.length - 1] as EmbedFieldView;
@@ -170,15 +170,15 @@ function clip(text: string, max: number): string {
 const fieldsLength = (groups: readonly (readonly EmbedFieldView[])[]): number =>
   groups.reduce((sum, group) => sum + group.reduce((inner, field) => inner + field.name.length + field.value.length, 0), 0);
 
-/** Affecte les rangs de boutons : 🇦 à 🇾 parmi les seuls assets actifs de la page. */
+/** Assign button ranks: 🇦 to 🇾 among the page's active assets only. */
 function withIndexes(assets: readonly TimerAsset[]): Entry[] {
   let next = 0;
   return assets.map((asset) => (asset.status === 'active' ? { asset, index: next++ } : { asset, index: null }));
 }
 
 /**
- * Découpe déterministe en pages : 25 boutons au plus, 6 000 caractères d'embed au plus, 10 embeds au plus. Un asset
- * barré ne coûte pas de bouton mais reste à sa place triée.
+ * Deterministic pagination: at most 25 buttons, 6,000 embed characters and 10 embeds. A struck asset needs
+ * no button but keeps its sorted position.
  */
 function paginate(sorted: readonly TimerAsset[], texts: BoardTexts, icons: BoardIcons): TimerAsset[][] {
   const pages: TimerAsset[][] = [[]];
@@ -224,7 +224,7 @@ function assemble(
     embedFields.length === 0
       ? [{ description: texts.empty, color: BOARD_COLOR }]
       : embedFields.map((fields) => ({ fields, color: BOARD_COLOR }));
-  // Le titre ouvre chaque message ; la date de dernière mise à jour n'apparaît que sous le tout premier.
+  // The title opens each message; show the last-update timestamp only below the first message.
   const embeds = bodies.map((embed, position): EmbedView => ({
     ...embed,
     ...(position === 0 ? { title: texts.title } : {}),
@@ -245,8 +245,8 @@ function assemble(
 }
 
 /**
- * Fonction pure : le même état donne toujours les mêmes messages. Au moins une page, même sans asset, pour que le
- * board ait toujours un message à modifier.
+ * Pure function: the same state always produces the same messages. Keep at least one page, even without
+ * assets, so the board always has a message to edit.
  */
 export function renderBoard(input: {
   readonly assets: readonly TimerAsset[];

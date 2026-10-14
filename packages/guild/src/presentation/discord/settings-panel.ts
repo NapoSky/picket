@@ -61,7 +61,7 @@ function nativeName(locale: string): string {
   return name.charAt(0).toLocaleUpperCase(locale) + name.slice(1);
 }
 
-/** Tout l'état de navigation est dans Discord ; les écritures relisent leur état dans les use cases. */
+/** Navigation state lives in Discord; writes reread state in the use cases. */
 export function createSettingsPanel(deps: SettingsPanelDependencies) {
   const now = () => Math.floor(deps.clock.now().getTime() / 1000);
   const accessRequest = (context: CommandContext) => ({ guildId: context.guildId, roleIds: context.interaction.memberRoleIds, permissions: context.interaction.memberPermissions });
@@ -214,7 +214,7 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
       return {
         kind: 'deferred', ephemeral: true, update: true,
         run: async () => {
-          // Le travail différé ne conserve pas une autorisation devenue obsolète entre-temps.
+          // Deferred work must not retain authorization that became stale while waiting.
           const required = namespace === 'psnav' || namespace === 'psedit' ? 'officer' : 'admin';
           const level = await deps.access.execute(accessRequest(context));
           if (level === null || ACCESS_RANK[level] < ACCESS_RANK[required]) return ephemeral(context.t('errors.denied', { level: context.t(`levels.${required}`) }));

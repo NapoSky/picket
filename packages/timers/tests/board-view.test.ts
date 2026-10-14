@@ -143,7 +143,7 @@ describe('renderBoard: messages, footer and hash', () => {
     expect(embeds[0]?.title).toBe(texts.title);
     expect(embeds.slice(1).every((embed) => embed.title === undefined)).toBe(true);
     expect(embeds.every((embed) => (embed.fields?.length ?? 0) <= 24)).toBe(true);
-    // Un lieu n'est jamais coupé entre deux embeds : chacun commence par un en-tête.
+    // Never split a location across embeds: each starts with a header.
     expect(embeds.map((embed) => embed.fields?.[0]?.inline)).toEqual(embeds.map(() => undefined));
   });
 
@@ -190,7 +190,7 @@ describe('renderBoard: messages, footer and hash', () => {
 });
 
 describe('renderBoard properties (TIM-RQ-19)', () => {
-  // Générateur pseudo-aléatoire à graine : les cas sont reproductibles.
+  // Seeded pseudorandom generator: reproducible cases.
   function random(seed: number): () => number {
     let state = seed;
     return () => {
@@ -250,7 +250,7 @@ describe('renderBoard properties (TIM-RQ-19)', () => {
       for (const button of view.buttons) expect(button.customId.length).toBeLessThanOrEqual(100);
       expect(new Set(view.buttons.map((button) => button.customId)).size).toBe(view.buttons.length);
       expect(view.buttons.map((button) => button.emoji)).toEqual(page.activeAssetIds.map((_id, index) => indicatorEmoji(index)));
-      // Ce que l'adaptateur REST accepterait réellement.
+      // What the REST adapter would actually accept.
       expect(() => toRestMessage(view)).not.toThrow();
       for (const id of page.activeAssetIds) activeIds.add(id);
     }

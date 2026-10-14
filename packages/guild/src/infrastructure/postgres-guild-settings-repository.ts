@@ -69,7 +69,7 @@ export class PostgresGuildSettingsRepository
   ): Promise<SettingsDecision> {
     return withTenant(this.#db, guildId, async (trx) => {
       await ensureGuildInitialized(trx, guildId);
-      // Verrou par guilde : deux modifications concurrentes s'enchaînent et leurs avant/après restent cohérents.
+      // Per-guild lock: concurrent changes run serially with consistent before/after state.
       const row: Row = await trx
         .selectFrom('guild_settings')
         .selectAll()

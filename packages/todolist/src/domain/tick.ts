@@ -1,7 +1,7 @@
 import { DONE_MARKER, ITEM_SEPARATOR, MAX_FACTOR, REGIONAL_INDICATOR_A } from './constants';
 import { splitFactor } from './parser';
 
-/** Ligne d'item encore à faire : emoji lettre, séparateur, texte. Les lignes cochées commencent par ✅ et n'en font pas partie. */
+/** Open item line: emoji letter, separator, text. Completed lines start with ✅ and are excluded. */
 const OPEN_ITEM = new RegExp(String.raw`^(\p{Regional_Indicator})${ITEM_SEPARATOR}(.+)$`, 'u');
 
 function openItem(line: string): { index: number; text: string } | null {
@@ -11,7 +11,7 @@ function openItem(line: string): { index: number; text: string } | null {
   return { index, text: match[2] as string };
 }
 
-/** Index (0 pour 🇦) des items à faire, dans l'ordre d'affichage. */
+/** Indices of open items (0 for 🇦), in display order. */
 export function openItemIndexes(description: string): number[] {
   const indexes: number[] = [];
   for (const line of description.split('\n')) {
@@ -22,15 +22,15 @@ export function openItemIndexes(description: string): number[] {
 }
 
 export type TickOutcome =
-  /** L'item n'existe plus à faire : déjà coché par quelqu'un d'autre, ou message modifié. */
+  /** Item no longer open: already ticked by someone else, or message modified. */
   | { readonly kind: 'not_found' }
   | { readonly kind: 'updated'; readonly description: string; readonly openIndexes: readonly number[] }
-  /** Plus aucun item à faire sur cette page. */
+  /** No open items remain on this page. */
   | { readonly kind: 'completed' };
 
 /**
- * Applique un clic en ne modifiant que la ligne de l'item : le reste du message (texte libre, catégories) n'est
- * jamais relu ni réécrit, donc jamais perdu. Facteur supérieur à 1 : décrémenté ; sinon l'item est barré.
+ * Apply a click by changing only the item's line. Never reread or rewrite other message content (free text,
+ * categories), so it cannot be lost. Decrement factors above 1; otherwise strike the item.
  */
 export function tickItem(description: string, index: number): TickOutcome {
   const lines = description.split('\n');

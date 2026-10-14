@@ -1,6 +1,6 @@
 name: Deploy
 
-# Déclenché uniquement après une CI réussie sur main : jamais par une pull request ni par un fork.
+# Triggered only after successful CI on main: never from a pull request or fork.
 on:
   workflow_run:
     workflows: [CI]
@@ -52,7 +52,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      # Le déploiement référence l'image par son condensat : immuable, impossible à substituer après coup.
+      # Deploy by image digest: immutable and impossible to replace afterwards.
       - id: ref
         run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}@${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
 
@@ -61,7 +61,7 @@ jobs:
     needs: publish
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Environnement protégé : relecteurs obligatoires et secrets limités à ce job.
+    # Protected environment: required reviewers and secrets restricted to this job.
     environment: production
     permissions:
       contents: read
@@ -76,8 +76,8 @@ jobs:
           printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-      # La clé n'autorise qu'une commande forcée (deploy/ssh-entrypoint.sh), qui valide la référence d'image.
-      # Le jeton du job (lecture des paquets) passe par l'entrée standard : il n'apparaît ni dans la commande ni dans les journaux.
+      # The key permits only the forced command (deploy/ssh-entrypoint.sh), which validates the image reference.
+      # The job token (package read access) goes through stdin: it appears in neither the command nor logs.
       - name: Roll out
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}

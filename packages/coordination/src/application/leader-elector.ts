@@ -14,9 +14,9 @@ export interface LeaderElectorOptions {
   readonly logger: Logger;
   readonly metrics?: OperationalMetrics;
   readonly component?: MetricComponent;
-  /** Démarre le travail réservé au détenteur ; retourne comment l'arrêter. */
+  /** Start the work reserved for the holder; return how to stop it. */
   readonly onAcquired: (lease: Lease) => Promise<StopWork>;
-  /** Attente interruptible ; injectable pour les tests. */
+  /** Interruptible sleep; injectable for tests. */
   readonly sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
 }
 
@@ -37,8 +37,8 @@ function defaultSleep(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 /**
- * Garantit qu'un seul processus à la fois exécute un travail nommé. Dès qu'il ne peut plus prouver
- * qu'il détient le verrou (perdu, ou renouvellement impossible jusqu'à l'expiration), il arrête son travail.
+ * Ensure only one process runs a named task at a time. Stop work as soon as ownership can no longer be
+ * proven (lease lost, or renewal unavailable until expiry).
  */
 export class LeaderElector {
   readonly #options: LeaderElectorOptions;
@@ -56,7 +56,7 @@ export class LeaderElector {
     return this.#held !== null;
   }
 
-  /** Une itération de la machine à états : acquérir si libre, renouveler si détenu. */
+  /** One state-machine iteration: acquire if free, otherwise renew. */
   async step(): Promise<void> {
     if (this.#held === null) {
       await this.#tryAcquire();
@@ -111,7 +111,7 @@ export class LeaderElector {
       this.#failures = 0;
       logger.info({ lease: name, fencing: lease.token.toString() }, 'lease acquired');
     } catch (error) {
-      // Rend la main aux autres processus et temporise : évite une boucle de crash qui épuiserait les quotas Discord.
+      // Yield to other processes and back off: avoid a crash loop that exhausts Discord quotas.
       this.#failures += 1;
       const backoff = Math.min(MAX_BACKOFF_MS, 1000 * 2 ** Math.min(this.#failures, 6));
       this.#backoffUntil = clock.now().getTime() + backoff;
@@ -134,7 +134,7 @@ export class LeaderElector {
       await this.#relinquish(false);
     } catch (error) {
       this.#options.metrics?.record('lease_renew', (Date.now() - started) / 1000, 'error', this.#options.component);
-      // Base injoignable : on garde le travail tant que le verrou ne peut pas avoir expiré.
+      // Database unavailable: keep working only while the lease cannot have expired.
       const silentFor = clock.now().getTime() - held.lastRenewedAt;
       logger.warn({ err: error, lease: name, silentForMs: silentFor }, 'lease renewal failed');
       if (silentFor >= ttlMs - this.#options.renewEveryMs) await this.#relinquish(false);

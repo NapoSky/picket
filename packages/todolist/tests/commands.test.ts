@@ -61,7 +61,7 @@ function harness() {
   const nextId = () => InteractionId.assert(`93000000000${String(10_000 + counter++)}`);
   type Overrides = Parameters<typeof makeInteraction>[0];
 
-  /** Comme le serveur HTTP : la réponse immédiate, puis le travail différé livré par l'adaptateur. */
+  /** Match the HTTP server: immediate response, then deferred work delivered by the adapter. */
   async function handle(overrides: Overrides): Promise<Reply> {
     const interaction = makeInteraction({ id: nextId(), appPermissions: ALL_PERMISSIONS, ...overrides });
     const reply = await pipeline.handle(interaction);

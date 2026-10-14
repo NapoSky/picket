@@ -9,7 +9,7 @@ import {
 import type { TodoItem, Todolist } from './parser';
 
 export interface Page {
-  /** Description de l'embed : les lignes d'items portent leur lettre, les autres lignes sont celles de la saisie. */
+  /** Embed description: item lines carry their letters; preserve other input lines. */
   readonly description: string;
   readonly itemCount: number;
 }
@@ -19,7 +19,7 @@ export type LayoutError = { readonly code: 'too_long_to_render' };
 export const renderItem = (item: TodoItem): string => (item.factor > 1 ? `${item.text} (x${item.factor})` : item.text);
 
 interface Block {
-  /** Lignes (texte libre, catégories, vides) situées avant l'item depuis l'item précédent. */
+  /** Lines (free text, categories, blanks) between the previous item and this one. */
   readonly gap: readonly string[];
   readonly gapHasCategory: boolean;
   readonly categoryRaw: string | null;
@@ -49,8 +49,8 @@ function trimLeadingBlank(lines: readonly string[]): string[] {
 }
 
 /**
- * Découpe en pages d'au plus 25 items et de longueur bornée. Un item et le texte qui le précède restent ensemble ;
- * une catégorie à cheval sur deux pages est répétée en tête de la suivante ; le texte final reste sur la dernière page.
+ * Split into pages of at most 25 items and bounded length. Keep an item with its preceding text; repeat a
+ * spanning category's title at the start of the next page; keep trailing text on the last page.
  */
 export function layoutPages(list: Todolist): Result<readonly Page[], LayoutError> {
   const blocks: Block[] = [];
@@ -78,7 +78,7 @@ export function layoutPages(list: Todolist): Result<readonly Page[], LayoutError
     if (page === undefined || page.items >= ITEMS_PER_PAGE || overflows) {
       page = { lines: [], items: 0, length: 0 };
       pages.push(page);
-      // Page entamée au milieu d'une catégorie : on répète son titre.
+      // Page begins in the middle of a category: repeat its title.
       if (!block.gapHasCategory && block.categoryRaw !== null) {
         page.lines.push(block.categoryRaw);
         page.length += block.categoryRaw.length + 1;

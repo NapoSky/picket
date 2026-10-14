@@ -1,9 +1,9 @@
-/** Composants V2, indépendants des types et des valeurs numériques de l'API Discord. */
+/** V2 components, independent of Discord API types and numeric constants. */
 export interface PanelButton {
   readonly kind: 'button';
   readonly customId: string;
   readonly label: string;
-  /** Emoji Unicode affiché à côté du libellé. */
+  /** Unicode emoji displayed beside the label. */
   readonly emoji?: string;
   readonly style?: 'primary' | 'secondary' | 'success' | 'danger';
   readonly disabled?: boolean;

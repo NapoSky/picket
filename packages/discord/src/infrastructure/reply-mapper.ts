@@ -7,7 +7,7 @@ import {
 import type { ModalInput, Reply } from '../application/interaction';
 import { toWirePanel } from './panel-mapper';
 
-// Limites Discord des modales : un texte traduit trop long est coupé plutôt que de faire échouer l'interaction.
+// Discord modal limits: truncate overly long translations instead of failing the interaction.
 const MODAL_TITLE_MAX = 45;
 const MODAL_LABEL_MAX = 45;
 const PLACEHOLDER_MAX = 100;
@@ -34,7 +34,7 @@ function toTextInput(input: ModalInput) {
   };
 }
 
-/** Réponse HTTP immédiate à une interaction. */
+/** Immediate HTTP response to an interaction. */
 export function toWireResponse(reply: Reply): APIInteractionResponse {
   switch (reply.kind) {
     case 'file':

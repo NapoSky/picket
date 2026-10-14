@@ -1,5 +1,5 @@
 import { createI18n } from '@picket/i18n';
 
-/** Catalogues réels (en, fr, …) : les tests vérifient les textes livrés, pas des doublures. */
+/** Real catalogs (en, fr, etc.): tests verify shipped text, not doubles. */
 export const testI18n = createI18n();
 export const englishT = testI18n.translator('en').t;

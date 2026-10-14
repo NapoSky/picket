@@ -17,9 +17,8 @@ const FAILURE_RETRY_MS = 5 * 60_000;
 const FEATURE_OFF_RECHECK_MS = 60 * 60_000;
 
 /**
- * Passe périodique du rôle `job-runner` (un seul détenteur à la fois, par bail) : traite les boards dont l'heure de
- * réveil est arrivée, c'est-à-dire un rendu resté en attente, un seuil d'alerte, une échéance ou une purge.
- * Rien ne se perd si le processus s'arrête : tout est relu depuis la base à la passe suivante.
+ * Periodic `job-runner` pass (one lease holder at a time): maintain due boards with pending renders, alert
+ * thresholds, deadlines or purges. Reread everything from the database on the next pass after interruption.
  */
 export class TimerSweep {
   readonly #deps: TimerSweepDeps;
@@ -28,7 +27,7 @@ export class TimerSweep {
     this.#deps = deps;
   }
 
-  /** Nombre de boards traités. */
+  /** Number of boards processed. */
   async tick(): Promise<number> {
     const { store, maintenance, features, clock, logger } = this.#deps;
     const now = clock.now();
@@ -37,7 +36,7 @@ export class TimerSweep {
     for (const { guildId, boardId } of due) {
       const later = (ms: number): Date => new Date(clock.now().getTime() + ms);
       try {
-        // Fonctionnalité désactivée : aucune requête Discord pour cette guilde, on revérifie plus tard.
+        // Feature disabled: make no Discord requests for this guild; check again later.
         if (!(await features.isEnabled(guildId))) {
           await store.schedule(guildId, boardId, later(FEATURE_OFF_RECHECK_MS));
           continue;

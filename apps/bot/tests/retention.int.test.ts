@@ -26,7 +26,7 @@ describe('automatic retention job (PostgreSQL)', () => {
   it('catches up an unprocessed nightly deadline on job leadership, without any external cron', async () => {
     let cleanupObserved!: () => void;
     const cleaned = new Promise<void>((resolve) => { cleanupObserved = resolve; });
-    // Le flush marque le début de la passe ; stop() attend ensuite sa fin effective.
+    // The flush marks the start of the pass; stop() then waits for its actual completion.
     const runner = buildJobRunner(database.handle.db, noopLogger, { ...options, holder: 'retention-test', flushGuildLogs: async () => cleanupObserved() });
     try {
       await runner.step();
@@ -37,7 +37,7 @@ describe('automatic retention job (PostgreSQL)', () => {
   });
 
   it('runs once per nightly deadline and shares completion with a restarted or replacement replica', async () => {
-    let now = new Date('2026-10-07T01:05:00Z'); // 3 h 05 à Paris.
+    let now = new Date('2026-10-07T01:05:00Z'); // 03:05 in Paris.
     const scheduledOptions = { ...options, clock: { now: () => now } };
     const first = buildNightlyRetentionJob(database.handle.db, noopLogger, scheduledOptions);
     expect(await first.execute()).toMatchObject({ auditDeleted: 1 });

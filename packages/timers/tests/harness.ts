@@ -32,7 +32,7 @@ import { LOCATION, NOW, REGION } from './fixtures';
 
 export const TIMER_TABLES = 'timer_alerts, timer_events, timer_board_messages, timer_assets, timer_schedule, timer_boards';
 
-/** Horloge pilotable : les échéances, alertes et purges se testent sans attendre. */
+/** Controllable clock: test deadlines, alerts and purges without waiting. */
 export class TestClock implements Clock {
   #now = NOW;
   now(): Date {
@@ -48,7 +48,7 @@ export class TestClock implements Clock {
 
 let counter = 0;
 
-/** Une guilde, un canal et des utilisateurs neufs : les tests d'un même fichier ne se voient jamais. */
+/** Fresh guild, channel and users: tests in one file cannot see each other's state. */
 export function freshIds() {
   counter += 1;
   const n = String(counter).padStart(4, '0');
@@ -70,7 +70,7 @@ const localizer: Localizer = {
   translator: (locale) => testI18n.translator(locale).t,
 };
 
-/** Un « processus » : ses propres objets, mais la même base et le même Discord (comme deux répliques). */
+/** One process: its own objects, with the same database and Discord (like two replicas). */
 export function createProcess(database: TestDatabase, messaging: InMemoryMessaging, clock: Clock, options: { features?: () => boolean } = {}) {
   const store = new PostgresTimerStore(database.handle.db);
   const maintenance = new BoardMaintenance({
@@ -132,7 +132,7 @@ export function timerHarness(database: TestDatabase, options: { features?: () =>
     ...overrides,
   });
 
-  /** Crée un board dans le canal et le retourne avec l'identifiant de son premier message. */
+  /** Create a board in the channel and return its identifier with the first message identifier. */
   async function boardWithMessage(channel = ids.channel) {
     const created = await processes.createBoard.execute({ guildId: ids.guild, channelId: channel, actor: ids.user, locale: null });
     if (created.kind !== 'created') throw new Error(`board not created: ${created.kind}`);
@@ -145,7 +145,7 @@ export function timerHarness(database: TestDatabase, options: { features?: () =>
     return result.asset;
   }
 
-  /** Une ligne par asset affiché, colonnes Asset, Code et Timer réunies : `nom | code | échéance`. */
+  /** One row per displayed asset, combining Asset, Code and Timer columns: `name | code | deadline`. */
   const lines = (channel = ids.channel) => {
     const fields = messaging
       .list(channel)

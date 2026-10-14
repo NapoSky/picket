@@ -3,7 +3,7 @@ import type { Lease, LeaseStore } from '../application/lease-store';
 
 const ttlSeconds = (ttlMs: number): number => ttlMs / 1000;
 
-/** Toutes les comparaisons de temps utilisent l'horloge de Postgres : insensible au décalage entre processus. */
+/** All time comparisons use the PostgreSQL clock, avoiding clock skew between processes. */
 export class PostgresLeaseStore implements LeaseStore {
   readonly #db: Db;
 

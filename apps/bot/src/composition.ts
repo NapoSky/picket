@@ -19,7 +19,7 @@ import {
   type InteractionReplies,
   type Messaging,
 } from '@picket/discord';
-import { PostgresGatewaySessionStore, PostgresKeyedLock, PostgresLeaseStore, LeaderElector, startLeasedLoop } from '@picket/coordination';
+import { PostgresGatewaySessionStore, PostgresKeyedLock, PostgresLeaseStore, LeaderElector, startLeasedLoop, type KeyedLock } from '@picket/coordination';
 import {
   CancelGuildDeletion,
   ExportGuildData,
@@ -91,7 +91,7 @@ import { buildStatsRefreshJob } from './stats-schedule';
 import { ConfigureWarLog, FoxholeApi, PostgresWarStore, PublishWarLog, WARLOG_ROOT, WarPoller, createWarLogSettingsPanel } from '@picket/warlog';
 import { createStatsPanel,DiskVoiceBuffer,PostgresStatsStore,STATS_ROOT,VoiceCollector,type DurableVoiceBuffer } from '@picket/stats';
 
-/** Accès à l'API REST de Discord : seul le serveur d'interactions en a besoin. */
+/** Discord REST access: only the interaction server needs it. */
 export interface DiscordPorts {
   readonly messaging: Messaging;
   readonly replies: InteractionReplies;
@@ -103,7 +103,7 @@ const unavailable = async (): Promise<never> => {
   throw new Error('Discord REST access is not available in this process');
 };
 
-/** Pour le CLI : le registre est construit sans jamais appeler Discord, et un appel accidentel échoue bruyamment. */
+/** For the CLI: build the registry without calling Discord; accidental calls fail loudly. */
 export const offlineDiscordPorts: DiscordPorts = {
   messaging: { send: unavailable, fetch: unavailable, edit: unavailable, delete: unavailable },
   replies: { editOriginal: unavailable, deleteOriginal: unavailable, followUp: unavailable },
@@ -118,6 +118,8 @@ export interface CompositionOptions {
   readonly discord?: DiscordPorts;
   readonly flushGuildLogs?: () => Promise<void>;
   readonly metrics?: OperationalMetrics;
+  /** Locks hold SQL connections across REST calls; use a separate pool in the running bot. */
+  readonly locks?: KeyedLock;
   readonly stats?: {readonly store:PostgresStatsStore;readonly buffer:DurableVoiceBuffer;readonly collector?:VoiceCollector;readonly dashboardUrl:string|null};
 }
 
@@ -190,7 +192,7 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
       ...statsPanel.families,
       warPanel.family,
       timerPanel.family,
-      todolistFamily({ create: new CreateTodolist(messaging), tick: new TickTodolistItem(messaging, new PostgresKeyedLock(db)),
+      todolistFamily({ create: new CreateTodolist(messaging), tick: new TickTodolistItem(messaging, options.locks ?? new PostgresKeyedLock(db)),
         created: { record: (input) => new PostgresGuildAuditRepository(db).recordTodolist(input) },
       }),
       timersFamily({
@@ -206,20 +208,20 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
   };
 }
 
-/** Tout ce que les timers partagent : la persistance, le rendu des boards et leur entretien. */
+/** Shared timer services: persistence, board rendering and maintenance. */
 function timerServices(db: Db, options: CompositionOptions, logger: Logger, settings: PostgresGuildSettingsRepository) {
   const store = new PostgresTimerStore(db);
   const messaging = (options.discord ?? offlineDiscordPorts).messaging;
   const guildLocale = new GetGuildLocale(settings);
   const localizer: Localizer = {
-    // Langue imposée au serveur, puis celle du canal à la création du board, puis l'anglais.
+    // Forced guild locale, then the channel locale when the board was created, then English.
     localeFor: async (guildId, boardLocale) => options.i18n.resolve(await guildLocale.execute(guildId), boardLocale),
     translator: (locale) => options.i18n.translator(locale).t,
   };
   const maintenance = new BoardMaintenance({
     store,
     messaging,
-    lock: new PostgresKeyedLock(db),
+    lock: options.locks ?? new PostgresKeyedLock(db),
     clock: options.clock,
     localizer,
     logger,
@@ -260,7 +262,7 @@ export function buildWarLogRunner(db: Db, logger: Logger, options: CompositionOp
   });
 }
 
-/** Seul endroit qui connaît toutes les commandes : le serveur, le CLI et les tests partagent ce registre. */
+/** The only place that knows every command: the server, CLI and tests share this registry. */
 export function buildCommandRegistry(db: Db, options: CompositionOptions): CommandRegistry {
   const guild = guildModule(db, options, noopLogger);
   return new CommandRegistry(ROOTS, guild.entries, options.i18n, guild.aliases);
@@ -286,7 +288,7 @@ const AUDIT_INTERVAL_MS = 5_000;
 const RETENTION_CHECK_INTERVAL_MS = 60_000;
 const RETENTION_SCHEDULE_KEY = 'retention:last_successful_schedule';
 
-/** Rôle `job-runner` : un seul détenteur du bail exécute les passes de timers et de rétention. */
+/** The `job-runner` role: a single lease holder runs timer and retention passes. */
 export function buildJobRunner(
   db: Db,
   logger: Logger,
@@ -326,13 +328,13 @@ export function buildAuditPublisher(db: Db, logger: Logger, options: Composition
     (options.discord ?? offlineDiscordPorts).messaging, options.i18n, options.clock, logger);
 }
 
-/** Même nettoyage pour le CLI, le rattrapage et la passe nocturne. */
+/** The same cleanup for the CLI, catch-up and nightly pass. */
 export function buildRetentionJob(db: Db, logger: Logger, options: CompositionOptions) {
   const purge = buildPurgeJob(db, logger, options);
   const receipts = new PostgresInteractionReceipts(db);
   return {
     async execute() {
-      // Une indisponibilité du stockage des logs ne doit pas empêcher l'effacement des anciennes données.
+      // Unavailable log storage must not prevent erasure of expired data.
       await options.flushGuildLogs?.().catch(() => logger.error({}, 'guild log flush failed'));
       const journals = await purgeExpiredJournals(db);
       const cutoff = new Date(options.clock.now().getTime() - INTERACTION_RECEIPT_RETENTION_DAYS * 24 * 60 * 60 * 1000);
@@ -344,7 +346,7 @@ export function buildRetentionJob(db: Db, logger: Logger, options: CompositionOp
   };
 }
 
-/** Une passe à 3 h à Paris ; une échéance manquée est rattrapée après un redémarrage ou une reprise de bail. */
+/** One pass at 03:00 in Paris; catch up a missed deadline after restart or lease handoff. */
 export function buildNightlyRetentionJob(db: Db, logger: Logger, options: CompositionOptions) {
   const state = createAppState(db);
   const retention = buildRetentionJob(db, logger, options);
@@ -356,7 +358,7 @@ export function buildNightlyRetentionJob(db: Db, logger: Logger, options: Compos
       options.metrics?.set('task_success', last ? new Date(last).getTime() / 1000 : 0, 'retention');
       if (last !== null && new Date(last) >= scheduledAt) return null;
       const report = await retention.execute();
-      // Un échec sera retenté lors de la prochaine vérification, sans attendre la nuit suivante.
+      // Retry a failure at the next check, without waiting until the following night.
       if (report.failed.length === 0) {
         await state.set(RETENTION_SCHEDULE_KEY, scheduledAt.toISOString());
         options.metrics?.set('task_success', scheduledAt.getTime() / 1000, 'retention');

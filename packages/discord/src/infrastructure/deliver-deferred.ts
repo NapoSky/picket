@@ -5,8 +5,8 @@ import type { InteractionReplies } from '../application/messaging';
 type Deferred = Extract<Reply, { kind: 'deferred' }>;
 
 /**
- * Exécute le travail différé après l'accusé de réception puis livre le résultat. Ne lève jamais :
- * si Discord refuse la livraison (jeton expiré, message supprimé), il n'y a plus rien à tenter.
+ * Run deferred work after acknowledgement, then deliver the result. Never throws: if Discord refuses
+ * delivery (expired token or deleted message), no further attempt is possible.
  */
 export async function deliverDeferred(options: {
   readonly reply: Deferred;

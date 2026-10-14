@@ -16,13 +16,13 @@ export interface GatewayDelivery {
   readonly replayed: boolean; readonly lease: Lease;
 }
 
-/** Événements Gateway normalisés : aucun type `discord-api-types` n'en sort. */
+/** Normalized Gateway events: no `discord-api-types` types escape this boundary. */
 export type GatewayEvent =
   | {
       readonly type: 'ready';
       readonly shardId: number;
       readonly shardCount: number;
-      /** Tous les serveurs du shard, y compris ceux momentanément indisponibles. */
+      /** All guilds on the shard, including temporarily unavailable guilds. */
       readonly guildIds: readonly GuildId[];
     }
   | { readonly type: 'guild_available'; readonly guildId: GuildId; readonly voiceSnapshot?: GatewayVoiceSnapshot }
@@ -31,7 +31,7 @@ export type GatewayEvent =
   | { readonly type: 'voice_state'; readonly guildId: GuildId; readonly person: GatewayVoicePerson }
   | { readonly type: 'voice_member'; readonly guildId: GuildId; readonly userId: string; readonly roles: readonly string[]; readonly bot: boolean; readonly name: string }
   | { readonly type: 'voice_member_removed'; readonly guildId: GuildId; readonly userId: string }
-  /** Le bot a été retiré du serveur (jamais émis pour une simple indisponibilité). */
+  /** The bot was removed from the guild (never emitted for temporary unavailability). */
   | { readonly type: 'guild_removed'; readonly guildId: GuildId }
   | { readonly type: 'channel_unusable'; readonly guildId: GuildId; readonly channelId: ChannelId; readonly deleted?: boolean; readonly name?: string }
   | { readonly type: 'role_deleted'; readonly guildId: GuildId; readonly roleId: RoleId };

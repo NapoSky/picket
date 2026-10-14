@@ -13,7 +13,7 @@ export class ConfigError extends DomainError {
   readonly code = 'invalid_config';
 }
 
-// Variables pouvant être fournies par fichier (Docker secrets) via `<NOM>_FILE`.
+// Variables that can be supplied as files (Docker secrets) through `<NAME>_FILE`.
 const FILE_SECRET_KEYS = ['DISCORD_BOT_TOKEN', 'DISCORD_CLIENT_SECRET', 'DATABASE_URL', 'DATABASE_MIGRATOR_URL'] as const;
 
 const port = z.coerce.number().int().min(1).max(65535);
@@ -105,9 +105,9 @@ export interface AppConfig {
     readonly restGlobalRps: number;
   };
   readonly database: { readonly url: Secret; readonly poolMax: number };
-  /** Délai entre la désactivation d'une guilde et la suppression définitive de ses données. */
+  /** Delay between guild deactivation and permanent deletion of its data. */
   readonly guildRetentionDays: number;
-  /** Nombre total de shards Gateway ; chaque shard a son bail et une seule connexion active. */
+  /** Total Gateway shard count; each shard has its own lease and a single active connection. */
   readonly shardCount: number;
   readonly warlog: { readonly apiUrl: string; readonly pollIntervalMs: number };
   readonly stats: {readonly bufferPath:string;readonly bufferMaxBytes:number};
@@ -142,7 +142,7 @@ function resolveFileSecrets(env: Env, readFile: (path: string) => string): Recor
   return resolved;
 }
 
-/** Valide l'environnement ; les messages d'erreur ne contiennent jamais les valeurs. */
+/** Validate the environment; error messages never include values. */
 function parseEnv<T extends z.ZodType>(schema: T, env: Env, options: LoadConfigOptions): z.output<T> {
   const readFile = options.readFile ?? ((path: string) => readFileSync(path, 'utf8'));
   const parsed = schema.safeParse(resolveFileSecrets(env, readFile));

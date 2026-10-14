@@ -8,9 +8,9 @@ export { ADMIN_URL_ENV, APP_PASSWORD, APP_ROLE, MIGRATOR_PASSWORD, MIGRATOR_ROLE
 
 export interface TestDatabase {
   readonly handle: DatabaseHandle;
-  /** Connexion superutilisateur : contourne la RLS, réservée aux vérifications des tests. */
+  /** Superuser connection: bypasses RLS, reserved for test verification. */
   readonly adminUrl: Secret;
-  /** Propriétaire des tables (non superutilisateur), comme l'outil de migration en production. */
+  /** Non-superuser table owner, matching the production migration role. */
   readonly migratorUrl: Secret;
   readonly appUrl: Secret;
   drop(): Promise<void>;
@@ -32,7 +32,7 @@ function withDatabase(url: string, database: string, credentials?: { user: strin
   return parsed.toString();
 }
 
-/** Base jetable migrée, accédée par un rôle non propriétaire (donc soumis à la RLS). */
+/** Migrated disposable database, accessed by a non-owner role (therefore subject to RLS). */
 export async function createTestDatabase(options: { readonly migrate?: boolean } = {}): Promise<TestDatabase> {
   const name = `picket_test_${randomBytes(6).toString('hex')}`;
   const admin = new Client({ connectionString: adminUrl() });
@@ -70,7 +70,7 @@ export async function createTestDatabase(options: { readonly migrate?: boolean }
   };
 }
 
-/** Exécute du SQL en superutilisateur (contourne la RLS) pour préparer ou vérifier un état. */
+/** Execute SQL as superuser (bypassing RLS) to prepare or verify test state. */
 export async function queryAsAdmin<T extends Record<string, unknown>>(
   database: TestDatabase,
   sql: string,

@@ -2,7 +2,7 @@ import type { GuildId } from '@picket/kernel';
 import { purgeExpiredJournals, sql, withTenant, type Db, type Schema } from '@picket/persistence';
 import type { GuildDataExportRepository, GuildDataRows } from '../application/export-guild-data';
 
-/** Liste explicite : les tables globales et les secrets ne font jamais partie d'un export de serveur. */
+/** Explicit list: global tables and secrets never belong in a guild export. */
 export const GUILD_EXPORT_TABLES = {
   stats_settings:['guild_id'],
   stats_privacy:['guild_id','user_id'],
@@ -59,7 +59,7 @@ export class PostgresGuildDataExportRepository implements GuildDataExportReposit
             sql<Date | null>`CASE WHEN interrupted_at > ${statsCutoff} THEN interrupted_at END`.as('interrupted_at'),
           ]);
         for (const column of GUILD_EXPORT_TABLES[table]) query = query.orderBy(sql.ref(column), 'asc');
-        // La transaction garde le même instantané et l'ordre des clés primaires évite pertes et doublons.
+        // The transaction keeps the same snapshot; primary-key ordering prevents omissions and duplicates.
         for (let offset = 0; ; offset += BATCH_SIZE) {
           const batch = await query.limit(BATCH_SIZE).offset(offset).execute();
           for (const row of batch) {

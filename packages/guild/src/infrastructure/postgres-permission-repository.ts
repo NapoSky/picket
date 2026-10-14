@@ -79,7 +79,7 @@ export class PostgresPermissionRepository implements PermissionRepository {
   ): Promise<ModifyResult> {
     return withTenant(this.#db, guildId, async (trx) => {
       await ensureGuildInitialized(trx, guildId);
-      // Verrou par guilde : deux modifications concurrentes s'enchaînent et leurs avant/après restent cohérents.
+      // Per-guild lock: concurrent changes run serially with consistent before/after state.
       await trx.selectFrom('guild_settings').select('guild_id').where('guild_id', '=', guildId).forUpdate().executeTakeFirstOrThrow();
 
       const before = await readConfig(trx, guildId);

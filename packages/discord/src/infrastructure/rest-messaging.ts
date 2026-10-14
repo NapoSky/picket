@@ -38,7 +38,7 @@ const CODE_TO_REASON: Readonly<Record<number, DiscordErrorReason>> = {
 
 const NETWORK_ERROR_CODES = new Set(['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN', 'UND_ERR_CONNECT_TIMEOUT']);
 
-/** Ramène toute erreur du client REST à une erreur de domaine, sans conserver l'erreur d'origine (jeton possible dans l'URL). */
+/** Map REST client errors to domain errors without retaining the original (its URL may contain a token). */
 export function mapRestError(error: unknown): DiscordApiError {
   if (error instanceof DiscordApiError) return error;
   if (error instanceof DiscordAPIError) {
@@ -54,7 +54,7 @@ export function mapRestError(error: unknown): DiscordApiError {
       status: error.status,
     });
   }
-  // Pas d'`instanceof Error` : une erreur de Node peut venir d'un autre contexte d'exécution.
+  // No `instanceof Error`: a Node error can originate from another execution context.
   const candidate = typeof error === 'object' && error !== null ? (error as { name?: unknown; code?: unknown; cause?: unknown }) : null;
   const causeCode = (candidate?.cause as { code?: unknown } | null | undefined)?.code;
   const isNetworkCode = (code: unknown): boolean => typeof code === 'string' && NETWORK_ERROR_CODES.has(code);
@@ -67,7 +67,7 @@ export function mapRestError(error: unknown): DiscordApiError {
   return new DiscordApiError('unknown', 'Unexpected Discord client error');
 }
 
-/** Corps REST d'un message du bot : seules les mentions de rôles explicitement demandées sont résolues, boutons en lignes de 5. */
+/** Bot message REST body: resolve only explicitly requested role mentions, with buttons in rows of 5. */
 export function toRestMessage(view: MessageView): RESTPostAPIChannelMessageJSONBody & RESTPatchAPIChannelMessageJSONBody {
   if (view.buttons.length > MAX_BUTTONS_PER_MESSAGE) throw new RangeError('Too many buttons for one message');
   if (view.embeds.length > MAX_EMBEDS_PER_MESSAGE) throw new RangeError('Too many embeds for one message');

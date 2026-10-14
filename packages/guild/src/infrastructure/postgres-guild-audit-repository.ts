@@ -13,7 +13,7 @@ export class PostgresGuildAuditRepository implements GuildAuditRepository {
 
   recordTodolist(input: { readonly guildId: GuildId; readonly actor: UserId; readonly channelId: ChannelId; readonly messageIds: readonly MessageId[] }): Promise<void> {
     return withTenant(this.db, input.guildId, async (trx) => {
-      // Si une purge concurrente a déjà effacé le serveur, ne pas recréer ses données.
+      // If a concurrent purge already erased the guild, never recreate its data.
       const exists = await trx.selectFrom('guild_registry').select('guild_id').where('guild_id', '=', input.guildId).forKeyShare().executeTakeFirst();
       if (!exists) return;
       await trx.insertInto('guild_audit_log').values({ guild_id: input.guildId, actor_id: input.actor, action: 'todolist.created',
@@ -48,8 +48,8 @@ export class PostgresGuildAuditRepository implements GuildAuditRepository {
 
   deliver(guildId: GuildId, now: Date, publish: (event: AuditEvent) => Promise<AuditDeliveryResult>): Promise<boolean> {
     return withTenant(this.db, guildId, async (trx) => {
-      // Verrou par guilde : protège aussi contre un changement de salon et deux workers concurrents.
-      // Seule cette transaction de livraison attend Discord ; les écritures métier ne font aucun appel réseau.
+      // Per-guild lock: also protects against channel changes and concurrent workers.
+      // Only this delivery transaction waits for Discord; business writes make no network calls.
       await sql`SET LOCAL idle_in_transaction_session_timeout = '120s'`.execute(trx);
       const settings = await trx.selectFrom('guild_settings').select(['locale', 'audit_channel_id']).where('guild_id', '=', guildId).forUpdate().skipLocked().executeTakeFirst();
       if (!settings) return false;

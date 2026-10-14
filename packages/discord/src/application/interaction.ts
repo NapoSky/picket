@@ -15,13 +15,13 @@ export type InteractionKind = 'command' | 'component' | 'modal' | 'autocomplete'
 
 export type OptionValue = string | number | boolean;
 
-/** Message qui porte le composant cliqué. */
+/** Message containing the clicked component. */
 export interface MessageRef {
   readonly id: MessageId;
   readonly channelId: ChannelId;
 }
 
-/** Interaction normalisée : aucun type `discord-api-types` n'en sort. */
+/** Normalized interaction: no `discord-api-types` types escape this boundary. */
 export interface IncomingInteraction {
   readonly id: InteractionId;
   readonly kind: InteractionKind;
@@ -35,18 +35,18 @@ export interface IncomingInteraction {
   readonly memberRoleIds: readonly RoleId[];
   readonly memberPermissions: bigint | null;
   readonly appPermissions: bigint | null;
-  /** Limite Discord pour un fichier joint à la réponse. */
+  /** Discord attachment size limit for the response. */
   readonly attachmentSizeLimit: number;
-  /** `[racine, groupe?, sous-commande?]` pour une commande ou un autocomplete, sinon vide. */
+  /** `[root, group?, subcommand?]` for commands or autocomplete, otherwise empty. */
   readonly commandPath: readonly string[];
-  /** Valeurs des options de la commande (hors sous-commandes et groupes). */
+  /** Command option values (excluding subcommands and groups). */
   readonly options: Readonly<Record<string, OptionValue>>;
-  /** Pour un autocomplete : nom de l'option en cours de saisie (sa valeur partielle est dans `options`). */
+  /** For autocomplete: focused option name (its partial value is in `options`). */
   readonly focusedOption: string | null;
   readonly customId: string | null;
-  /** Message cliqué, ou message source d'une modale ouverte depuis un composant. */
+  /** Clicked message, or source message for a modal opened from a component. */
   readonly message: MessageRef | null;
-  /** Pour une modale : valeur saisie par champ (`custom_id` du champ). */
+  /** For a modal: entered value per field (field `custom_id`). */
   readonly fields: Readonly<Record<string, string>>;
   readonly componentKind: 'button' | 'stringSelect' | 'roleSelect' | 'channelSelect' | null;
   readonly selectedValues: readonly string[];
@@ -61,7 +61,7 @@ export interface ModalInput {
   readonly minLength?: number;
   readonly maxLength?: number;
   readonly required?: boolean;
-  /** Valeur préremplie du champ. */
+  /** Prefilled field value. */
   readonly value?: string;
   /** `paragraph` : saisie multiligne. */
   readonly style: 'short' | 'paragraph';
@@ -75,10 +75,10 @@ export type Reply =
   | { readonly kind: 'modal'; readonly customId: string; readonly title: string; readonly inputs: readonly ModalInput[] }
   | {
       /**
-       * Accusé immédiat (3 s) puis travail en tâche de fond. `update` : le clic d'un composant est acquitté
-       * sans changer le message. Un résultat `panel` avec `update` actualise ce même message ; un résultat
-       * texte est livré en suivi éphémère. Pour une commande, le résultat remplace la réponse d'attente.
-       * `null` : rien à dire.
+       * Immediate acknowledgement (3 s), then background work. With `update`, acknowledge a component click
+       * without changing its message. A `panel` result with `update` updates that same message; text results use
+       * an ephemeral follow-up. For a command, replace the loading response with the result. `null` means there is
+       * nothing to say.
        */
       readonly kind: 'deferred';
       readonly ephemeral: boolean;

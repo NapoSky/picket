@@ -57,13 +57,14 @@ const toAsset = (row: AssetRow): TimerAsset => ({
   rev: row.rev,
 });
 
-const toAlert = (row: { asset_id: string; board_id: string; due_at: Date | string; threshold_min: number; message_id: string | null; acked_at: Date | null }): AlertRecord => ({
+const toAlert = (row: { asset_id: string; board_id: string; due_at: Date | string; threshold_min: number; message_id: string | null; acked_at: Date | null; delivery_pending: boolean }): AlertRecord => ({
   assetId: row.asset_id,
   boardId: row.board_id,
   dueAt: new Date(row.due_at),
   thresholdMin: row.threshold_min,
   messageId: row.message_id,
   ackedAt: row.acked_at === null ? null : new Date(row.acked_at),
+  pending: row.delivery_pending,
 });
 
 const assetValues = (asset: TimerAsset, guildId: GuildId) => ({
@@ -101,7 +102,7 @@ async function recordEvents(trx: Tx, guildId: GuildId, boardId: string, events: 
   }
 }
 
-/** `LEAST` : une mutation ne repousse jamais un réveil déjà en retard, elle l'avance seulement. */
+/** `LEAST`: a mutation never postpones an overdue wakeup, only moves it earlier. */
 async function wakeNow(trx: Tx, guildId: GuildId, boardId: string, now: Date): Promise<void> {
   await trx
     .insertInto('timer_schedule')
@@ -122,6 +123,18 @@ export class PostgresTimerStore implements TimerStore {
     now: Date,
   ): Promise<CreateBoardOutcome> {
     return withTenant(this.#db, input.guildId, async (trx) => {
+      // Serialize the quota check and insert across channels/replicas. This
+      // transaction does SQL only and uses the same connection throughout.
+      await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`picket:timers:create:${input.guildId}`}, 0))`.execute(trx);
+      const existing = await trx
+        .selectFrom('timer_boards')
+        .selectAll()
+        .where('channel_id', '=', input.channelId)
+        .where('archived_at', 'is', null)
+        .executeTakeFirst();
+      // Reposting an existing board needs no new quota slot.
+      if (existing !== undefined) return { kind: 'exists', board: toBoard(existing) };
+
       const { n } = await trx
         .selectFrom('timer_boards')
         .select(sql<number>`count(*)::int`.as('n'))
@@ -224,7 +237,7 @@ export class PostgresTimerStore implements TimerStore {
 
   mutate<T>(guildId: GuildId, boardId: string, decide: (state: BoardState) => Mutation<T>, now: Date): Promise<T | null> {
     return withTenant(this.#db, guildId, async (trx) => {
-      // La ligne du board est verrouillée : toutes les mutations d'un même board passent l'une après l'autre.
+      // The board row is locked: all mutations to the same board execute sequentially.
       const row = await trx.selectFrom('timer_boards').selectAll().where('id', '=', boardId).forUpdate().executeTakeFirst();
       if (row === undefined || row.archived_at !== null) return null;
       const assets = await trx.selectFrom('timer_assets').selectAll().where('board_id', '=', boardId).execute();
@@ -291,7 +304,7 @@ export class PostgresTimerStore implements TimerStore {
 
   markSynced(guildId: GuildId, boardId: string, result: SyncResult): Promise<boolean> {
     return withTenant(this.#db, guildId, async (trx) => {
-      // `needs_sync` ne retombe que si aucune mutation n'est arrivée pendant le rendu.
+      // Clear `needs_sync` only if no mutation arrived during rendering.
       const row = await trx
         .updateTable('timer_boards')
         .set({ sync_error: result.syncError, needs_sync: sql<boolean>`rev <> ${result.rev}` })
@@ -347,13 +360,18 @@ export class PostgresTimerStore implements TimerStore {
             due_at: claim.dueAt,
             threshold_min: claim.thresholdMin,
             sent_at: now,
+            delivery_pending: claim.send,
           })
-          .onConflict((conflict) => conflict.doNothing())
+          // Board maintenance owns the shared board lock. A pending reservation
+          // left by its previous holder can be retried or settled as superseded.
+          .onConflict((conflict) => conflict.columns(['asset_id', 'due_at', 'threshold_min'])
+            .doUpdateSet({ delivery_pending: claim.send, sent_at: now })
+            .where('timer_alerts.delivery_pending', '=', true))
           .returning('asset_id')
           .executeTakeFirst();
         return inserted !== undefined;
       } catch (error) {
-        // L'asset a été supprimé entre la lecture et la réclamation : il n'y a plus rien à signaler.
+        // Asset deleted between reading and reservation: nothing left to notify.
         if (isForeignKeyViolation(error)) return false;
         throw error;
       }
@@ -364,7 +382,7 @@ export class PostgresTimerStore implements TimerStore {
     return withTenant(this.#db, guildId, async (trx) => {
       await trx
         .updateTable('timer_alerts')
-        .set({ message_id: messageId })
+        .set({ message_id: messageId, delivery_pending: false })
         .where('asset_id', '=', row.assetId)
         .where('due_at', '=', row.dueAt)
         .where('threshold_min', '=', row.thresholdMin)
@@ -415,7 +433,7 @@ export class PostgresTimerStore implements TimerStore {
         .onConflict((conflict) => conflict.column('board_id').doUpdateSet({ wake_at: wakeAt }))
         .execute();
     } catch (error) {
-      // Board supprimé (purge de la guilde) pendant le traitement : rien à planifier.
+      // Board deleted (guild purge) during processing: nothing left to schedule.
       if (!isForeignKeyViolation(error)) throw error;
     }
   }
@@ -425,7 +443,7 @@ export class PostgresTimerStore implements TimerStore {
       .selectFrom('timer_schedule as schedule')
       .select(['schedule.guild_id', 'schedule.board_id'])
       .where('schedule.wake_at', '<=', now)
-      // Une guilde qui a retiré le bot n'est plus servie ; son retard sera rattrapé si le bot revient.
+      // Stop serving a guild that removed the bot; catch up if the bot returns.
       .where(({ not, exists, selectFrom }) =>
         not(
           exists(

@@ -62,7 +62,7 @@ describe('Gateway events -> guild lifecycle and permissions (integration)', () =
         },
         payload: body,
       });
-      // Attend aussi la livraison différée du panneau avant de vérifier l'état PostgreSQL.
+      // Also wait for deferred panel delivery before checking PostgreSQL state.
       await app.close();
       expect(response.statusCode).toBe(200);
       return { wire: response.json(), delivered: replies.replies };

@@ -3,7 +3,7 @@ import { purgeCutoff, purgeDate } from '../domain/lifecycle';
 import type { GuildLifecycleRepository } from './guild-lifecycle-repository';
 import type { AuditActor } from './permission-repository';
 
-/** Date de suppression définitive si la guilde est suspendue, sinon `null`. */
+/** Permanent deletion date if the guild is suspended, otherwise `null`. */
 export class GetSuspension {
   readonly #repository: GuildLifecycleRepository;
   readonly #retentionDays: number;
@@ -24,7 +24,7 @@ export interface DeletionScheduled {
   readonly purgeAt: Date;
 }
 
-/** Demande de suppression (commande) ou départ du bot (événement `guildDelete`) : même chemin, même audit. */
+/** Deletion request (command) or bot departure (`guildDelete` event): same path and audit. */
 export class RequestGuildDeletion {
   readonly #repository: GuildLifecycleRepository;
   readonly #clock: Clock;
@@ -41,13 +41,13 @@ export class RequestGuildDeletion {
     return { alreadyScheduled: !result.changed, purgeAt: purgeDate(result.inactiveSince, this.#retentionDays) };
   }
 
-  /** Date qu'aurait une suppression demandée maintenant (pour l'avertissement avant confirmation). */
+  /** Deletion date if requested now (for the warning before confirmation). */
   previewPurgeAt(): Date {
     return purgeDate(this.#clock.now(), this.#retentionDays);
   }
 }
 
-/** Annulation (commande) ou retour du bot (événement `guildCreate`). */
+/** Cancellation (command) or bot return (`guildCreate` event). */
 export class CancelGuildDeletion {
   readonly #repository: GuildLifecycleRepository;
 
@@ -65,7 +65,7 @@ export interface PurgeReport {
   readonly failed: readonly GuildId[];
 }
 
-/** Tâche périodique : une guilde en échec n'empêche ni les suivantes ni le passage suivant. */
+/** Periodic task: one failing guild does not prevent subsequent guilds or passes from running. */
 export class PurgeInactiveGuilds {
   readonly #repository: GuildLifecycleRepository;
   readonly #clock: Clock;
@@ -87,7 +87,7 @@ export class PurgeInactiveGuilds {
       try {
         await this.#repository.purge(guildId);
         purged.push(guildId);
-        // Ne pas réécrire un journal de serveur immédiatement après avoir effacé ses données.
+        // Never recreate a guild journal immediately after erasing its data.
         this.#logger.info({}, 'guild data purged');
       } catch (error) {
         failed.push(guildId);

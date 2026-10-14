@@ -3,8 +3,8 @@ import { shardOf } from '../domain/lifecycle';
 import type { GuildLifecycleRepository } from './guild-lifecycle-repository';
 
 /**
- * Le bot rejoint un serveur, ou le retrouve (Discord émet aussi cet événement pour chaque serveur à la connexion).
- * Une suppression demandée par un administrateur n'est jamais annulée ici ; seul un départ précédent l'est.
+ * The bot joins or rediscovers a guild (Discord also emits this event for every guild at connection time).
+ * Never cancel administrator-requested deletion here; only undo a previous departure.
  */
 export class HandleGuildAvailable {
   readonly #repository: GuildLifecycleRepository;
@@ -19,7 +19,7 @@ export class HandleGuildAvailable {
   }
 }
 
-/** Le bot a été retiré d'un serveur : ses données sont conservées pendant la période de rétention. */
+/** The bot was removed from a guild: retain its data for the retention period. */
 export class HandleGuildRemoved {
   readonly #repository: GuildLifecycleRepository;
   readonly #clock: Clock;
@@ -38,14 +38,13 @@ export class HandleGuildRemoved {
 export interface ReconcileRequest {
   readonly shardId: number;
   readonly shardCount: number;
-  /** Serveurs listés par Discord à la connexion : un serveur indisponible y figure toujours. */
+  /** Guilds listed by Discord at connection time: unavailable guilds are still included. */
   readonly presentGuildIds: readonly GuildId[];
 }
 
 /**
- * Rattrape les départs survenus pendant que le bot était hors ligne. Les serveurs présents sont traités
- * par leur propre événement de création, et les serveurs temporairement indisponibles ne sont jamais
- * confondus avec un départ.
+ * Catch up departures that occurred while the bot was offline. Present guilds are handled by their own
+ * creation event; never mistake temporarily unavailable guilds for departures.
  */
 export class ReconcileGuilds {
   readonly #repository: GuildLifecycleRepository;
