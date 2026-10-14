@@ -53,7 +53,7 @@ import {
   statusCommand,
 } from '@picket/guild';
 import type { I18n } from '@picket/i18n';
-import { noopLogger, type Clock, type Logger, type Secret } from '@picket/kernel';
+import { noopLogger, type Clock, type Logger, type Secret, type OperationalMetrics } from '@picket/kernel';
 import { createAppState, purgeExpiredJournals, withTenant, type Db } from '@picket/persistence';
 import {
   CreateTodolist,
@@ -117,6 +117,7 @@ export interface CompositionOptions {
   readonly i18n: I18n;
   readonly discord?: DiscordPorts;
   readonly flushGuildLogs?: () => Promise<void>;
+  readonly metrics?: OperationalMetrics;
   readonly stats?: {readonly store:PostgresStatsStore;readonly buffer:DurableVoiceBuffer;readonly collector?:VoiceCollector;readonly dashboardUrl:string|null};
 }
 
@@ -246,12 +247,14 @@ export function buildWarLogRunner(db: Db, logger: Logger, options: CompositionOp
     guildId => guildLocale.execute(guildId), (guildId, war, start) => timers.resetForNewWar(guildId, war, start, options.clock.now()));
   return new LeaderElector({ store: new PostgresLeaseStore(db), name: 'warlog-poller', holder: options.holder,
     ttlMs: 30_000, renewEveryMs: 5_000, retryEveryMs: 5_000, clock: options.clock, logger,
+    ...(options.metrics ? { metrics: options.metrics, component: 'warlog-poller' as const } : {}),
     onAcquired: async lease => {
       if (!await store.recover(lease)) throw new Error('War-log lease unavailable');
-      const poller = new WarPoller(new FoxholeApi(options.apiUrl, options.version), store, lease, options.clock, logger, options.pollIntervalMs);
-      const stopPoll = startLeasedLoop({ tick: () => poller.tick(), intervalMs: options.pollIntervalMs, logger });
-      const stopPublish = startLeasedLoop({ tick: () => publish.tick(), intervalMs: 1_000, logger });
-      const stopHooks = startLeasedLoop({ tick: () => publish.hooks(), intervalMs: 10_000, logger });
+      const poller = new WarPoller(new FoxholeApi(options.apiUrl, options.version), store, lease, options.clock, logger, options.pollIntervalMs, options.metrics);
+      options.metrics?.set('war_last_success', options.clock.now().getTime() / 1000, 'warlog-poller');
+      const stopPoll = startLeasedLoop({ tick: () => poller.tick(), intervalMs: options.pollIntervalMs, logger, component: 'warlog-poller', ...(options.metrics ? { metrics: options.metrics } : {}) });
+      const stopPublish = startLeasedLoop({ tick: () => publish.tick(), intervalMs: 1_000, logger, component: 'war-publish', ...(options.metrics ? { metrics: options.metrics } : {}) });
+      const stopHooks = startLeasedLoop({ tick: () => publish.hooks(), intervalMs: 10_000, logger, component: 'war-hooks', ...(options.metrics ? { metrics: options.metrics } : {}) });
       return async () => { poller.stop(); await Promise.all([stopPoll(), stopPublish(), stopHooks()]); };
     },
   });
@@ -274,6 +277,7 @@ export function buildPipeline(db: Db, logger: Logger, options: CompositionOption
     language: guild.language,
     features: guild.features,
     logger,
+    ...(options.metrics ? { metrics: options.metrics } : {}),
   });
 }
 
@@ -301,15 +305,16 @@ export function buildJobRunner(
     retryEveryMs: 5_000,
     clock: options.clock,
     logger,
+    ...(options.metrics ? { metrics: options.metrics, component: 'job-runner' as const } : {}),
     onAcquired: async () => {
-      const stopTimers = startLeasedLoop({ tick: () => sweep.tick(), intervalMs: SWEEP_INTERVAL_MS, logger });
-      const stopRetention = startLeasedLoop({ tick: () => retention.execute(), intervalMs: RETENTION_CHECK_INTERVAL_MS, logger });
-      const stopAudit = startLeasedLoop({ tick: () => audit.tick(), intervalMs: AUDIT_INTERVAL_MS, logger });
+      const stopTimers = startLeasedLoop({ tick: () => sweep.tick(), intervalMs: SWEEP_INTERVAL_MS, logger, component: 'timers', ...(options.metrics ? { metrics: options.metrics } : {}) });
+      const stopRetention = startLeasedLoop({ tick: () => retention.execute(), intervalMs: RETENTION_CHECK_INTERVAL_MS, logger, component: 'retention', ...(options.metrics ? { metrics: options.metrics } : {}) });
+      const stopAudit = startLeasedLoop({ tick: () => audit.tick(), intervalMs: AUDIT_INTERVAL_MS, logger, component: 'audit', ...(options.metrics ? { metrics: options.metrics } : {}) });
       const stats=options.stats?.store ?? new PostgresStatsStore(db,()=>options.clock.now());
-      const stopStats=startLeasedLoop({tick:async()=>{for(const guildId of await stats.allGuildIds()) await stats.maintenance(guildId);},intervalMs:120_000,logger});
-      const refresh = buildStatsRefreshJob(stats, options.clock, logger, options.statsAdminRefreshCron, options.timeZone);
+      const stopStats=startLeasedLoop({tick:async()=>{for(const guildId of await stats.allGuildIds()) await stats.maintenance(guildId);},intervalMs:120_000,logger, component: 'stats-maintenance', ...(options.metrics ? { metrics: options.metrics } : {}) });
+      const refresh = buildStatsRefreshJob(stats, options.clock, logger, options.statsAdminRefreshCron, options.timeZone, options.metrics);
       const stopRefresh = options.stats?.dashboardUrl
-        ? startLeasedLoop({ tick: () => refresh.execute(), intervalMs:60_000, logger })
+        ? startLeasedLoop({ tick: () => refresh.execute(), intervalMs:60_000, logger, component: 'stats-refresh', ...(options.metrics ? { metrics: options.metrics } : {}) })
         : async () => undefined;
       return async () => { await Promise.all([stopTimers(), stopRetention(), stopAudit(),stopStats(),stopRefresh()]); };
     },
@@ -347,10 +352,15 @@ export function buildNightlyRetentionJob(db: Db, logger: Logger, options: Compos
     async execute() {
       const scheduledAt = latestRetentionSchedule(options.clock.now(), options.timeZone);
       const last = await state.get(RETENTION_SCHEDULE_KEY);
+      options.metrics?.set('task_schedule', scheduledAt.getTime() / 1000, 'retention');
+      options.metrics?.set('task_success', last ? new Date(last).getTime() / 1000 : 0, 'retention');
       if (last !== null && new Date(last) >= scheduledAt) return null;
       const report = await retention.execute();
       // Un échec sera retenté lors de la prochaine vérification, sans attendre la nuit suivante.
-      if (report.failed.length === 0) await state.set(RETENTION_SCHEDULE_KEY, scheduledAt.toISOString());
+      if (report.failed.length === 0) {
+        await state.set(RETENTION_SCHEDULE_KEY, scheduledAt.toISOString());
+        options.metrics?.set('task_success', scheduledAt.getTime() / 1000, 'retention');
+      }
       return report;
     },
   };
@@ -402,12 +412,14 @@ export function buildShardRunner(
     leases: new PostgresLeaseStore(db),
     clock: options.clock,
     logger,
+    ...(options.metrics ? { metrics: options.metrics } : {}),
     connect: createWsShardConnector({
       token: options.botToken,
       ...(options.rest ? { rest: options.rest } : {}),
       sessions: new PostgresGatewaySessionStore(db),
       handler: buildGatewayHandler(db, logger, options),
       logger,
+      ...(options.metrics ? { metrics: options.metrics } : {}),
     }),
   });
 }

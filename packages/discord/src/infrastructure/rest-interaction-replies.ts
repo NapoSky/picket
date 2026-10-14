@@ -4,13 +4,15 @@ import type { InteractionReplies, ReplyTarget } from '../application/messaging';
 import { mapRestError } from './rest-messaging';
 import type { ReplyContent } from '../application/messaging';
 import { toWireReplyContent } from './panel-mapper';
+import { instrumentRestOptions } from './bot-rest';
+import type { OperationalMetrics } from '@picket/kernel';
 
 /** Les routes de webhook portent le jeton d'interaction : pas d'en-tête d'autorisation, et aucune erreur d'origine conservée. */
 export class DiscordRestInteractionReplies implements InteractionReplies {
   readonly #rest: REST;
 
-  constructor(options: Partial<RESTOptions> = {}) {
-    this.#rest = new REST({ version: '10', timeout: 10_000, retries: 2, ...options });
+  constructor(options: Partial<RESTOptions> = {}, metrics?: OperationalMetrics) {
+    this.#rest = new REST({ version: '10', timeout: 10_000, retries: 2, ...instrumentRestOptions(options, metrics, 'webhook') });
   }
 
   async editOriginal(target: ReplyTarget, content: ReplyContent): Promise<void> {

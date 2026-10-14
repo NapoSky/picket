@@ -11,9 +11,12 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@picket/kernel": "workspace:*",
+    "@prometheus-io/client": "^0.16.1",
     "pino": "^10.4.0"
   }
 }

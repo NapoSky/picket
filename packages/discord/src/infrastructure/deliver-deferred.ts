@@ -1,4 +1,4 @@
-import type { Logger } from '@picket/kernel';
+import type { Logger, OperationalMetrics } from '@picket/kernel';
 import type { IncomingInteraction, Reply } from '../application/interaction';
 import type { InteractionReplies } from '../application/messaging';
 
@@ -13,9 +13,12 @@ export async function deliverDeferred(options: {
   readonly interaction: IncomingInteraction;
   readonly replies: InteractionReplies;
   readonly logger: Logger;
+  readonly metrics?: OperationalMetrics;
 }): Promise<void> {
   const { reply, interaction, replies, logger } = options;
   const target = { applicationId: interaction.applicationId, token: interaction.token };
+  const started = Date.now();
+  let failed = false;
   try {
     const result = await reply.run();
     if (result?.kind === 'file') {
@@ -38,6 +41,9 @@ export async function deliverDeferred(options: {
       await replies.deleteOriginal(target);
     }
   } catch (error) {
+    failed = true;
     logger.error({ err: error, guild_id: interaction.guildId, interaction_id: interaction.id }, 'deferred reply delivery failed');
+  } finally {
+    options.metrics?.record('deferred_delivery', (Date.now() - started) / 1000, failed ? 'error' : 'success', 'interactions');
   }
 }

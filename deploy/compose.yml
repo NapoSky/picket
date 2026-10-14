@@ -32,6 +32,11 @@ x-hardening: &hardening
     - ALL
   security_opt:
     - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
 
 services:
   # Stack HTTPS entrypoint: port 443 only (no port 80; Cloudflare handles redirects), with Let's Encrypt certificates
@@ -52,6 +57,9 @@ services:
       - --global.sendAnonymousUsage=false
       - --log.format=json
       - --ping=true
+      - --entrypoints.metrics.address=:8083
+      - --metrics.prometheus=true
+      - --metrics.prometheus.entrypoint=metrics
       - --providers.docker=true
       - --providers.docker.exposedByDefault=false
       - --providers.docker.network=picket_edge
@@ -83,13 +91,16 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       PICKET_MIGRATOR_PASSWORD_FILE: /run/secrets/picket_migrator_password
       PICKET_APP_PASSWORD_FILE: /run/secrets/picket_app_password
+      PICKET_MONITOR_PASSWORD_FILE: /run/secrets/picket_monitor_password
     secrets:
       - postgres_password
       - picket_migrator_password
       - picket_app_password
+      - picket_monitor_password
     volumes:
       - pgdata:/var/lib/postgresql
       - ./postgres/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
+      - ./postgres/monitoring-role.sh:/opt/picket/monitoring-role.sh:ro
     networks:
       - internal
     healthcheck:
@@ -188,6 +199,7 @@ services:
       PGDATABASE: picket
       PGCONNECT_TIMEOUT: "10"
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      BACKUP_SOURCE_IMAGE: ${BACKUP_SOURCE_IMAGE:-${PICKET_IMAGE}}
     volumes:
       - type: bind
         source: ${BACKUP_DIR:-../backups}
@@ -267,6 +279,172 @@ services:
     networks:
       - internal
 
+  restore:
+    image: picket-postgres-backup:18
+    profiles: [tools]
+    restart: "no"
+    <<: *hardening
+    user: "0:0"
+    cap_add: [DAC_READ_SEARCH]
+    entrypoint: [bash, /opt/picket-backup/restore.sh]
+    environment:
+      PGHOST: postgres
+      PGDATABASE: picket
+      PGCONNECT_TIMEOUT: "10"
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    volumes:
+      - type: bind
+        source: ${RESTORE_ARCHIVE_DIR:-./secrets}
+        target: /restore/archive
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${RESTORE_IDENTITY_FILE:-./secrets/backup_identity}
+        target: /restore/identity
+        read_only: true
+        bind:
+          create_host_path: false
+    networks: [internal]
+
+  # Enable with COMPOSE_PROFILES=monitoring in .env. Only Grafana has a public route.
+  grafana:
+    image: grafana/grafana:13.2.4
+    profiles: [monitoring]
+    restart: unless-stopped
+    <<: *hardening
+    mem_limit: 768m
+    entrypoint: [sh, /etc/picket/grafana-start.sh]
+    environment:
+      GF_SERVER_ROOT_URL: https://${MONITORING_HOST:-monitoring-disabled.invalid}
+      GF_SECURITY_ADMIN_USER__FILE: /run/secrets/grafana_admin_user
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_PATHS_LOGS: /tmp
+      GF_LOG_MODE: console
+      GF_LOG_CONSOLE_FORMAT: json
+      GF_METRICS_ENABLED: "false"
+      MONITORING_HOST: ${MONITORING_HOST:-}
+      MONITORING_DISCORD_WEBHOOK_URL: ${MONITORING_DISCORD_WEBHOOK_URL:-}
+    secrets: [grafana_admin_user, grafana_admin_password]
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - ./monitoring/grafana-start.sh:/etc/picket/grafana-start.sh:ro
+    networks: [internal, edge]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: picket_edge
+      traefik.http.routers.picket-monitoring.rule: Host(`${MONITORING_HOST:-monitoring-disabled.invalid}`)
+      traefik.http.routers.picket-monitoring.entrypoints: https
+      traefik.http.routers.picket-monitoring.tls.certresolver: "${MONITORING_HOST:+certbot}"
+      traefik.http.services.picket-monitoring.loadbalancer.server.port: "3000"
+
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    profiles: [monitoring]
+    restart: unless-stopped
+    <<: *hardening
+    mem_limit: 768m
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --storage.tsdb.retention.size=5GB
+    volumes:
+      - prometheus-data:/prometheus
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/rules.yml:/etc/prometheus/rules.yml:ro
+    networks: [internal]
+
+  loki:
+    image: grafana/loki:3.7.8
+    profiles: [monitoring]
+    restart: unless-stopped
+    <<: *hardening
+    mem_limit: 1g
+    command: [-config.file=/etc/loki/config.yml]
+    volumes:
+      - loki-data:/loki
+      - ./monitoring/loki.yml:/etc/loki/config.yml:ro
+    networks: [internal]
+
+  alloy:
+    image: grafana/alloy:v1.20.1
+    profiles: [monitoring]
+    restart: unless-stopped
+    <<: *hardening
+    # Root reads Docker's socket; the image's Alloy group owns its persistent directory.
+    user: "0:473"
+    mem_limit: 512m
+    command: [run, --server.http.listen-addr=0.0.0.0:12345, --storage.path=/var/lib/alloy, /etc/alloy/config.alloy]
+    environment:
+      PICKET_COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-picket}
+    volumes:
+      - alloy-data:/var/lib/alloy
+      - ./monitoring/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [internal]
+
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    profiles: [monitoring]
+    restart: unless-stopped
+    <<: *hardening
+    mem_limit: 128m
+    pid: host
+    command: [--path.rootfs=/host, --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/containers/storage/.+)($$|/)]
+    volumes:
+      - /:/host:ro
+    networks: [internal]
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+    profiles: [monitoring]
+    restart: unless-stopped
+    <<: *hardening
+    mem_limit: 128m
+    environment:
+      DATA_SOURCE_URI: postgres:5432/picket?sslmode=disable
+      DATA_SOURCE_USER: picket_monitor
+      DATA_SOURCE_PASS_FILE: /run/secrets/picket_monitor_password
+    secrets: [picket_monitor_password]
+    networks: [internal]
+
+  operations-exporter:
+    image: picket-postgres-backup:18
+    build:
+      context: ./backup
+    profiles: [monitoring]
+    restart: unless-stopped
+    <<: *hardening
+    user: "0:0"
+    # Read the operator-owned (0700) backup directory; mounts themselves remain read-only.
+    cap_add: [DAC_READ_SEARCH]
+    mem_limit: 128m
+    entrypoint: [python3, /opt/picket-monitoring/exporter.py]
+    environment:
+      PICKET_COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-picket}
+    volumes:
+      - ./monitoring/exporter.py:/opt/picket-monitoring/exporter.py:ro
+      - operations-state:/state
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - type: bind
+        source: ${BACKUP_DIR:-../backups}
+        target: /backups
+        read_only: true
+        bind:
+          create_host_path: false
+    networks: [internal]
+
 networks:
   internal:
     internal: true
@@ -279,10 +457,21 @@ volumes:
   pgdata:
   traefik-acme:
   voice-buffer:
+  grafana-data:
+  prometheus-data:
+  loki-data:
+  alloy-data:
+  operations-state:
 
 secrets:
   backup_recipients:
     file: ./secrets/backup_recipients
+  grafana_admin_user:
+    file: ./secrets/grafana_admin_user
+  grafana_admin_password:
+    file: ./secrets/grafana_admin_password
+  picket_monitor_password:
+    file: ./secrets/picket_monitor_password
   postgres_password:
     file: ./secrets/postgres_password
   picket_migrator_password:

@@ -72,6 +72,9 @@ app_password="$(random)"
 generate postgres_password "$postgres_password"
 generate picket_migrator_password "$migrator_password"
 generate picket_app_password "$app_password"
+generate grafana_admin_user picket-admin
+generate grafana_admin_password "$(random)"
+generate picket_monitor_password "$(random)"
 
 # Connection URLs must use the passwords actually stored on disk.
 migrator_password="$(cat secrets/picket_migrator_password)"
@@ -100,4 +103,5 @@ fi
 # Readable by the container user; the parent directory (700) protects access on the host.
 chmod 644 secrets/postgres_password secrets/picket_migrator_password secrets/picket_app_password \
   secrets/database_migrator_url secrets/database_url secrets/discord_bot_token secrets/discord_client_secret \
-  secrets/cloudflare_dns_token secrets/backup_recipients
+  secrets/cloudflare_dns_token secrets/backup_recipients secrets/grafana_admin_user \
+  secrets/grafana_admin_password secrets/picket_monitor_password

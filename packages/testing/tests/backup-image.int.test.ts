@@ -94,6 +94,26 @@ describe('encrypted backup image (PostgreSQL 18)', () => {
     expect(await withTenant(destination.handle.db, GuildId.assert('700000000000000001'), (trx) => trx.selectFrom('guild_settings').select('locale').execute())).toEqual([{ locale: 'fr' }]);
   });
 
+  it('restores with the production helper, refuses a non-empty target and never leaves a plaintext dump', async () => {
+    const target = await createTestDatabase({ migrate: false });
+    try {
+      await backup.exec(['mkdir', '-p', '/restore'], { user: '0' });
+      await backup.exec(['ln', '-s', archive.slice(0, archive.lastIndexOf('/')), '/restore/archive'], { user: '0' });
+      await backup.copyContentToContainer([{ content: identity, target: '/restore/identity' }]);
+      const name = new URL(target.adminUrl.reveal()).pathname.slice(1);
+      const command = ['env', `PGDATABASE=${name}`, 'bash', './restore.sh'];
+      const result = await backup.exec(command, { user: '0' });
+      if (result.exitCode !== 0) throw new Error(result.output);
+      expect(result.stdout).toContain('tenant isolation verified');
+      expect(await queryAsAdmin(target, 'SELECT count(*)::int AS n FROM guild_settings')).toEqual([{ n: 2 }]);
+      const repeated = await backup.exec(command, { user: '0' });
+      expect(repeated.exitCode).not.toBe(0);
+      expect(repeated.output).toContain('target database is not empty');
+      const files = await backup.exec(['sh', '-c', 'find /restore -type f']);
+      expect(files.stdout.trim().split('\n')).toEqual(['/restore/identity']);
+    } finally { await backup.exec(['rm', '-f', '/restore/identity'], { user: '0' }); await target.drop(); }
+  });
+
   it('detects a corrupted encrypted archive without requiring the private identity', async () => {
     const check = await backup.exec(['sh', '-c', 'printf corruption >> "$1"; cd "$(dirname "$1")"; sha256sum --check picket.dump.age.sha256', 'sh', archive]);
     expect(check.exitCode).not.toBe(0);

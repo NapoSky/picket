@@ -3,6 +3,8 @@ import type { Logger } from '@picket/kernel';
 
 export * from './health-server';
 export * from './guild-log-destination';
+export * from './metrics';
+export * from './monitoring-destination';
 
 export interface CreateLoggerOptions {
   readonly level: string;

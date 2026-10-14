@@ -14,6 +14,10 @@ Start with the [installation guide](https://docs.picket-foxhole.com/self-hosting
 [configuration reference](https://docs.picket-foxhole.com/self-hosting/configuration). They cover host requirements,
 Discord application setup, secrets, backup keys, first deployment and updates.
 
+Optional operator monitoring and Discord alerts are described in the
+[monitoring guide](docs/self-hosting/monitoring.md). Restore commands and the
+monthly isolated verification are in [disaster recovery](docs/self-hosting/disaster_recovery.md).
+
 Create your own Discord application for your instance. In the Developer Portal, configure **Guild Install** with the
 `bot` and `applications.commands` scopes and these permissions:
 

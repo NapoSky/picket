@@ -1,5 +1,5 @@
 import { LeaderElector, type Lease, type LeaseStore } from '@picket/coordination';
-import type { Clock, Logger } from '@picket/kernel';
+import type { Clock, Logger, OperationalMetrics } from '@picket/kernel';
 
 export interface ShardConnection {
   /** Se connecte à Discord (reprend la session précédente si elle est valide). */
@@ -21,6 +21,7 @@ export interface ShardRunnerOptions {
   readonly connect: (params: ShardConnectionParams) => ShardConnection;
   readonly clock: Clock;
   readonly logger: Logger;
+  readonly metrics?: OperationalMetrics;
   readonly ttlMs?: number;
   readonly renewEveryMs?: number;
   readonly retryEveryMs?: number;
@@ -46,6 +47,7 @@ export class ShardRunner {
         retryEveryMs: options.retryEveryMs ?? 2_000,
         clock: options.clock,
         logger: options.logger.child({ shard_id: shardId }),
+        ...(options.metrics ? { metrics: options.metrics, component: 'gateway' as const } : {}),
         onAcquired: async (lease) => {
           const connection = options.connect({ shardId, shardCount: options.shardCount, lease });
           await connection.start();

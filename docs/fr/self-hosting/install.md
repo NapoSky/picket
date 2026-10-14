@@ -116,8 +116,9 @@ docker compose ps backup
 docker compose logs --tail=50 backup
 ```
 
-Le contrôle de santé échoue après 26 h sans succès. Configurez une alerte d’exploitation sur les échecs et les
-conteneurs non sains ; Docker ne fournit pas de notification à lui seul.
+Le contrôle de santé échoue après 26 h sans succès. Activer le
+[monitoring opérateur](./monitoring) pour les alertes Discord et suivre la
+[procédure de reprise](./disaster_recovery) pour restaurer et vérifier chaque mois.
 
 ## Mettre à jour une installation existante
 

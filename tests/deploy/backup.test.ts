@@ -37,6 +37,7 @@ describe('deployment backups', () => {
     await writeFile(join(bin, 'docker'), [
       '#!/bin/bash', 'printf "%s\\n" "$*" >> "$TEST_CALLS"',
       'printf "%s:%s\\n" "$PICKET_BACKUP_UID" "$PICKET_BACKUP_GID" >> "$TEST_IDENTITIES"', 'case "$*" in',
+      '  "compose exec -T picket node -p "*) printf "%s" "${TEST_RUNNING_IMAGE:-}" ;;',
       '  "compose run --rm -T backup "*) exec "$TEST_RUNNER" "${@: -1}" ;;',
       '  *) exit 0 ;;', 'esac', '',
     ].join('\n'), { mode: 0o755 });
@@ -93,6 +94,31 @@ describe('deployment backups', () => {
     await writeFile(join(deploy, 'recipients'), 'AGE-SECRET-KEY-PRIVATE\n');
     await expect(run('rollout.sh', 'image')).rejects.toThrow();
     expect((await calls()).some((call) => call.includes('run --rm migrate'))).toBe(false);
+  });
+
+  it('records the image serving before migration, rather than the target image, and starts daily backups', async () => {
+    env.TEST_RUNNING_IMAGE = 'ghcr.io/example/picket@sha256:' + 'a'.repeat(64);
+    const target = 'ghcr.io/example/picket@sha256:' + 'b'.repeat(64);
+    await run('rollout.sh', target);
+    const snapshot = (await readdir(backups)).find(name => name.startsWith('picket-'))!;
+    const manifest = await readFile(join(backups, snapshot, 'manifest.txt'), 'utf8');
+    expect(manifest).toContain(`image=${env.TEST_RUNNING_IMAGE}`);
+    expect(manifest).not.toContain(target);
+    expect(await calls()).toContain('compose up -d backup');
+  });
+
+  it('keeps the first unresolved backup failure across retries and clears it only after success', async () => {
+    env.FAIL_DUMP = '1';
+    await expect(run('backup.sh', 'daily')).rejects.toThrow();
+    const original = String(Math.floor(Date.now() / 1000) - 7200);
+    await writeFile(join(backups, '.failure-since'), original);
+    await expect(run('backup.sh', 'daily')).rejects.toThrow();
+    expect(await readFile(join(backups, '.failure-since'), 'utf8')).toBe(original);
+    expect(Number(await readFile(join(backups, '.last-failure'), 'utf8'))).toBeGreaterThan(Number(original));
+    env.FAIL_DUMP = '0';
+    await run('backup.sh', 'daily');
+    expect(await readdir(backups)).not.toContain('.failure-since');
+    expect(Number(await readFile(join(backups, '.last-duration'), 'utf8'))).toBeGreaterThanOrEqual(0);
   });
 
   it('detects a corrupt write using the hash of the ciphertext stream', async () => {

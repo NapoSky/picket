@@ -1,0 +1,247 @@
+{
+  "uid": "picket-discord",
+  "title": "PICKET \u2014 Bot and Discord",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "tags": [
+    "PICKET"
+  ],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "PICKET dashboards",
+      "type": "dashboards",
+      "tags": [
+        "PICKET"
+      ]
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Interaction rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "picket-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(outcome)(rate(picket_operations_total{operation=\"interaction\"}[5m]))",
+          "legendFormat": "{{service}} {{component}} {{outcome}} {{job}} {{version}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Initial response p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "picket-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95,sum by(le)(rate(picket_operation_duration_seconds_bucket{operation=\"acknowledgement\"}[5m])))",
+          "legendFormat": "{{service}} {{component}} {{outcome}} {{job}} {{version}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Deferred results",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "picket-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(operation,outcome)(rate(picket_operations_total{operation=~\"deferred|deferred_delivery\"}[5m]))",
+          "legendFormat": "{{service}} {{component}} {{outcome}} {{job}} {{version}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "REST attempts",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "picket-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(component,outcome)(rate(picket_operations_total{operation=\"discord_rest\"}[5m]))",
+          "legendFormat": "{{service}} {{component}} {{outcome}} {{job}} {{version}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "REST/budget duration p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "picket-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95,sum by(le,operation)(rate(picket_operation_duration_seconds_bucket{operation=~\"discord_rest|discord_budget\"}[5m])))",
+          "legendFormat": "{{service}} {{component}} {{outcome}} {{job}} {{version}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Dashboard requests",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "picket-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(outcome)(rate(picket_operations_total{operation=\"http\"}[5m]))",
+          "legendFormat": "{{service}} {{component}} {{outcome}} {{job}} {{version}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 100,
+      "type": "logs",
+      "title": "Operational logs (sanitized, outside data exports)",
+      "datasource": {
+        "type": "loki",
+        "uid": "picket-loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{service=~\"picket|picket-stats\"} | json",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      }
+    }
+  ]
+}

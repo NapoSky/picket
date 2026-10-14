@@ -113,8 +113,9 @@ docker compose ps backup
 docker compose logs --tail=50 backup
 ```
 
-The health check fails after 26 hours without a successful backup. Set up operational alerts for failures and unhealthy
-containers; Docker does not send notifications on its own.
+The health check fails after 26 hours without a successful backup. Enable the
+[operator monitoring](./monitoring) for Discord alerts and use the short
+[disaster recovery procedure](./disaster_recovery) for restores and monthly checks.
 
 ## Upgrade an existing installation
 

@@ -1,0 +1,2290 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "PICKET operations",
+      "folder": "PICKET",
+      "interval": "30s",
+      "rules": [
+        {
+          "uid": "picket-bot-unavailable",
+          "title": "Bot unavailable",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Bot unavailable",
+            "description": "Check container health, logs and PostgreSQL; restart the failed service after identifying the cause.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "critical",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:bot_unavailable",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-stats-unavailable",
+          "title": "Stats process unavailable",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Stats process unavailable",
+            "description": "Check the stats container and its database connection.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "critical",
+            "scope": "picket-stats"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:stats_unavailable",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-postgres-unavailable",
+          "title": "PostgreSQL unavailable",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "PostgreSQL unavailable",
+            "description": "Check PostgreSQL health, connections and available disk; use disaster recovery if data is lost.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "critical",
+            "scope": "postgres"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:postgres_unavailable",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-gateway-unavailable",
+          "title": "Gateway shards disconnected",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Gateway shards disconnected",
+            "description": "Check Discord connectivity, Gateway credentials and lease renewals.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "critical",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:gateway_unavailable",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-leader-unavailable",
+          "title": "Required role has no leader",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Required role has no leader",
+            "description": "Check lease acquisition errors and PostgreSQL; standby replicas without a lease are normal.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "critical",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:leader_unavailable",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-container-unavailable",
+          "title": "Container unavailable or unhealthy",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Container unavailable or unhealthy",
+            "description": "Inspect docker compose ps and logs for the service shown in the alert.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "critical",
+            "scope": "infrastructure"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:container_unavailable",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-restarts",
+          "title": "Repeated container restarts",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Repeated container restarts",
+            "description": "Check crash logs, memory usage and container exit status. Normal rollout replacements are excluded.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "infrastructure"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:restarts",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-interaction-errors",
+          "title": "Interactions failing",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Interactions failing",
+            "description": "Check operation durations, pool waits and Discord errors.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:interaction_errors",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-interaction-slow",
+          "title": "Slow initial interaction responses",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Slow initial interaction responses",
+            "description": "Check event loop lag, database acquisition and Discord budget waits.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:interaction_slow",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-deferred-errors",
+          "title": "Deferred work or delivery failing",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Deferred work or delivery failing",
+            "description": "Inspect deferred work and delivery logs; check expired interaction tokens and Discord availability.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:deferred_errors",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-rest-limited",
+          "title": "Discord REST repeatedly limited",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Discord REST repeatedly limited",
+            "description": "Reduce shared REST demand; include overlapping replicas in the configured budget.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:rest_limited",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-pool-waits",
+          "title": "Database pool waiting",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Database pool waiting",
+            "description": "Check long transactions and Discord calls holding locks before increasing the connection budget.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "database"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:pool_waits",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-pool-errors",
+          "title": "Database acquisition failing",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Database acquisition failing",
+            "description": "Check PostgreSQL health and the sum of all process connection budgets.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "database"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:pool_errors",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-jobs-stale",
+          "title": "Periodic work stopped succeeding",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Periodic work stopped succeeding",
+            "description": "Inspect periodic task errors and dependency availability; the alert accounts for the configured interval.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:jobs_stale",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-schedule-late",
+          "title": "Scheduled maintenance overdue",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Scheduled maintenance overdue",
+            "description": "Check nightly retention or stats refresh errors; retry the job after restoring its dependencies.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:schedule_late",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-war-stale",
+          "title": "War collection stale",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "War collection stale",
+            "description": "Check Foxhole API availability and collector logs. A quiet war does not trigger this alert.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:war_stale",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-buffer-full",
+          "title": "Voice disk buffer nearly full",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Voice disk buffer nearly full",
+            "description": "Restore database writes and replay health; do not delete pending voice events as a workaround.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:buffer_full",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-buffer-rejected",
+          "title": "Voice events rejected by full buffer",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Voice events rejected by full buffer",
+            "description": "Restore database availability and free safe disk space; collection cannot safely buffer more events.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "critical",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:buffer_rejected",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-cpu",
+          "title": "Host CPU saturated",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Host CPU saturated",
+            "description": "Identify CPU-heavy containers in the infrastructure dashboard.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "host"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:cpu",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-memory",
+          "title": "Host memory pressure",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Host memory pressure",
+            "description": "Identify memory-heavy containers and inspect their restart counters.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "host"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:memory",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-disk-warning",
+          "title": "Disk space low",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Disk space low",
+            "description": "Free unused images and expired files; preserve PostgreSQL, pending voice events and valid backups.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "host"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:disk_warning",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-disk-critical",
+          "title": "Disk space critically low",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Disk space critically low",
+            "description": "Free safe disk space immediately; check database writes, backup failures and log retention.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "critical",
+            "scope": "host"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:disk_critical",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-inodes",
+          "title": "Filesystem inodes low",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Filesystem inodes low",
+            "description": "Locate excessive small files and remove only disposable files.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "critical",
+            "scope": "host"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:inodes",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-backup-failed",
+          "title": "Backup failure persists",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Backup failure persists",
+            "description": "Check backup logs, PostgreSQL, encryption recipients and available disk; retries run every 15 minutes.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "backup"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:backup_failed",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-backup-stuck",
+          "title": "Backup attempt appears stuck",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Backup attempt appears stuck",
+            "description": "Check the active backup process and its lock; do not interrupt a healthy archive being written.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "backup"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:backup_stuck",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-backup-missing",
+          "title": "No valid recent backup",
+          "condition": "B",
+          "for": "1h",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "No valid recent backup",
+            "description": "Run ./backup.sh daily and verify a new encrypted archive; check backup service health.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "critical",
+            "scope": "backup"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:backup_missing",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-backup-metadata",
+          "title": "Backup monitoring unavailable",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Backup monitoring unavailable",
+            "description": "Check the operations exporter backup mount and directory permissions.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "monitoring"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:backup_metadata",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-docker-metadata",
+          "title": "Docker monitoring unavailable",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Docker monitoring unavailable",
+            "description": "Check the operations exporter Docker socket and persistent restart state.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "monitoring"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:docker_metadata",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-exporter-unavailable",
+          "title": "Monitoring target unavailable",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Monitoring target unavailable",
+            "description": "Check the indicated exporter or monitoring service and its network.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "monitoring"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:exporter_unavailable",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-restore-overdue",
+          "title": "Monthly restore verification overdue",
+          "condition": "B",
+          "for": "1d",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Monthly restore verification overdue",
+            "description": "Run the isolated monthly restore check described in disaster recovery.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "backup"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:restore_overdue",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-stats-dirty",
+          "title": "Stats snapshot unavailable",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Stats snapshot unavailable",
+            "description": "Check stats refresh work and PostgreSQL; invalidated snapshots remain unavailable until rebuilt.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "picket-stats"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:stats_dirty",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-delivery-errors",
+          "title": "Repeated feature delivery failures",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "Repeated feature delivery failures",
+            "description": "Inspect operational logs for the indicated feature; check channel permissions and Discord availability.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:delivery_errors",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "picket-war-delivery-late",
+          "title": "War publications overdue",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "annotations": {
+            "summary": "War publications overdue",
+            "description": "Check publication errors and shared REST budget; pending guild counts contain no tenant identifiers.",
+            "runbook_url": "https://docs.picket-foxhole.com/self-hosting/monitoring",
+            "__dashboardUid__": "picket-overview",
+            "__panelId__": "6"
+          },
+          "labels": {
+            "severity": "warning",
+            "scope": "picket"
+          },
+          "isPaused": false,
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "picket-prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "picket:incident:war_delivery_late",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 1000
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

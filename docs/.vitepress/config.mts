@@ -54,6 +54,8 @@ function sidebar(lang: Lang): DefaultTheme.Sidebar {
       items: [
         { text: s.sections.selfHosting[0], link: `${prefix}/self-hosting/install` },
         { text: s.sections.selfHosting[1], link: `${prefix}/self-hosting/configuration` },
+        { text: 'Monitoring', link: `${prefix}/self-hosting/monitoring` },
+        { text: lang === 'fr' ? 'Reprise après sinistre' : 'Disaster recovery', link: `${prefix}/self-hosting/disaster_recovery` },
       ],
     },
     {

@@ -1,4 +1,4 @@
-import type { Clock, Logger } from '@picket/kernel';
+import type { Clock, Logger, OperationalMetrics, MetricComponent } from '@picket/kernel';
 import type { Lease, LeaseStore } from './lease-store';
 
 export type StopWork = () => Promise<void>;
@@ -12,6 +12,8 @@ export interface LeaderElectorOptions {
   readonly retryEveryMs: number;
   readonly clock: Clock;
   readonly logger: Logger;
+  readonly metrics?: OperationalMetrics;
+  readonly component?: MetricComponent;
   /** Démarre le travail réservé au détenteur ; retourne comment l'arrêter. */
   readonly onAcquired: (lease: Lease) => Promise<StopWork>;
   /** Attente interruptible ; injectable pour les tests. */
@@ -92,9 +94,12 @@ export class LeaderElector {
     if (clock.now().getTime() < this.#backoffUntil) return;
 
     let lease: Lease | null;
+    const started = Date.now();
     try {
       lease = await store.acquire(name, holder, ttlMs);
+      this.#options.metrics?.record('lease_acquire', (Date.now() - started) / 1000, lease ? 'success' : 'standby', this.#options.component);
     } catch (error) {
+      this.#options.metrics?.record('lease_acquire', (Date.now() - started) / 1000, 'error', this.#options.component);
       logger.warn({ err: error, lease: name }, 'lease acquisition failed');
       return;
     }
@@ -117,14 +122,18 @@ export class LeaderElector {
 
   async #renew(held: { lease: Lease; lastRenewedAt: number }): Promise<void> {
     const { store, ttlMs, clock, logger, name } = this.#options;
+    const started = Date.now();
     try {
       if (await store.renew(held.lease, ttlMs)) {
+        this.#options.metrics?.record('lease_renew', (Date.now() - started) / 1000, 'success', this.#options.component);
         held.lastRenewedAt = clock.now().getTime();
         return;
       }
       logger.warn({ lease: name }, 'lease lost to another holder');
+      this.#options.metrics?.record('lease_renew', (Date.now() - started) / 1000, 'rejected', this.#options.component);
       await this.#relinquish(false);
     } catch (error) {
+      this.#options.metrics?.record('lease_renew', (Date.now() - started) / 1000, 'error', this.#options.component);
       // Base injoignable : on garde le travail tant que le verrou ne peut pas avoir expiré.
       const silentFor = clock.now().getTime() - held.lastRenewedAt;
       logger.warn({ err: error, lease: name, silentForMs: silentFor }, 'lease renewal failed');

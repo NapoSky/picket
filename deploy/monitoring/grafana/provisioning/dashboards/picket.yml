@@ -1,0 +1,17 @@
+{
+  "apiVersion": 1,
+  "providers": [
+    {
+      "name": "PICKET",
+      "orgId": 1,
+      "folder": "PICKET",
+      "type": "file",
+      "disableDeletion": true,
+      "allowUiUpdates": false,
+      "updateIntervalSeconds": 30,
+      "options": {
+        "path": "/etc/grafana/dashboards"
+      }
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { STATS_RETENTION_MS, type VoiceObservation } from '../domain/model';
 import type { DurableVoiceBuffer } from '../application/store';
+import type { OperationalMetrics } from '@picket/kernel';
 
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 const EVENT_FILE = /^[a-f0-9]{64}\.evt$/;
@@ -21,9 +22,16 @@ export class DiskVoiceBuffer implements DurableVoiceBuffer {
     readonly directory: string,
     readonly maxBytes = 128 * 1024 * 1024,
     readonly now: () => Date = () => new Date(),
+    readonly metrics?: OperationalMetrics,
   ) {}
   async initialize(): Promise<void> {
     await mkdir(this.directory, { recursive: true, mode: 0o700 });
+  }
+
+  async collectMetrics(): Promise<void> {
+    const bytes = Number(await readFile(join(this.directory, '.usage'), 'utf8').catch(() => '0'));
+    this.metrics?.set('buffer_bytes', bytes);
+    this.metrics?.set('buffer_max_bytes', this.maxBytes);
   }
 
   private async locked<T>(work: () => Promise<T>): Promise<T> {
@@ -182,8 +190,10 @@ export class DiskVoiceBuffer implements DurableVoiceBuffer {
       const value = JSON.stringify(event);
       const used = Number(await readFile(join(this.directory, '.usage'), 'utf8'));
       const blockSize = (await stat(this.directory)).blksize || 4096;
-      if (used + Math.ceil(Buffer.byteLength(value) / blockSize) * blockSize > this.maxBytes)
+      if (used + Math.ceil(Buffer.byteLength(value) / blockSize) * blockSize > this.maxBytes) {
+        this.metrics?.record('loop', 0, 'rejected', 'voice');
         throw new VoiceBufferFullError();
+      }
       const temporary = join(this.directory, `.pending-${randomUUID()}`);
       await this.write(temporary, value);
       await rename(temporary, target);

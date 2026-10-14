@@ -1,0 +1,249 @@
+{
+  "rule_files": [
+    "/etc/prometheus/rules.yml"
+  ],
+  "evaluation_interval": "30s",
+  "tests": [
+    {
+      "name": "rollout retains service availability",
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "picket_ready{service=\"picket\",job=\"picket\",instance=\"old\"}",
+          "values": "1x30"
+        },
+        {
+          "series": "picket_ready{service=\"picket\",job=\"picket\",instance=\"new\"}",
+          "values": "0x30"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "picket:incident:bot_unavailable",
+          "eval_time": "20m",
+          "exp_samples": [
+            {
+              "labels": "picket:incident:bot_unavailable",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "all replicas unavailable",
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "picket_ready{service=\"picket\",job=\"picket\",instance=\"old\"}",
+          "values": "0x30"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "picket:incident:bot_unavailable",
+          "eval_time": "20m",
+          "exp_samples": [
+            {
+              "labels": "picket:incident:bot_unavailable",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "standby replica does not lose shard coverage",
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "picket_shards_expected{instance=\"old\"}",
+          "values": "1x30"
+        },
+        {
+          "series": "picket_shards_expected{instance=\"new\"}",
+          "values": "1x30"
+        },
+        {
+          "series": "picket_shards_connected{instance=\"old\"}",
+          "values": "1x30"
+        },
+        {
+          "series": "picket_shards_connected{instance=\"new\"}",
+          "values": "0x30"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "picket:incident:gateway_unavailable",
+          "eval_time": "20m",
+          "exp_samples": [
+            {
+              "labels": "picket:incident:gateway_unavailable",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "missing discovered bot targets are an outage",
+      "interval": "1m",
+      "input_series": [],
+      "promql_expr_test": [
+        {
+          "expr": "picket:incident:bot_unavailable",
+          "eval_time": "20m",
+          "exp_samples": [
+            {
+              "labels": "picket:incident:bot_unavailable",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "low traffic does not trigger error ratio",
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "picket_operations_total{operation=\"interaction\",outcome=\"error\"}",
+          "values": "0+1x5"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "picket:incident:interaction_errors",
+          "eval_time": "5m",
+          "exp_samples": []
+        }
+      ]
+    },
+    {
+      "name": "sustained interaction errors",
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "picket_operations_total{operation=\"interaction\",outcome=\"error\"}",
+          "values": "0+10x30"
+        },
+        {
+          "series": "picket_operations_total{operation=\"interaction\",outcome=\"success\"}",
+          "values": "0+20x30"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "picket:incident:interaction_errors",
+          "eval_time": "20m",
+          "exp_samples": [
+            {
+              "labels": "picket:incident:interaction_errors",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "archive absence is detected despite recent success",
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "picket_backup_last_success",
+          "values": "0x30"
+        },
+        {
+          "series": "picket_backup_archives",
+          "values": "0x30"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "picket:incident:backup_missing",
+          "eval_time": "20m",
+          "exp_samples": [
+            {
+              "labels": "picket:incident:backup_missing",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "recent archive is healthy",
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "picket_backup_last_success",
+          "values": "0x30"
+        },
+        {
+          "series": "picket_backup_archives",
+          "values": "1x30"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "picket:incident:backup_missing",
+          "eval_time": "20m",
+          "exp_samples": [
+            {
+              "labels": "picket:incident:backup_missing",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "nightly work is checked against its schedule",
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "picket_task_schedule{component=\"retention\"}",
+          "values": "3600x90"
+        },
+        {
+          "series": "picket_task_success{component=\"retention\"}",
+          "values": "0x90"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "picket:incident:schedule_late",
+          "eval_time": "80m",
+          "exp_samples": [
+            {
+              "labels": "picket:incident:schedule_late{component=\"retention\"}",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "nightly work is healthy before the deadline",
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "picket_task_schedule{component=\"retention\"}",
+          "values": "3600x90"
+        },
+        {
+          "series": "picket_task_success{component=\"retention\"}",
+          "values": "0x90"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "picket:incident:schedule_late",
+          "eval_time": "60m",
+          "exp_samples": []
+        }
+      ]
+    }
+  ]
+}

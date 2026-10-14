@@ -15,8 +15,31 @@ exec 8> "$BACKUP_DIR/.backup.lock"
 flock -w 300 8
 
 # Run retention first, so a failed daily dump cannot retain old snapshots forever.
+if [ "$reason" = prune ]; then python3 ./retention.py "$BACKUP_DIR"; exit 0; fi
+
+# Operational timestamps, separate from the archive manifest and database export.
+mark() {
+  date -u +'%s' > "$BACKUP_DIR/$1.new"
+  mv "$BACKUP_DIR/$1.new" "$BACKUP_DIR/$1"
+}
+mark .last-attempt
+attempt_started="$(date -u +'%s')"
+work=""
+finish() {
+  result="$1"
+  # Remove a partial archive first, including when the failure was a full disk.
+  if [ -n "$work" ]; then rm -rf -- "$work" || true; fi
+  {
+    printf '%s\n' "$(( $(date -u +'%s') - attempt_started ))" > "$BACKUP_DIR/.last-duration.new"
+    mv "$BACKUP_DIR/.last-duration.new" "$BACKUP_DIR/.last-duration"
+  } || true
+  if [ "$result" -ne 0 ]; then
+    mark .last-failure || true
+    if [ ! -s "$BACKUP_DIR/.failure-since" ]; then mark .failure-since || true; fi
+  fi
+}
+trap 'finish "$?"' EXIT
 python3 ./retention.py "$BACKUP_DIR"
-if [ "$reason" = prune ]; then exit 0; fi
 : "${BACKUP_RECIPIENTS_FILE:=/run/secrets/backup_recipients}"
 # Reject identities and password-based encryption: the container receives only public age recipients.
 python3 - "$BACKUP_RECIPIENTS_FILE" <<'PY'
@@ -32,7 +55,6 @@ export PGPASSWORD
 
 stamp="$(date -u +'%Y%m%dT%H%M%SZ')"
 work="$(mktemp -d "$BACKUP_DIR/picket-$stamp-XXXXXXXX.partial")"
-trap 'rm -rf -- "$work"' EXIT
 archive="$work/picket.dump.age"
 
 # pipefail detects failures of pg_dump, encryption, the write AND hashing.
@@ -54,7 +76,7 @@ if [ "$expected" != "${actual%% *}" ] || [ ! -s "$archive" ]; then
   exit 1
 fi
 printf '%s  picket.dump.age\n' "$expected" > "$work/picket.dump.age.sha256"
-printf 'created_at=%s\nreason=%s\n' "$stamp" "$reason" > "$work/manifest.txt"
+printf 'created_at=%s\nreason=%s\nimage=%s\n' "$stamp" "$reason" "${BACKUP_SOURCE_IMAGE:-${PICKET_VERSION:-unknown}}" > "$work/manifest.txt"
 rm "$work/stream.sha256"
 sync -f "$archive"
 destination="${work%.partial}"
@@ -65,4 +87,5 @@ python3 ./retention.py "$BACKUP_DIR"
 sync -f "$BACKUP_DIR"
 date -u +'%s' > "$BACKUP_DIR/.last-success.new"
 mv "$BACKUP_DIR/.last-success.new" "$BACKUP_DIR/.last-success"
+rm -f "$BACKUP_DIR/.failure-since"
 echo "encrypted PostgreSQL backup verified: $(basename "$destination")"

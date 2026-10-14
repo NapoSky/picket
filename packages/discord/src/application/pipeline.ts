@@ -1,5 +1,5 @@
 import type { Translator } from '@picket/i18n';
-import type { GuildId, InteractionId, Logger } from '@picket/kernel';
+import type { GuildId, InteractionId, Logger, MetricOutcome, OperationalMetrics } from '@picket/kernel';
 import { ACCESS_RANK, type AccessLevel, type CommandRegistry } from './commands';
 import type { ComponentRegistry } from './components';
 import { ephemeral, type IncomingInteraction, type Reply } from './interaction';
@@ -43,6 +43,7 @@ export interface PipelineDependencies {
   readonly language: GuildLanguage;
   readonly features: FeatureGate;
   readonly logger: Logger;
+  readonly metrics?: OperationalMetrics;
   /** Discord exige une réponse sous 3 s. */
   readonly handlerTimeoutMs?: number;
   /** Travail différé : le jeton d'interaction reste valable 15 minutes. */
@@ -72,6 +73,8 @@ export class InteractionPipeline {
   }
 
   async handle(interaction: IncomingInteraction): Promise<Reply> {
+    const started = Date.now();
+    let outcome: MetricOutcome = 'success';
     const logger = this.#deps.logger.child({
       interaction_id: interaction.id,
       guild_id: interaction.guildId,
@@ -87,6 +90,7 @@ export class InteractionPipeline {
       if (interaction.kind !== 'autocomplete') {
         const isNew = await this.#deps.receipts.claim(interaction.id, interaction.guildId);
         if (!isNew) {
+          outcome = 'duplicate';
           logger.warn({}, 'duplicate interaction');
           return this.#fallback(interaction, t('errors.duplicate'));
         }
@@ -100,6 +104,7 @@ export class InteractionPipeline {
 
       const level = await this.#deps.access.levelOf(interaction, guildId);
       if (level === null || ACCESS_RANK[level] < ACCESS_RANK[target.level]) {
+        outcome = 'rejected';
         logger.warn({ command: target.label, required: target.level, actual: level }, 'access denied');
         return this.#fallback(interaction, t('errors.denied', { level: t(`levels.${target.level}`) }));
       }
@@ -120,11 +125,15 @@ export class InteractionPipeline {
     } catch (error) {
       const label = interaction.commandPath.join(' ') || interaction.customId;
       if (error instanceof HandlerTimeoutError) {
+        outcome = 'timeout';
         logger.error({ command: label }, 'handler timeout');
         return this.#fallback(interaction, t('errors.timeout'));
       }
       logger.error({ err: error, command: label }, 'interaction failed');
+      outcome = 'error';
       return this.#fallback(interaction, t('errors.failure'));
+    } finally {
+      this.#deps.metrics?.record('interaction', (Date.now() - started) / 1000, outcome, 'interactions');
     }
   }
 
@@ -188,15 +197,21 @@ export class InteractionPipeline {
     logger: Logger,
     t: Translator['t'],
   ): Promise<Reply | null> {
+    const started = Date.now();
+    let outcome: MetricOutcome = 'success';
     try {
       return await this.#withTimeout(run(), this.#deps.deferredTimeoutMs ?? DEFAULT_DEFERRED_TIMEOUT_MS);
     } catch (error) {
       if (error instanceof HandlerTimeoutError) {
+        outcome = 'timeout';
         logger.error({ command: label }, 'deferred work timeout');
         return ephemeral(t('errors.timeout'));
       }
       logger.error({ err: error, command: label }, 'deferred work failed');
+      outcome = 'error';
       return ephemeral(t('errors.failure'));
+    } finally {
+      this.#deps.metrics?.record('deferred', (Date.now() - started) / 1000, outcome, 'interactions');
     }
   }
 

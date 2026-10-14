@@ -1,0 +1,142 @@
+{
+  "groups": [
+    {
+      "name": "picket-incidents",
+      "interval": "30s",
+      "rules": [
+        {
+          "record": "picket:incident:bot_unavailable",
+          "expr": "(max(picket_ready{service=\"picket\"}) or vector(0)) < bool 1"
+        },
+        {
+          "record": "picket:incident:stats_unavailable",
+          "expr": "(max(picket_ready{service=\"picket-stats\"}) or vector(0)) < bool 1"
+        },
+        {
+          "record": "picket:incident:postgres_unavailable",
+          "expr": "(max(pg_up) or vector(0)) < bool 1"
+        },
+        {
+          "record": "picket:incident:gateway_unavailable",
+          "expr": "(sum(picket_shards_connected) or vector(0)) < bool (max(picket_shards_expected) or vector(1))"
+        },
+        {
+          "record": "picket:incident:leader_unavailable",
+          "expr": "(sum by(component)(picket_role_leader) < bool 1) and on(component) (max by(component)(picket_role_enabled) > 0)"
+        },
+        {
+          "record": "picket:incident:container_unavailable",
+          "expr": "picket_container_healthy < bool 1"
+        },
+        {
+          "record": "picket:incident:restarts",
+          "expr": "increase(picket_container_restarts_total[30m]) >= bool 3"
+        },
+        {
+          "record": "picket:incident:interaction_errors",
+          "expr": "(sum(rate(picket_operations_total{operation=\"interaction\",outcome=~\"error|timeout\"}[10m])) / clamp_min(sum(rate(picket_operations_total{operation=\"interaction\"}[10m])),0.000001) > bool 0.05) and (sum(increase(picket_operations_total{operation=\"interaction\"}[10m])) >= 20)"
+        },
+        {
+          "record": "picket:incident:interaction_slow",
+          "expr": "(histogram_quantile(0.95,sum by(le)(rate(picket_operation_duration_seconds_bucket{operation=\"acknowledgement\"}[10m]))) > bool 2) and (sum(increase(picket_operation_duration_seconds_count{operation=\"acknowledgement\"}[10m])) >= 20)"
+        },
+        {
+          "record": "picket:incident:deferred_errors",
+          "expr": "sum by(operation)(increase(picket_operations_total{operation=~\"deferred|deferred_delivery\",outcome=~\"error|timeout\"}[10m])) >= bool 3"
+        },
+        {
+          "record": "picket:incident:rest_limited",
+          "expr": "(sum(rate(picket_operations_total{operation=\"discord_rest\",outcome=\"limited\"}[10m])) / clamp_min(sum(rate(picket_operations_total{operation=\"discord_rest\"}[10m])),0.000001) > bool 0.05) and (sum(increase(picket_operations_total{operation=\"discord_rest\"}[10m])) >= 20)"
+        },
+        {
+          "record": "picket:incident:pool_waits",
+          "expr": "max by(service)(picket_pool_waiting) > bool 0"
+        },
+        {
+          "record": "picket:incident:pool_errors",
+          "expr": "sum by(service)(increase(picket_operations_total{operation=\"database_acquire\",outcome=\"error\"}[10m])) >= bool 3"
+        },
+        {
+          "record": "picket:incident:jobs_stale",
+          "expr": "((time() - picket_loop_last_success) > bool (picket_loop_interval + 600)) and on(service,instance,job,component) (picket_loop_active > 0)"
+        },
+        {
+          "record": "picket:incident:schedule_late",
+          "expr": "(picket_task_success < bool picket_task_schedule) and on(service,instance,job,component) (time() - picket_task_schedule > 600)"
+        },
+        {
+          "record": "picket:incident:war_stale",
+          "expr": "(time() - picket_war_last_success > bool 600) and on(service,instance,job,component) (picket_role_leader > 0)"
+        },
+        {
+          "record": "picket:incident:buffer_full",
+          "expr": "picket_buffer_bytes / picket_buffer_max_bytes > bool 0.8"
+        },
+        {
+          "record": "picket:incident:buffer_rejected",
+          "expr": "sum(increase(picket_operations_total{operation=\"loop\",component=\"voice\",outcome=\"rejected\"}[10m])) > bool 0"
+        },
+        {
+          "record": "picket:incident:cpu",
+          "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) > bool 0.9"
+        },
+        {
+          "record": "picket:incident:memory",
+          "expr": "1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes > bool 0.9"
+        },
+        {
+          "record": "picket:incident:disk_warning",
+          "expr": "node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\",mountpoint!~\"/boot.*\"} / node_filesystem_size_bytes < bool 0.2"
+        },
+        {
+          "record": "picket:incident:disk_critical",
+          "expr": "node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\",mountpoint!~\"/boot.*\"} / node_filesystem_size_bytes < bool 0.1"
+        },
+        {
+          "record": "picket:incident:inodes",
+          "expr": "node_filesystem_files_free{fstype!~\"tmpfs|overlay|squashfs\"} / node_filesystem_files < bool 0.1"
+        },
+        {
+          "record": "picket:incident:backup_failed",
+          "expr": "picket_backup_failure_since > bool 0 and (time() - picket_backup_failure_since > 3600)"
+        },
+        {
+          "record": "picket:incident:backup_stuck",
+          "expr": "(picket_backup_last_attempt > bool picket_backup_last_success) and (time() - picket_backup_last_attempt > 3600)"
+        },
+        {
+          "record": "picket:incident:backup_missing",
+          "expr": "clamp_max((time() - picket_backup_last_success > bool 93600) + (picket_backup_archives < bool 1),1)"
+        },
+        {
+          "record": "picket:incident:backup_metadata",
+          "expr": "picket_backup_metadata_available < bool 1"
+        },
+        {
+          "record": "picket:incident:docker_metadata",
+          "expr": "picket_docker_metadata_available < bool 1"
+        },
+        {
+          "record": "picket:incident:exporter_unavailable",
+          "expr": "up{job!~\"picket|picket-stats\"} < bool 1"
+        },
+        {
+          "record": "picket:incident:restore_overdue",
+          "expr": "time() - picket_restore_last_verified > bool 3024000"
+        },
+        {
+          "record": "picket:incident:stats_dirty",
+          "expr": "picket_stats_snapshot_dirty > bool 0"
+        },
+        {
+          "record": "picket:incident:delivery_errors",
+          "expr": "sum by(component)(increase(picket_operations_total{operation=\"diagnostic\",outcome=\"error\"}[10m])) >= bool 3"
+        },
+        {
+          "record": "picket:incident:war_delivery_late",
+          "expr": "picket_war_delivery_overdue > bool 600"
+        }
+      ]
+    }
+  ]
+}

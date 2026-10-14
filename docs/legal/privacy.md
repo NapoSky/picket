@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Effective date: 13 October 2026.
+Effective date: 14 October 2026.
 
 This policy describes the data processed by the official PICKET instance (the Discord application "PICKET" and the site
 `docs.picket-foxhole.com`). It applies together with the [Terms of Service](./terms) and Discord's own
@@ -34,6 +34,7 @@ data in one. For anything sensitive, use a
 | Alerts sent for each timer | Never send the same alert twice | Same |
 | Identifier of each processed interaction and its server | Avoid handling the same command twice | 7 days |
 | Application logs: server, user, channel and message identifiers of each todo list or timer creation and click, never the list content nor the timer names | Operate, secure and debug the service | 30 days |
+| Separate operational diagnostics: timestamps, service/version, technical events, durations, aggregate failure counts and resource usage; no Discord identifiers or user content | Detect failures and maintain availability | 30 days |
 | War-log subscription: channel, selected zones, reference faction, language, activation for a war and configuration audit | Publish requested public game events | While the bot is on the server, then the retention period |
 | War-log deliveries and optional timer-reset execution records | Control publication and avoid repeated actions | Same, with completed deliveries cleaned up during collection |
 | Eligible voice events and channel presence segments: server/user/channel identifiers and timestamps | Provide opt-in server statistics | Rolling maximum of 60 days |
@@ -97,6 +98,12 @@ The shared PICKET overview shows authenticated users only aggregate counts of ac
 Statistical history expires within the rolling 60-day window in all reports. Physical cleanup runs periodically and may be delayed during outages; operators must monitor and restore purge jobs. The same window applies to queued disk events. Admin snapshots update periodically. Erasure invalidates their results immediately: they remain inaccessible while a replacement is built. Physical snapshot cleanup follows refresh completion, including after the daily purge. Statistical history, snapshots and dashboard session data are excluded from standard backups; erasure cannot be undone by restoring those backups. Downloaded exports are controlled by their recipient and must follow their retention duties.
 
 ## Your rights
+
+Operational diagnostics are accessible only to the service operator and contain
+no Discord identifiers or user content. They are separate from guild journals,
+voice statistics, database backups and application data exports. They are never
+included in server or personal exports. Their purpose is service maintenance;
+they expire after 30 days, with physical cleanup performed periodically.
 
 Under the GDPR you may ask for access to, correction or erasure of the data about you, object to its processing, or ask
 for it to be restricted or exported. Your Discord user identifier appears in the audit log

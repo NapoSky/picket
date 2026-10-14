@@ -1,6 +1,6 @@
 # Politique de confidentialité
 
-Date d'effet : 13 octobre 2026.
+Date d'effet : 14 octobre 2026.
 
 Cette politique décrit les données traitées par l'instance officielle de PICKET (l'application Discord « PICKET » et le
 site `docs.picket-foxhole.com`). Elle s'applique avec les [Conditions d'utilisation](./terms) et la
@@ -34,6 +34,7 @@ donnée personnelle. Pour tout sujet sensible, utilisez un
 | Alertes envoyées pour chaque timer | Ne jamais envoyer deux fois la même alerte | Idem |
 | Identifiant de chaque interaction traitée et son serveur | Ne pas traiter deux fois la même commande | 7 jours |
 | Journaux de l'application : identifiants de serveur, d'utilisateur, de canal et de message pour chaque création et chaque clic de todolist ou de timer, jamais le contenu de la liste ni les noms de timers | Exploiter, sécuriser et dépanner le service | 30 jours |
+| Diagnostics opérationnels distincts : horodatages, service/version, événements techniques, durées, nombres agrégés d'échecs et consommation des ressources ; sans identifiants Discord ni contenu utilisateur | Détecter les pannes et maintenir la disponibilité | 30 jours |
 | Abonnement au war-log : canal, zones choisies, faction de référence, langue, activation pour une guerre et audits de configuration | Publier les événements publics du jeu demandés | Tant que le bot est sur le serveur, puis la période de rétention |
 | Livraisons du war-log et suivi des resets facultatifs des timers | Contrôler la publication et éviter les actions répétées | Idem, avec nettoyage des livraisons terminées pendant la collecte |
 | Événements vocaux éligibles et segments de présence : identifiants serveur/utilisateur/salon et horodatages | Produire les statistiques activées dans le serveur | 60 jours glissants maximum |
@@ -101,6 +102,13 @@ La vue globale PICKET partage avec les utilisateurs connectés uniquement les no
 Les rapports excluent tout historique au-delà des 60 jours glissants. Le nettoyage physique est périodique et peut être retardé par une panne ; les opérateurs doivent surveiller et rétablir les jobs de purge. La même fenêtre s’applique aux événements en attente sur disque. Les instantanés admin sont actualisés périodiquement. Une demande d’effacement invalide immédiatement les résultats concernés : ils restent inaccessibles pendant leur reconstruction. Leur nettoyage physique suit le rafraîchissement, y compris après la purge quotidienne. L’historique statistique, les instantanés et les sessions du dashboard sont exclus des sauvegardes standard ; les restaurer ne rétablit pas les activités effacées. Les exports téléchargés sont contrôlés par leur destinataire, soumis à ses obligations de rétention.
 
 ## Vos droits
+
+Les diagnostics opérationnels sont accessibles uniquement à l'opérateur du
+service et ne contiennent ni identifiants Discord ni contenu utilisateur. Ils
+sont séparés des journaux de guilde, statistiques vocales, sauvegardes de base et
+exports de données applicatives. Ils ne sont jamais inclus dans les exports de
+serveur ou personnels. Ils servent à la maintenance du service et expirent après
+30 jours ; le nettoyage physique est périodique.
 
 Le RGPD vous permet de demander l'accès aux données vous concernant, leur rectification ou leur effacement, de vous opposer
 à leur traitement, d'en demander la limitation ou la portabilité. Votre

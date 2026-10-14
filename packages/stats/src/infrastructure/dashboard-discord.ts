@@ -58,6 +58,7 @@ export class DashboardDiscord implements DashboardIdentityProvider {
     readonly callbackUrl: string,
     readonly rest: DiscordBotRestClient,
     readonly fetcher: typeof fetch = fetch,
+    readonly metrics?: import('@picket/kernel').OperationalMetrics,
   ) {}
 
   private async request(path: string, token: string): Promise<unknown> {
@@ -80,7 +81,7 @@ export class DashboardDiscord implements DashboardIdentityProvider {
           // Short waits are handled by the SDK. Long quotas return a retry delay
           // instead of keeping an HTTP request queued indefinitely.
           rejectOnRateLimit: limit => Math.max(limit.retryAfter, limit.timeToReset, limit.sublimitTimeout) > 2000,
-        }),
+        }, this.metrics),
         expires: instant + 8 * 60 * 60 * 1000, globalCooldown: 0, invalid: false,
         cooldowns: new Map(), pending: new Map(),
       };

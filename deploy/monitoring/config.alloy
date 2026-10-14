@@ -1,0 +1,46 @@
+// Only the sanitized application stream is ingested. Third-party logs can
+// include SQL, connection metadata or credentials and remain in Docker.
+discovery.docker "picket" {
+  host = "unix:///var/run/docker.sock"
+  refresh_interval = "15s"
+  filter {
+    name = "label"
+    values = ["com.docker.compose.project=" + sys.env("PICKET_COMPOSE_PROJECT")]
+  }
+}
+discovery.relabel "logs" {
+  targets = discovery.docker.picket.targets
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex = "picket|picket-stats"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label = "service"
+  }
+}
+loki.source.docker "picket" {
+  host = "unix:///var/run/docker.sock"
+  targets = discovery.relabel.logs.output
+  forward_to = [loki.process.picket.receiver]
+}
+loki.process "picket" {
+  stage.json {
+    expressions = { level = "level", time = "time", message = "msg" }
+  }
+  stage.timestamp {
+    source = "time"
+    format = "RFC3339Nano"
+  }
+  stage.labels {
+    values = { level = "level" }
+  }
+  stage.label_keep {
+    values = ["service", "level"]
+  }
+  forward_to = [loki.write.local.receiver]
+}
+loki.write "local" {
+  endpoint { url = "http://loki:3100/loki/api/v1/push" }
+}

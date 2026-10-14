@@ -1,13 +1,13 @@
 import { parseArgs } from 'node:util';
 import { loadDashboardConfig, loggingConfig } from '@picket/config';
-import { createLogger } from '@picket/observability';
+import { createLogger, createMonitoringDestination } from '@picket/observability';
 import { startStatsServer } from './runtime';
 
 async function run() {
   // Live authorization comes from Discord; this server accepts no preview-role flags.
   parseArgs();
   const config = loadDashboardConfig(process.env);
-  const logger = createLogger({ level: config.logLevel, version: config.version, service: 'picket-stats' });
+  const logger = createLogger({ level: config.logLevel, version: config.version, service: 'picket-stats', destination: createMonitoringDestination() });
   process.on('unhandledRejection', (error) => { logger.fatal({ err: error }, 'unhandled rejection'); process.exit(1); });
   process.on('uncaughtException', (error) => { logger.fatal({ err: error }, 'uncaught exception'); process.exit(1); });
   const runtime = await startStatsServer(config, logger);
@@ -23,7 +23,7 @@ async function run() {
   });
 }
 void run().catch((error: unknown) => {
-  createLogger({ ...loggingConfig(process.env), service: 'picket-stats' })
+  createLogger({ ...loggingConfig(process.env), service: 'picket-stats', destination: createMonitoringDestination() })
     .fatal({ error: error instanceof Error ? error.message : 'Unknown startup error' }, 'stats failed to start');
   process.exit(1);
 });

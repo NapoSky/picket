@@ -1,0 +1,77 @@
+# Monthly verification: only a temporary database and a one-off restore tool.
+# No bot, published ports, production volumes or shared edge network.
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: picket
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      PICKET_MIGRATOR_PASSWORD_FILE: /run/secrets/picket_migrator_password
+      PICKET_APP_PASSWORD_FILE: /run/secrets/picket_app_password
+    secrets: [postgres_password, picket_migrator_password, picket_app_password]
+    volumes:
+      - restore-pgdata:/var/lib/postgresql
+      - ./postgres/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
+    networks: [isolated]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres -d picket]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  restore:
+    image: picket-postgres-backup:18
+    entrypoint: [bash, /opt/picket-backup/restore.sh]
+    user: "0:0"
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    cap_add: [DAC_READ_SEARCH]
+    security_opt: [no-new-privileges:true]
+    environment:
+      PGHOST: postgres
+      PGDATABASE: picket
+      PGCONNECT_TIMEOUT: "10"
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    volumes:
+      - type: bind
+        source: ${RESTORE_ARCHIVE_DIR:?set RESTORE_ARCHIVE_DIR}
+        target: /restore/archive
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${RESTORE_IDENTITY_FILE:?set RESTORE_IDENTITY_FILE}
+        target: /restore/identity
+        read_only: true
+        bind:
+          create_host_path: false
+    networks: [isolated]
+  record-verification:
+    image: picket-postgres-backup:18
+    user: "${PICKET_BACKUP_UID:-1000}:${PICKET_BACKUP_GID:-1000}"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    entrypoint: [sh, -c]
+    command: ['date -u +%s > /backups/.last-restore-check.new && mv /backups/.last-restore-check.new /backups/.last-restore-check']
+    volumes:
+      - type: bind
+        source: ${BACKUP_DIR:-../backups}
+        target: /backups
+        bind:
+          create_host_path: false
+    networks: [isolated]
+networks:
+  isolated:
+    internal: true
+volumes:
+  restore-pgdata:
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password
+  picket_migrator_password:
+    file: ./secrets/picket_migrator_password
+  picket_app_password:
+    file: ./secrets/picket_app_password

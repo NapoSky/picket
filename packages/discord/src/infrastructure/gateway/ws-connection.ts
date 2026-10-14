@@ -3,7 +3,7 @@ import { CloseCodes, WebSocketManager, WebSocketShardEvents, type SessionInfo } 
 import { GatewayIntentBits } from 'discord-api-types/v10';
 import type { GatewaySessionStore } from '@picket/coordination';
 import type { Lease } from '@picket/coordination';
-import type { Logger, Secret } from '@picket/kernel';
+import type { Logger, Secret, OperationalMetrics } from '@picket/kernel';
 import type { GatewayEventHandler } from '../../application/gateway-events';
 import { normalizeDispatch } from './event-normalizer';
 import { SerialQueue } from './serial-queue';
@@ -15,6 +15,8 @@ export interface WsConnectorDependencies {
   readonly sessions: GatewaySessionStore;
   readonly handler: GatewayEventHandler;
   readonly logger: Logger;
+  readonly metrics?: OperationalMetrics;
+  readonly connectionState?: (shardId: number, connected: boolean) => void;
   readonly flushEveryMs?: number;
 }
 
@@ -122,6 +124,7 @@ class DiscordWsShardConnection implements ShardConnection {
       });
     });
     manager.on(WebSocketShardEvents.Closed, (code) => {
+      this.#deps.connectionState?.(this.#shardId, false);
       this.#replaying = true;
       this.#logger.warn({ code }, 'gateway connection closed');
       this.#queue.enqueue('voice_disconnected', async () => {
@@ -133,6 +136,7 @@ class DiscordWsShardConnection implements ShardConnection {
       this.#logger.error({ err: error }, 'gateway socket error'),
     );
     manager.on(WebSocketShardEvents.Resumed, () => {
+      this.#deps.connectionState?.(this.#shardId, true);
       this.#replaying = false;
       this.#logger.info({}, 'gateway session resumed');
       this.#queue.enqueue('voice_resumed', async () => {
@@ -140,6 +144,7 @@ class DiscordWsShardConnection implements ShardConnection {
       });
     });
     manager.on(WebSocketShardEvents.Ready, () => {
+      this.#deps.connectionState?.(this.#shardId, true);
       this.#replaying = false;
       this.#logger.info({}, 'gateway ready');
       this.#queue.enqueue('voice_ready', async () => {
@@ -181,6 +186,7 @@ class DiscordWsShardConnection implements ShardConnection {
   }
 
   async #shutdown(): Promise<void> {
+    this.#deps.connectionState?.(this.#shardId, false);
     if (this.#timer) clearInterval(this.#timer);
     this.#timer = null;
     const manager = this.#manager;
@@ -222,6 +228,13 @@ class DiscordWsShardConnection implements ShardConnection {
 export function createWsShardConnector(
   deps: WsConnectorDependencies,
 ): (params: ShardConnectionParams) => ShardConnection {
-  const shared = { ...deps, rest: deps.rest ?? createDiscordBotRest(deps.token) };
+  const connected = new Set<number>();
+  const shared = { ...deps, rest: deps.rest ?? createDiscordBotRest(deps.token),
+    connectionState: (shardId: number, ready: boolean) => {
+      if (ready) connected.add(shardId); else connected.delete(shardId);
+      deps.metrics?.set('shards_connected', connected.size, 'gateway');
+      deps.connectionState?.(shardId, ready);
+    },
+  };
   return (params) => new DiscordWsShardConnection(shared, params);
 }

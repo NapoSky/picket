@@ -2,6 +2,7 @@ import { createServer, type Server } from 'node:http';
 
 export interface HealthServerOptions {
   readonly isReady: () => Promise<boolean>;
+  readonly metrics?: { readonly contentType: string; render(): Promise<string> };
 }
 
 /** `/healthz` : le processus répond (liveness). `/readyz` : prêt à recevoir du trafic (503 en drain ou base HS). */
@@ -14,6 +15,13 @@ export function createHealthServer(options: HealthServerOptions): Server {
 
     if (request.method !== 'GET') return respond(405, 'method not allowed');
     if (request.url === '/healthz') return respond(200, 'ok');
+    if (request.url === '/metrics' && options.metrics) {
+      options.metrics.render().then(body => {
+        response.writeHead(200, { 'content-type': options.metrics!.contentType, 'cache-control': 'no-store' });
+        response.end(body);
+      }, () => respond(503, 'metrics unavailable'));
+      return;
+    }
     if (request.url === '/readyz') {
       options.isReady().then(
         (ready) => respond(ready ? 200 : 503, ready ? 'ready' : 'not ready'),

@@ -2,7 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEq
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import Fastify, { type FastifyRequest } from 'fastify';
-import { GuildId, RoleId, type Logger } from '@picket/kernel';
+import { GuildId, RoleId, type Logger, type OperationalMetrics } from '@picket/kernel';
 import { PostgresPermissionRepository, resolveAccessLevel } from '@picket/guild';
 import { sql, type Db } from '@picket/persistence';
 import { exportActivity } from '../application/activity-export';
@@ -33,6 +33,7 @@ export interface DashboardOptions {
   readonly encryptionSecret: string;
   readonly buffer: DurableVoiceBuffer;
   readonly logger: Logger;
+  readonly metrics?: OperationalMetrics;
   readonly now?: () => Date;
   readonly staticDirectory?: string;
   /** Supplied only by the development entry point; production uses Discord. */
@@ -48,6 +49,10 @@ export function createDashboardServer(options: DashboardOptions) {
     keepAliveTimeout: 120_000,
   });
   const now = options.now ?? (() => new Date());
+  app.addHook('onResponse', async (_request, reply) => {
+    options.metrics?.record('http', reply.elapsedTime / 1000,
+      reply.statusCode >= 500 ? 'error' : reply.statusCode >= 400 ? 'rejected' : 'success', 'dashboard');
+  });
   const origin = new URL(options.origin).origin;
   const secure = origin.startsWith('https:');
   const cookieName = secure ? '__Host-picket_session' : 'picket_session';

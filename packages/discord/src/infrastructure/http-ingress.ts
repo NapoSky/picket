@@ -1,6 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { InteractionType, type APIInteraction } from 'discord-api-types/v10';
-import type { Clock, Logger } from '@picket/kernel';
+import type { Clock, Logger, OperationalMetrics } from '@picket/kernel';
 import type { InteractionPipeline } from '../application/pipeline';
 import type { InteractionReplies } from '../application/messaging';
 import { deliverDeferred } from './deliver-deferred';
@@ -14,6 +14,7 @@ export interface InteractionServerOptions {
   readonly replies: InteractionReplies;
   readonly logger: Logger;
   readonly clock: Clock;
+  readonly metrics?: OperationalMetrics;
   readonly timestampToleranceSeconds?: number;
 }
 
@@ -36,6 +37,10 @@ export function createInteractionServer(options: InteractionServerOptions): Fast
   // Corps brut indispensable : la signature porte sur les octets reçus.
   app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (_request, body, done) => {
     done(null, body);
+  });
+  app.addHook('onResponse', async (_request, reply) => {
+    options.metrics?.record('acknowledgement', reply.elapsedTime / 1000,
+      reply.statusCode >= 500 ? 'error' : reply.statusCode >= 400 ? 'rejected' : 'success', 'interactions');
   });
 
   app.post('/interactions', async (request, reply) => {
@@ -82,6 +87,7 @@ export function createInteractionServer(options: InteractionServerOptions): Fast
             interaction: interaction.value,
             replies: options.replies,
             logger: options.logger,
+            ...(options.metrics ? { metrics: options.metrics } : {}),
           }),
         )
         .finally(() => inFlight.delete(work));

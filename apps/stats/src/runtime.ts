@@ -3,7 +3,7 @@ import type { DashboardConfig } from '@picket/config';
 import { PostgresDiscordBudget } from '@picket/coordination';
 import { createDiscordBotRest } from '@picket/discord';
 import type { Logger } from '@picket/kernel';
-import { createHealthServer } from '@picket/observability';
+import { createHealthServer, createMetrics } from '@picket/observability';
 import { createDatabase } from '@picket/persistence';
 import { DashboardDiscord, DiskVoiceBuffer, PostgresStatsStore, createDashboardServer } from '@picket/stats';
 import { createDevelopmentIdentity, type DevelopmentRole } from './development';
@@ -20,20 +20,23 @@ export async function startStatsServer(config: DashboardConfig, logger: Logger,
   if (options.developmentRole && config.env !== 'development') throw new Error('Simulated Discord identities require NODE_ENV=development');
   const { origin, clientSecret, port } = config.dashboard;
   if (origin && !clientSecret) throw new Error('OAuth client secret required for dashboard');
+  const metrics = createMetrics({ service: 'picket-stats', version: config.version });
+  metrics.set('dashboard_enabled', Number(Boolean(origin)));
   const database = origin ? createDatabase({
     connectionString: config.database.url,
     maxConnections: config.database.poolMax,
     applicationName: 'picket-dashboard',
     onPoolError: (error) => logger.error({ err: error }, 'dashboard pool error'),
+    metrics,
   }) : null;
-  const buffer = new DiskVoiceBuffer(config.stats.bufferPath, config.stats.bufferMaxBytes);
+  const buffer = new DiskVoiceBuffer(config.stats.bufferPath, config.stats.bufferMaxBytes, () => new Date(), metrics);
   const rest = database ? createDiscordBotRest(config.discord.botToken,
-    { globalRequestsPerSecond: config.discord.restGlobalRps }, new PostgresDiscordBudget(database.db)) : null;
+    { globalRequestsPerSecond: config.discord.restGlobalRps }, new PostgresDiscordBudget(database.db), metrics) : null;
   const store = database ? new PostgresStatsStore(database.db) : null;
   const dashboard = database && store && origin && clientSecret && rest ? createDashboardServer({
-    db: database.db, store, buffer, logger,
+    db: database.db, store, buffer, logger, metrics,
     identity: options.developmentRole ? createDevelopmentIdentity(database.db, store, options.developmentRole)
-      : new DashboardDiscord(config.discord.applicationId, clientSecret.reveal(), `${origin}/auth/callback`, rest),
+      : new DashboardDiscord(config.discord.applicationId, clientSecret.reveal(), `${origin}/auth/callback`, rest, fetch, metrics),
     applicationId: config.discord.applicationId, origin, encryptionSecret: clientSecret.reveal(),
     ...(options.developmentRole ? { development: {
       role: options.developmentRole,
@@ -41,11 +44,15 @@ export async function startStatsServer(config: DashboardConfig, logger: Logger,
     } } : {}),
   }) : null;
   let draining = false;
-  const health = createHealthServer({ isReady: async () => {
-    if (draining) return false;
-    if (database) await database.ping();
-    return true;
-  } });
+  const isReady = async () => {
+    let ready = !draining;
+    try { if (database) await database.ping(); } catch { ready = false; }
+    metrics.set('ready', Number(ready));
+    metrics.set('draining', Number(draining));
+    return ready;
+  };
+  const health = createHealthServer({ isReady, metrics });
+  metrics.collect(async () => { database?.collectMetrics(); await isReady(); });
   const closeHealth = () => new Promise<void>((resolve, reject) => {
     if (!health.listening) return resolve();
     health.close((error) => error ? reject(error) : resolve());
@@ -56,6 +63,7 @@ export async function startStatsServer(config: DashboardConfig, logger: Logger,
     await dashboard?.close();
     await closeHealth();
     await database?.close();
+    metrics.close();
   }
   try {
     if (dashboard) {

@@ -15,6 +15,13 @@ const keyOf = (event: WarEvent): string => createHash('sha256').update(JSON.stri
 
 export class PostgresWarStore implements WarStore {
   constructor(private readonly db: Db) {}
+  /** Aggregate scheduling metadata only; no tenant payloads or identifiers leave this boundary. */
+  async operationalState(): Promise<{ pendingGuilds: number; overdueSeconds: number }> {
+    const row = (await sql<{ pending: number; overdue: number }>`SELECT count(*)::int AS pending,
+      COALESCE(GREATEST(0, EXTRACT(EPOCH FROM (clock_timestamp() - min(wake_at)))), 0)::double precision AS overdue
+      FROM warlog_schedule WHERE wake_at IS NOT NULL`.execute(this.db)).rows[0]!;
+    return { pendingGuilds: row.pending, overdueSeconds: row.overdue };
+  }
   async state(): Promise<StoredWarState> {
     const row = (await sql<StateRow>`SELECT generation, available, highest_war, payload FROM warlog_state WHERE id = 1`.execute(this.db)).rows[0]!;
     return { generation: row.generation, available: row.available, highestWar: row.highest_war, snapshot: row.payload };

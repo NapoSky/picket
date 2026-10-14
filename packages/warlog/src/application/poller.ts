@@ -1,6 +1,6 @@
 import type { Lease } from '@picket/coordination';
 import { WAR_ICONS, KNOWN_UNTRACKED_ICONS, warZoneOf } from '@picket/game-data';
-import type { Clock, Logger } from '@picket/kernel';
+import type { Clock, Logger, OperationalMetrics } from '@picket/kernel';
 import { isActiveWar, mapObject, snapshotEvents, type MapLabel, type PollSnapshot, type WarObject } from '../domain/model';
 import type { WarApi, WarStore } from './ports';
 
@@ -14,10 +14,11 @@ export class WarPoller {
   #lastSuccessAt: number | null = null;
   // Keep diagnostics across baseline rebuilds so recurring undocumented icons do not spam logs.
   readonly #reportedUnknownIcons = new Set<number>();
-  constructor(private readonly api: WarApi, private readonly store: WarStore, private readonly lease: Lease, private readonly clock: Clock, private readonly logger: Logger, private readonly intervalMs = 15_000) {}
+  constructor(private readonly api: WarApi, private readonly store: WarStore, private readonly lease: Lease, private readonly clock: Clock, private readonly logger: Logger, private readonly intervalMs = 15_000, private readonly metrics?: OperationalMetrics) {}
 
   async tick(): Promise<void> {
     if (this.clock.now().getTime() < this.#retryAt) return;
+    const started = Date.now();
     // A process may have been suspended without seeing any HTTP error. Missed polling periods need a new baseline too.
     if (!this.#recovering && this.#lastSuccessAt !== null && this.clock.now().getTime() - this.#lastSuccessAt > this.intervalMs * 3) {
       this.#recovering = true; this.#begun = false; this.#snapshot = null;
@@ -75,7 +76,10 @@ export class WarPoller {
       if (!await this.store.commit(this.lease, snapshot, events, baseline, now)) return;
       this.#snapshot = snapshot; this.#recovering = false; this.#failures = 0; this.#retryAt = 0;
       this.#lastSuccessAt = this.clock.now().getTime();
+      this.metrics?.set('war_last_success', this.#lastSuccessAt / 1000, 'warlog-poller');
+      this.metrics?.record('war_poll', (Date.now() - started) / 1000, 'success', 'warlog-poller');
     } catch (error) {
+      this.metrics?.record('war_poll', (Date.now() - started) / 1000, 'error', 'warlog-poller');
       this.#failures += 1;
       this.#retryAt = this.clock.now().getTime() + Math.min(300_000, this.intervalMs * 2 ** Math.min(this.#failures - 1, 5));
       this.logger.warn({ err: error, retry_at: this.#retryAt }, 'war poll failed, rebuilding baseline');
