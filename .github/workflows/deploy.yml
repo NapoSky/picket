@@ -1,6 +1,7 @@
 name: Deploy
 
 # Triggered only after successful CI on main: never from a pull request or fork.
+# CI filters documentation-only pushes, which are built/deployed by Docs instead.
 on:
   workflow_run:
     workflows: [CI]

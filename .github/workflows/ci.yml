@@ -2,8 +2,17 @@ name: CI
 
 on:
   pull_request:
+  workflow_dispatch:
   push:
     branches: [main]
+    # Docs have their own build/deployment; workflow-only changes can be
+    # checked manually without publishing an image (Deploy requires a push CI).
+    # Keep pull_request unfiltered so required checks still complete before merge.
+    paths-ignore:
+      - docs/**
+      - '**/*.md'
+      - scripts/generate-doc-diagrams.mjs
+      - .github/workflows/**
 
 permissions:
   contents: read
