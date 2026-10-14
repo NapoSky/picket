@@ -32,6 +32,11 @@ L'accès d'instance revient aux membres ayant **accepté l'invitation de la Team
 y compris les rôles developer et read-only. Une invitation en attente ne suffit pas. Un rôle officier sur un serveur
 ne donne aucun accès aux données individuelles des autres serveurs.
 
+Les vérifications réussies d'appartenance, de rôles et d'accès Team sur Discord sont réutilisées pendant cinq minutes
+au maximum lors de la navigation normale. Votre session et les permissions locales de PICKET restent vérifiées à chaque
+requête. Les exports forcent une vérification Discord fraîche ; aucun résultat d'accès expiré n'autorise de nouvelles
+lectures pendant une indisponibilité.
+
 ![Page de connexion PICKET en anglais : bannière complète, carte de connexion épurée et bouton SSO Discord.](/images/stats-login-en.png)
 
 *Connectez-vous avec votre compte Discord. Vos permissions déterminent les tableaux de bord accessibles.*
@@ -267,8 +272,8 @@ prouvant l'inactivité d'un membre.
 | Aucune activité n'apparaît | Vérifiez l'activation, les rôles ciblés, les salons exclus, votre préférence de suivi et la période choisie. |
 | Vous ne voyez pas les données d'autres personnes | Choisissez **Activité du régiment** si vous êtes officier ou administrateur de ce serveur ; sinon, la vue reste personnelle. |
 | Les chiffres sont en retard ou une interruption est indiquée | Consultez la dernière confirmation et réessayez **Actualiser** plus tard. Le temps non observé ne sera pas ajouté automatiquement. |
-| Vos droits viennent de changer | Actualisez ou reconnectez-vous ; la liste des serveurs et l'accès Team peuvent mettre jusqu'à deux minutes à se renouveler. |
-| Discord limite les vérifications d'accès | Les délais courts sont réessayés automatiquement. Pour un délai plus long, attendez le nombre de secondes affiché avant d'utiliser **Actualiser**. Les actions de confidentialité restent désactivées jusqu'au chargement ; votre préférence enregistrée ne change pas. |
+| Vos droits viennent de changer | L'appartenance, les rôles et l'accès Team Discord peuvent mettre jusqu'à cinq minutes à se renouveler pendant la navigation normale. Les exports les revérifient immédiatement ; les changements de permissions PICKET s'appliquent à la requête suivante. |
+| Discord limite les vérifications d'accès | Le compte à rebours suspend les requêtes concernées et les reprend à la fin du délai. Les chiffres précédents restent visibles uniquement pour le même serveur et les mêmes filtres. Les actions de confidentialité sont désactivées pendant l'attente ; votre préférence enregistrée ne change pas. |
 | `/stats link` ne propose pas de lien sur une instance auto-hébergée | Son opérateur doit [configurer le dashboard](../self-hosting/configuration#statistiques-vocales-et-dashboard). |
 | Un export est trop volumineux | Réduisez la période ou choisissez un salon ; aucun fichier partiel n'est présenté comme complet. |
 

@@ -22,11 +22,13 @@ export interface DashboardIdentityProvider {
   user(token: string): Promise<OAuthUser>;
   guilds(token: string, fresh?: boolean): Promise<readonly OAuthGuild[]>;
   guildNames(): Promise<readonly Pick<OAuthGuild, 'id' | 'name'>[]>;
-  memberRoles(token: string, guildId: string): Promise<readonly string[]>;
+  memberRoles(token: string, guildId: string, fresh?: boolean): Promise<readonly string[]>;
   teamMember(userId: string, fresh?: boolean): Promise<boolean>;
 }
 
 const id = (value: unknown): value is string => typeof value === 'string' && /^\d{15,25}$/.test(value);
+const ACCESS_CACHE_MS = 5 * 60_000;
+const tokenKey = (token: string) => createHash('sha256').update(token).digest('hex');
 
 /** Deliberately excludes request URLs, bearer tokens and response bodies. */
 export class DashboardDiscordError extends Error {
@@ -51,6 +53,7 @@ export class DashboardDiscord implements DashboardIdentityProvider {
   readonly #oauth = new Map<string, {
     client: DiscordOAuthRestClient; expires: number; globalCooldown: number; invalid: boolean;
     cooldowns: Map<string, number>; pending: Map<string, Promise<unknown>>;
+    members: Map<string, { at: number; roles: readonly string[] }>;
   }>();
   constructor(
     readonly applicationId: string,
@@ -63,7 +66,7 @@ export class DashboardDiscord implements DashboardIdentityProvider {
 
   private async request(path: string, token: string): Promise<unknown> {
     const operation = path.endsWith('/member') ? 'membership' : path.startsWith('/users/@me/guilds') ? 'guilds' : 'user';
-    const key = createHash('sha256').update(token).digest('hex');
+    const key = tokenKey(token);
     const instant = Date.now();
     for (const [key, state] of this.#oauth) {
       if (state.expires > instant || state.pending.size) continue;
@@ -83,7 +86,7 @@ export class DashboardDiscord implements DashboardIdentityProvider {
           rejectOnRateLimit: limit => Math.max(limit.retryAfter, limit.timeToReset, limit.sublimitTimeout) > 2000,
         }, this.metrics),
         expires: instant + 8 * 60 * 60 * 1000, globalCooldown: 0, invalid: false,
-        cooldowns: new Map(), pending: new Map(),
+        cooldowns: new Map(), pending: new Map(), members: new Map(),
       };
       this.#oauth.set(key, state);
     }
@@ -93,8 +96,7 @@ export class DashboardDiscord implements DashboardIdentityProvider {
       throw new DashboardDiscordError(operation, 429, undefined, Math.ceil((cooldown - instant) / 1000));
     const pending = state.pending.get(path);
     if (pending) return pending;
-    // Only coalesce simultaneous reads. Completed membership/role results are
-    // never cached, so exports and permission revocations keep fresh checks.
+    // Coalesce simultaneous reads, including fresh export checks.
     const query = path.indexOf('?');
     const request = state.client.get((query < 0 ? path : path.slice(0, query)) as `/${string}`,
       query < 0 ? {} : { query: new URLSearchParams(path.slice(query + 1)) });
@@ -109,8 +111,10 @@ export class DashboardDiscord implements DashboardIdentityProvider {
       if (error instanceof DiscordAPIError || error instanceof HTTPError) {
         if (error.status === 401) {
           state.invalid = true;
-          this.#guildCache.delete(token);
+          state.members.clear();
+          this.#guildCache.delete(key);
         }
+        if (operation === 'membership' && (error.status === 403 || error.status === 404)) state.members.delete(path.split('/')[4]!);
         throw new DashboardDiscordError(operation, error.status);
       }
       throw new DashboardDiscordError(operation, undefined,
@@ -162,11 +166,14 @@ export class DashboardDiscord implements DashboardIdentityProvider {
   }
 
   async guilds(token: string, fresh = false): Promise<readonly OAuthGuild[]> {
-    const cached = this.#guildCache.get(token);
-    if (cached && !fresh && Date.now() - cached.at < 120_000) return cached.guilds;
+    const key = tokenKey(token);
+    if (this.#oauth.get(key)?.invalid) throw new DashboardDiscordError('guilds', 401);
+    const cached = this.#guildCache.get(key);
+    if (cached && !fresh && Date.now() - cached.at < ACCESS_CACHE_MS) return cached.guilds;
+    this.#guildCache.delete(key);
     // Bound cache size and remove expired access tokens from memory.
     for (const [key, value] of this.#guildCache)
-      if (Date.now() - value.at >= 120_000) this.#guildCache.delete(key);
+      if (Date.now() - value.at >= ACCESS_CACHE_MS) this.#guildCache.delete(key);
     const guilds: OAuthGuild[] = [];
     let after = '';
     for (let page = 0; page < 10; page++) {
@@ -186,7 +193,7 @@ export class DashboardDiscord implements DashboardIdentityProvider {
             owner: guild.owner === true,
           });
       if (data.length < 200) {
-        if (this.#guildCache.size < 1000) this.#guildCache.set(token, { at: Date.now(), guilds });
+        if (this.#guildCache.size < 1000) this.#guildCache.set(key, { at: Date.now(), guilds });
         return guilds;
       }
       const last = data.at(-1) as { id?: unknown };
@@ -198,7 +205,7 @@ export class DashboardDiscord implements DashboardIdentityProvider {
 
   /** Names for the bot's servers, including those the signed-in administrator has not joined. */
   async guildNames(): Promise<readonly Pick<OAuthGuild, 'id' | 'name'>[]> {
-    if (this.#botGuilds && Date.now() - this.#botGuilds.at < 120_000) return this.#botGuilds.guilds;
+    if (this.#botGuilds && Date.now() - this.#botGuilds.at < ACCESS_CACHE_MS) return this.#botGuilds.guilds;
     const guilds: Pick<OAuthGuild, 'id' | 'name'>[] = [];
     let after = '';
     for (let page = 0; page < 10; page++) {
@@ -218,15 +225,27 @@ export class DashboardDiscord implements DashboardIdentityProvider {
     throw new Error('Discord guild names pagination limit reached');
   }
 
-  async memberRoles(token: string, guildId: string): Promise<readonly string[]> {
+  async memberRoles(token: string, guildId: string, fresh = false): Promise<readonly string[]> {
     if (!id(guildId)) throw new Error('Invalid guild');
+    const key = tokenKey(token);
+    const state = this.#oauth.get(key);
+    if (state?.invalid) throw new DashboardDiscordError('membership', 401);
+    const cached = state?.members.get(guildId);
+    // Cache only successful checks, without extending their lifetime on hits.
+    // Expired rights must not authorize reads during a Discord outage.
+    if (!fresh && state && state.expires > Date.now() && cached && Date.now() - cached.at < ACCESS_CACHE_MS) return cached.roles;
+    state?.members.delete(guildId);
     const data = (await this.request(`/users/@me/guilds/${guildId}/member`, token)) as { roles?: unknown };
     if (!Array.isArray(data.roles) || !data.roles.every(id)) throw new Error('Invalid Discord membership');
+    const current = this.#oauth.get(key);
+    if (current?.invalid) throw new DashboardDiscordError('membership', 401);
+    if (current && current.members.size < 1000) current.members.set(guildId, { at: Date.now(), roles: data.roles as string[] });
     return data.roles as string[];
   }
 
   async teamMember(userId: string, fresh = false): Promise<boolean> {
-    if (!this.#team || fresh || Date.now() - this.#team.at > 120_000) {
+    if (!this.#team || fresh || Date.now() - this.#team.at >= ACCESS_CACHE_MS) {
+      this.#team = null;
       const data = (await this.rest.get('/applications/@me')) as {
         id?: string;
         team?: { members?: { membership_state?: number; user?: { id?: string } }[] } | null;

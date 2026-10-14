@@ -111,7 +111,11 @@ const translations = {
       'All statistical history covers a maximum of 60 days. “No observed activity” does not mean “never active”.',
     privacyTitle: 'Your data, your choice',
     privacyUnavailable: 'Your privacy preferences could not be loaded. These actions are temporarily unavailable. Use Refresh to try again.',
-    discordRateLimited: 'Discord is limiting access checks. Try again in {seconds} seconds. Your stored privacy preferences remain unchanged.',
+    discordRateLimited: 'Discord is limiting access checks. Retry in {seconds} seconds.',
+    dashboardRateLimited: 'Too many dashboard requests. Retry in {seconds} seconds.',
+    discordUnavailable: 'Discord access checks are temporarily unavailable. Try again shortly.',
+    loadFailed: 'Activity could not be loaded.',
+    staleData: 'Update failed. Previous figures are shown.',
     privacyHelp:
       'Manage tracking for your account in the selected server. Erasure also removes your contribution from the statistics.',
     optOut: 'Exclude me from future tracking',
@@ -289,7 +293,11 @@ const translations = {
       'L’historique statistique couvre au maximum 60 jours. « Aucune activité observée » ne signifie pas « jamais actif ».',
     privacyTitle: 'Vos données, votre choix',
     privacyUnavailable: 'Vos préférences de confidentialité n’ont pas pu être chargées. Ces actions sont temporairement indisponibles. Utilisez Actualiser pour réessayer.',
-    discordRateLimited: 'Discord limite les vérifications d’accès. Réessayez dans {seconds} secondes. Vos préférences de confidentialité enregistrées restent inchangées.',
+    discordRateLimited: 'Discord limite les vérifications d’accès. Nouvelle tentative dans {seconds} secondes.',
+    dashboardRateLimited: 'Trop de requêtes vers le tableau de bord. Nouvelle tentative dans {seconds} secondes.',
+    discordUnavailable: 'Les vérifications d’accès Discord sont temporairement indisponibles. Réessayez dans un instant.',
+    loadFailed: 'L’activité n’a pas pu être chargée.',
+    staleData: 'Échec de l’actualisation. Les chiffres précédents restent affichés.',
     privacyHelp:
       'Gérez le suivi de votre compte sur le serveur sélectionné. L’effacement retire également votre contribution des statistiques.',
     optOut: 'M’exclure des prochaines collectes',
@@ -378,6 +386,11 @@ let current = null,
 let instanceReport = null;
 let privacyFailure = null;
 let startupFailure = null;
+let loadFailure = null;
+let retryFailure = null;
+let retryAt = 0;
+let displayedReportKey = null;
+const privacyCache = new Map();
 let overviewPage = 'overview';
 const t = (key) => translations[language][key] ?? translations.en[key] ?? key;
 const number = (value, decimals = 0) =>
@@ -407,6 +420,9 @@ function restoreGuildSelection() {
 }
 let guildNamesUpdatedAt = 0;
 function updateGuilds(data) {
+  for (const guild of data.guilds) {
+    if (guild.level === 'unknown') guild.level = guilds.find(previous => previous.id === guild.id)?.level ?? 'member';
+  }
   guilds = data.guilds.sort((a, b) => Number(!!a.inactive) - Number(!!b.inactive)
     || Number(a.nameKnown === false) - Number(b.nameKnown === false) || a.name.localeCompare(b.name, language));
   const previous = $('guild').value;
@@ -457,9 +473,16 @@ function translate() {
     renderPrivacyStatus();
     if (page === 'picket' && instanceReport) renderInstance(instanceReport);
     else if (report) render(report);
+    if (loadFailure) renderLoadFailure();
   }
 }
 async function api(path, options = {}) {
+  if (retryFailure && Date.now() >= retryAt) {
+    retryFailure = null;
+    updateRetryState();
+  }
+  if (retryFailure && Date.now() < retryAt && path !== '/api/logout' &&
+    (retryFailure.message === 'rate_limited' || /^\/api\/(guilds|activity|privacy(?:\?|$)|export)/.test(path))) throw retryFailure;
   const response = await fetch(path, {
     credentials: 'same-origin',
     ...options,
@@ -473,16 +496,37 @@ async function api(path, options = {}) {
     try {
       body = await response.json();
     } catch {}
-    throw Object.assign(new Error(body.error ?? 'unavailable'), {
+    const error = Object.assign(new Error(body.error ?? 'unavailable'), {
       status: response.status, retryAfter: Number(response.headers.get('Retry-After')),
     });
+    if (['discord_rate_limited', 'rate_limited'].includes(error.message)) {
+      retryAt = Math.max(retryAt, Date.now() + Math.max(1, error.retryAfter || 60) * 1000);
+      error.retryAt = retryAt;
+      retryFailure = error;
+      updateRetryState();
+    }
+    if (error.status === 401 && current) endSession();
+    if (error.status === 403 && path.startsWith('/api/export')) {
+      const guildId = new URLSearchParams(path.split('?')[1]).get('guild');
+      privacyCache.delete(guildId);
+      if (guildId === $('guild').value) {
+        generation++;
+        loading = false;
+        clearReport();
+        $('workspace').removeAttribute('aria-busy');
+        text('updated', t('loadFailed'));
+      }
+    }
+    throw error;
   }
   return response;
 }
 function errorText(error) {
   if (error.message === 'stats_snapshot_pending') return t('snapshotPending');
-  if (error.message === 'discord_rate_limited')
-    return t('discordRateLimited').replace('{seconds}', number(Math.max(1, error.retryAfter || 60)));
+  if (['discord_rate_limited', 'rate_limited'].includes(error.message))
+    return t(error.message === 'rate_limited' ? 'dashboardRateLimited' : 'discordRateLimited')
+      .replace('{seconds}', number(Math.max(0, error.retryAt ? Math.ceil((error.retryAt - Date.now()) / 1000) : error.retryAfter || 60)));
+  if (error.message === 'discord_unavailable') return t('discordUnavailable');
   return error.status === 403
     ? t('forbidden')
     : error.message === 'invalid_period'
@@ -497,6 +541,42 @@ function renderPrivacyStatus() {
   $('privacy-status').hidden = !privacyFailure;
   if (privacyFailure) text('privacy-status', privacyFailure.message === 'discord_rate_limited'
     ? errorText(privacyFailure) : t('privacyUnavailable'));
+}
+function updateRetryState() {
+  const waiting = Date.now() < retryAt;
+  for (const id of ['refresh', 'export-csv', 'export-json', 'startup-retry']) $(id).disabled = waiting;
+  $('instance-refresh').disabled = waiting && retryFailure?.message === 'rate_limited';
+  if (waiting) for (const id of ['opt-out', 'save-privacy', 'erase']) $(id).disabled = true;
+}
+function clearReport() {
+  report = null;
+  instanceReport = null;
+  displayedReportKey = null;
+  ['metric-hours', 'metric-users', 'metric-sessions', 'metric-live', 'instance-total'].forEach(id => text(id, '—'));
+  for (const id of ['daily-chart', 'people-daily-chart', 'hourly-chart', 'server-summary-body',
+    'channels-chart', 'people-body', 'segments-body', 'instance-features', 'instance-adoption']) $(id).replaceChildren();
+  $('empty').hidden = true;
+}
+function renderLoadFailure() {
+  notice(errorText(loadFailure), true);
+  text(page === 'picket' ? 'instance-updated' : 'updated', t(displayedReportKey ? 'staleData' : 'loadFailed'));
+}
+function endSession() {
+  current = null;
+  generation++;
+  loading = false;
+  loadFailure = null;
+  retryFailure = null;
+  retryAt = 0;
+  privacyCache.clear();
+  clearReport();
+  $('workspace').hidden = true;
+  $('workspace').removeAttribute('aria-busy');
+  $('welcome').hidden = false;
+  $('logout').hidden = true;
+  $('erase-all').hidden = true;
+  $('login-status').hidden = false;
+  updateRetryState();
 }
 function setHeading() {
   const isOverview = page === 'overview' || page === 'picket';
@@ -890,49 +970,52 @@ function render(data) {
     warnings.push(t('late'));
   notice(warnings.join(' '));
 }
-async function load() {
+async function load({ refreshPrivacy = false } = {}) {
   if (!current || (page !== 'picket' && !$('guild').value)) return;
   const ticket = ++generation;
   loading = true;
-  report = null;
+  setHeading();
+  let requestedKey = page === 'picket' ? 'picket' : `${page}:${query()}`;
+  if (displayedReportKey !== requestedKey) clearReport();
+  loadFailure = null;
   $('workspace').setAttribute('aria-busy', 'true');
   text('updated', t('loading'));
-  ['metric-hours', 'metric-users', 'metric-sessions', 'metric-live'].forEach((id) => text(id, '—'));
-  $('daily-chart').replaceChildren();
-  $('people-daily-chart').replaceChildren();
-  $('server-summary-body').replaceChildren();
-  $('channels-chart').replaceChildren();
-  $('people-body').replaceChildren();
-  $('segments-body').replaceChildren();
   notice('');
-  setHeading();
   for (const id of ['opt-out', 'save-privacy', 'erase']) $(id).disabled = true;
   $('opt-out').checked = false;
   privacyFailure = null;
   renderPrivacyStatus();
   try {
-    if (Date.now() - guildNamesUpdatedAt >= 120000) {
+    if (Date.now() - guildNamesUpdatedAt >= 300000 && Date.now() >= retryAt) {
       try {
         const names = await (await api('/api/guilds')).json();
         if (ticket !== generation) return;
         updateGuilds(names);
         setHeading();
+        requestedKey = page === 'picket' ? 'picket' : `${page}:${query()}`;
+        if (displayedReportKey !== requestedKey) clearReport();
       } catch (error) {
         if (error.status === 401) throw error;
         // Optional label refresh must not prevent loading activity or checking access.
       }
     }
     if (page === 'picket') {
-      instanceReport = null;
-      text('instance-total', '—');
       text('instance-updated', t('loading'));
-      $('instance-features').replaceChildren(); $('instance-adoption').replaceChildren();
       const data = await (await api('/api/instance')).json();
-      if (ticket === generation) renderInstance(data);
+      if (ticket === generation) {
+        displayedReportKey = requestedKey;
+        renderInstance(data);
+      }
       return;
     }
     const data = await (await api(`/api/activity?${query()}`)).json();
     if (ticket !== generation) return;
+    const selectedGuild = guilds.find(guild => guild.id === $('guild').value);
+    if (selectedGuild && data.accessLevel) {
+      selectedGuild.level = data.accessLevel;
+      setHeading();
+    }
+    displayedReportKey = `${page}:${query()}`;
     render(data);
     if (
       page !== 'admin' &&
@@ -940,14 +1023,19 @@ async function load() {
       guilds.find((g) => g.id === $('guild').value)?.isMember !== false
     ) {
       try {
-        const privacy = await (await api(`/api/privacy?guild=${$('guild').value}`)).json();
+        const guildId = $('guild').value;
+        const cached = privacyCache.get(guildId);
+        const privacy = !refreshPrivacy && cached && Date.now() - cached.at < 300000
+          ? cached.value : await (await api(`/api/privacy?guild=${guildId}`)).json();
         if (ticket === generation) {
+          if (privacy !== cached?.value) privacyCache.set(guildId, { at: Date.now(), value: privacy });
           $('opt-out').checked = privacy.optedOut;
-          for (const id of ['opt-out', 'save-privacy', 'erase']) $(id).disabled = false;
+          for (const id of ['opt-out', 'save-privacy', 'erase']) $(id).disabled = Date.now() < retryAt;
         }
       } catch (error) {
         if (error.status === 401) throw error;
         if (ticket === generation) {
+          privacyCache.delete($('guild').value);
           privacyFailure = error;
           renderPrivacyStatus();
           $('privacy-card').open = true;
@@ -975,12 +1063,15 @@ async function load() {
   } catch (error) {
     if (ticket === generation) {
       if (error.status === 401) {
-        current = null;
-        $('workspace').hidden = true;
-        $('welcome').hidden = false;
-        $('logout').hidden = true;
-        $('erase-all').hidden = true;
-      } else notice(errorText(error), true);
+        endSession();
+      } else {
+        if (error.status === 403) {
+          clearReport();
+          privacyCache.delete($('guild').value);
+        }
+        loadFailure = error;
+        renderLoadFailure();
+      }
     }
   } finally {
     if (ticket === generation) {
@@ -1057,7 +1148,7 @@ $('previous').addEventListener('click', () => {
   offset = Math.max(0, offset - 1000);
   load();
 });
-$('refresh').addEventListener('click', () => load());
+$('refresh').addEventListener('click', () => load({ refreshPrivacy: true }));
 $('instance-refresh').addEventListener('click', () => load());
 $('logout').addEventListener('click', async () => {
   try {
@@ -1086,10 +1177,12 @@ for (const format of ['csv', 'json'])
   });
 $('save-privacy').addEventListener('click', async () => {
   try {
+    const guildId = $('guild').value;
     await api('/api/privacy', {
       method: 'POST',
-      body: JSON.stringify({ guild: $('guild').value, optedOut: $('opt-out').checked, erase: false }),
+      body: JSON.stringify({ guild: guildId, optedOut: $('opt-out').checked, erase: false }),
     });
+    privacyCache.delete(guildId);
     await load();
     notice(t('saved'));
   } catch (error) {
@@ -1122,6 +1215,7 @@ $('erase-submit').addEventListener('click', async () => {
           : { guild: $('guild').value, optedOut: $('opt-out').checked, erase: true, confirm: 'DELETE' },
       ),
     });
+    privacyCache.clear();
     $('erase-dialog').close();
     await load();
     notice(t('erased'));
@@ -1181,5 +1275,17 @@ $('startup-retry').addEventListener('click', () => initialize());
 translate();
 await initialize();
 setInterval(() => {
-  if (!document.hidden && !loading && current) load();
+  if (!document.hidden && !loading && current && Date.now() >= retryAt) load();
 }, 60000);
+setInterval(() => {
+  if (!retryFailure) return;
+  updateRetryState();
+  if (loadFailure) renderLoadFailure();
+  if (privacyFailure) renderPrivacyStatus();
+  if (startupFailure) text('startup-error', errorText(startupFailure));
+  if (Date.now() >= retryAt && !document.hidden && !loading) {
+    retryFailure = null;
+    if (current) load();
+    else if (startupFailure) initialize();
+  }
+}, 1000);

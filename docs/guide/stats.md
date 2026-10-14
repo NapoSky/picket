@@ -32,6 +32,10 @@ Instance access belongs to members who have **accepted the invitation to the Tea
 including developer and read-only Team roles. A pending invitation is insufficient. Officer access in one server
 does not grant access to individual data in other servers.
 
+Successful Discord membership, role and Team checks are reused for up to five minutes during ordinary dashboard
+navigation. Your session and PICKET's local permissions are still checked on each request. Exports force fresh
+Discord checks; expired access results are never used to authorize new reads during an outage.
+
 ![PICKET sign-in page in English: complete banner, compact sign-in card and SSO Discord button.](/images/stats-login-en.png)
 
 *Sign in with your Discord account. Your permissions determine which dashboards you can access.*
@@ -259,8 +263,8 @@ is not reconstructed. There is no complete member directory or ranking that prov
 | No activity appears | Check activation, target roles, excluded channels, your tracking preference and the selected period. |
 | You cannot see other people's data | Select **Regiment activity** if you are an officer or administrator of that server; otherwise, the view stays personal. |
 | Figures are delayed or an interruption is shown | Check the last confirmation and try **Refresh** later. Unobserved time will not be automatically added. |
-| Your access has just changed | Refresh or sign in again; the server list and Team access may take up to two minutes to renew. |
-| Discord limits access checks | Short delays are retried automatically. For a longer delay, wait the number of seconds shown before using **Refresh**. Privacy actions remain disabled until preferences load; your recorded preference is unchanged. |
+| Your access has just changed | Discord membership, roles and Team access may take up to five minutes to renew during normal navigation. Exports recheck them immediately; local PICKET permission changes apply on the next request. |
+| Discord limits access checks | The countdown pauses affected requests and retries when the delay expires. Previous figures remain visible only for the same server and filters. Privacy actions stay disabled during the wait; your recorded preference is unchanged. |
 | `/stats link` offers no link on a self-hosted instance | Its operator must [configure the dashboard](../self-hosting/configuration#voice-statistics-and-dashboard). |
 | An export is too large | Narrow the period or choose a channel; no partial file is presented as complete. |
 

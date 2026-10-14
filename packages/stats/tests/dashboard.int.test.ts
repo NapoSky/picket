@@ -178,6 +178,43 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
       await queryAsAdmin(database, 'SELECT guild_id FROM guild_settings WHERE guild_id=$1', [OTHER]),
     ).toEqual([]);
   });
+  it('uses cached membership reads for navigation but forces fresh roles for exports', async () => {
+    const memberRoles = jest.spyOn(identity, 'memberRoles');
+    expect((await get(`/api/activity?guild=${A}&mode=overview`)).statusCode).toBe(200);
+    expect((await get(`/api/privacy?guild=${A}`)).statusCode).toBe(200);
+    expect(memberRoles.mock.calls).toEqual([
+      ['sensitive-oauth-token', A, false], ['sensitive-oauth-token', A, false],
+    ]);
+    expect((await get(`/api/export?guild=${A}&format=json`)).statusCode).toBe(200);
+    expect(memberRoles).toHaveBeenLastCalledWith('sensitive-oauth-token', A, true);
+  });
+  it('lists servers without checking every member role and resolves officer access on the selected report', async () => {
+    const memberRoles = jest.spyOn(identity, 'memberRoles');
+    const menu = await get('/api/guilds');
+    expect(menu.statusCode).toBe(200);
+    expect(menu.json().guilds.find((item: { id: string }) => item.id === A).level).toBe('unknown');
+    expect(memberRoles).not.toHaveBeenCalled();
+    roles = [R, O];
+    const response = await get(`/api/activity?guild=${A}&mode=overview`);
+    expect(response.json()).toMatchObject({ scope: 'overview', accessLevel: 'officer', users: [] });
+    expect(memberRoles).toHaveBeenCalledTimes(1);
+    expect(memberRoles).toHaveBeenCalledWith('sensitive-oauth-token', A, false);
+  });
+  it('versions scripts and styles together so cached assets from an old release are not reused', async () => {
+    const page = await app.inject('/');
+    const version = page.body.match(/src="\/app\.js\?v=([a-f0-9]{16})"/)?.[1];
+    expect(version).toBeDefined();
+    expect(page.body).toContain(`href="/style.css?v=${version}"`);
+    expect((await app.inject(`/app.js?v=${version}`)).body).toContain('discordUnavailable');
+    expect((await app.inject(`/style.css?v=${version}`)).statusCode).toBe(200);
+  });
+  it('reports unavailable Discord checks as a dependency failure, not a lost session or forbidden access', async () => {
+    jest.spyOn(identity, 'memberRoles').mockRejectedValueOnce(new DashboardDiscordError('membership', undefined, 'network'));
+    const response = await get(`/api/activity?guild=${A}&mode=overview`);
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({ error: 'discord_unavailable' });
+    expect((await get('/api/session')).statusCode).toBe(200);
+  });
   it('refreshes a newly enabled server before any voice activity has been recorded', async () => {
     await queryAsAdmin(database, 'TRUNCATE stats_users,stats_channels,stats_voice_events,stats_voice_segments,stats_voice_presence CASCADE');
     await queryAsAdmin(database, "UPDATE guild_settings SET timezone='Europe/Paris' WHERE guild_id=$1", [A]);

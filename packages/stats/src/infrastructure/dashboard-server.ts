@@ -125,7 +125,7 @@ export function createDashboardServer(options: DashboardOptions) {
     const guild =
       knownGuild ?? (await options.identity.guilds(current.token, fresh)).find((g) => g.id === guildId);
     if (!guild) throw Object.assign(new Error('forbidden'), { statusCode: 403 });
-    const roles = await options.identity.memberRoles(current.token, guildId);
+    const roles = await options.identity.memberRoles(current.token, guildId, fresh);
     const config = await permissions.loadExisting(GuildId.assert(guildId));
     if (!config) throw Object.assign(new Error('forbidden'), { statusCode: 403 });
     const level =
@@ -137,11 +137,13 @@ export function createDashboardServer(options: DashboardOptions) {
       }) ?? 'member';
     return { guild, level };
   }
-  async function scope(current: Session, query: Record<string, unknown>, fresh = false): Promise<StatsScope> {
+  async function scope(current: Session, query: Record<string, unknown>, fresh = false): Promise<StatsScope & {
+    accessLevel: 'member' | 'officer' | 'admin' | 'instance_admin';
+  }> {
     if (query.guild === 'all') {
       if (!(await options.identity.teamMember(current.user_id, fresh)))
         throw Object.assign(new Error('forbidden'), { statusCode: 403 });
-      return { kind: 'global', guildId: null, userId: current.user_id };
+      return { kind: 'global', guildId: null, userId: current.user_id, accessLevel: 'instance_admin' };
     }
     if (!validId(query.guild)) throw Object.assign(new Error('invalid_guild'), { statusCode: 400 });
     // Team members may inspect a guild even when they are not members of it.
@@ -158,6 +160,7 @@ export function createDashboardServer(options: DashboardOptions) {
             : 'self',
       guildId: query.guild,
       userId: current.user_id,
+      accessLevel: global ? 'instance_admin' : member!.level,
     };
   }
   function periodFor(query: Record<string, unknown>, snapshotAt?: Date | null) {
@@ -228,9 +231,14 @@ export function createDashboardServer(options: DashboardOptions) {
     if (error instanceof DashboardDiscordError && error.upstreamStatus === 429 && error.retryAfterSeconds)
       return reply.code(503).header('Retry-After', String(error.retryAfterSeconds))
         .send({ error: 'discord_rate_limited' });
-    return reply.code(status).send({ error: status === 503 ? 'unavailable' : failure.message });
+    return reply.code(status).send({ error: status === 503
+      ? error instanceof DashboardDiscordError ? 'discord_unavailable' : 'unavailable'
+      : failure.message });
   });
 
+  // Cloudflare may cache JS/CSS even when HTML is revalidated. A content version
+  // prevents a new page from using scripts and styles from the previous release.
+  let assetVersion: Promise<string> | undefined;
   for (const [path, file, type] of [
     ['/', 'index.html', 'text/html'],
     ['/app.js', 'app.js', 'text/javascript'],
@@ -240,10 +248,17 @@ export function createDashboardServer(options: DashboardOptions) {
   ] as const)
     app.get(path, async (_request, reply) => {
       const data = await readFile(join(staticDirectory, file));
-      const body = file === 'index.html' && options.development
-        ? data.toString().replace('<html ', '<html data-development="true" ').replace('<body>',
-          `<body><p role="status" class="notice">Development · Live PostgreSQL · Simulated Discord identity: ${options.development.role}</p>`)
-        : data;
+      let body: Buffer | string = data;
+      if (file === 'index.html') {
+        assetVersion ??= Promise.all(['app.js', 'style.css'].map(asset => readFile(join(staticDirectory, asset))))
+          .then(assets => createHash('sha256').update(assets[0]!).update(assets[1]!).digest('hex').slice(0, 16));
+        const version = await assetVersion;
+        body = data.toString().replace('src="/app.js"', `src="/app.js?v=${version}"`)
+          .replace('href="/style.css"', `href="/style.css?v=${version}"`);
+      }
+      if (file === 'index.html' && options.development)
+        body = body.toString().replace('<html ', '<html data-development="true" ').replace('<body>',
+          `<body><p role="status" class="notice">Development · Live PostgreSQL · Simulated Discord identity: ${options.development.role}</p>`);
       return reply
         .type(type)
         .header('Cache-Control', 'no-cache')
@@ -321,7 +336,9 @@ export function createDashboardServer(options: DashboardOptions) {
     for (const guildId of global ? deployed : memberships.map((g) => g.id).filter((id) => deployed.has(id))) {
       const settings = await options.store.settings(guildId);
       const membership = memberships.find((g) => g.id === guildId);
-      const level = global ? 'instance_admin' : (await access(current, guildId, false, membership)).level;
+      // The guild list establishes membership, not access to individual records.
+      // Resolve roles only for the server being read, rather than every menu item.
+      const level = global ? 'instance_admin' : 'unknown';
       if (global && !membership && active.has(guildId) && botNames === undefined) {
         try {
           botNames = new Map((await options.identity.guildNames()).map(guild => [guild.id, guild.name]));
@@ -365,14 +382,14 @@ export function createDashboardServer(options: DashboardOptions) {
       const report = await options.store.report({ ...selected, kind: 'guild' }, requested, {
         includeUsers: false,
       });
-      return { ...report, users: [], scope: 'overview' };
+      return { ...report, users: [], scope: 'overview', accessLevel: selected.accessLevel };
     }
     const offset = typeof query.offset === 'string' && /^\d+$/.test(query.offset) ? Number(query.offset) : 0;
     if (offset > 1_000_000) throw Object.assign(new Error('invalid_offset'), { statusCode: 400 });
     const report = selected.kind === 'global'
       ? await options.store.adminReport(selected, requested, { offset })
       : await options.store.report(selected, requested, { offset });
-    return { ...report, scope: selected.kind, offset };
+    return { ...report, scope: selected.kind, accessLevel: selected.accessLevel, offset };
   });
   app.get('/api/export', async (request, reply) => {
     const current = await session(request);
@@ -448,7 +465,7 @@ export function createDashboardServer(options: DashboardOptions) {
   });
   app.get('/api/admin/status', async (request) => {
     const current = await session(request);
-    if (!(await options.identity.teamMember(current.user_id, true)))
+    if (!(await options.identity.teamMember(current.user_id)))
       throw Object.assign(new Error('forbidden'), { statusCode: 403 });
     return { buffer: await options.buffer.status(), retentionDays: 60, refreshSeconds: 60 };
   });
