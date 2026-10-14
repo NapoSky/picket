@@ -1,5 +1,8 @@
 # Architecture
 
+Les vues interactives de la [stack auto-hébergée](../self-hosting/architecture) et de
+l'[export et du cycle des données](../self-hosting/data-lifecycle) complètent cette présentation du code.
+
 PICKET est un monolithe modulaire dans un workspace pnpm : une image, plusieurs réplicas identiques, PostgreSQL comme
 unique source de vérité.
 

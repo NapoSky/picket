@@ -1,0 +1,62 @@
+[
+  {
+    "input": "docs/diagrams/self-hosted.fr.json",
+    "output": "docs/public/diagrams/fr/self-hosted.html",
+    "generatorVersion": "3.1.0",
+    "type": "architecture",
+    "revision": "155e6e94b1786ea5dae79f23055e207e423a3012",
+    "specificationSha256": "6c61fead6b8ce9639821344af7bb00976cb5c9df82b014f733b6019eca105a82",
+    "artifactSha256": "a1d1796ea5be24852143d4e718deb6e9bc209f1869a8ecfe6084772ef4160105",
+    "gates": {
+      "validate": "pass",
+      "deliver": "pass",
+      "check": "pass",
+      "browser-check": "pass"
+    }
+  },
+  {
+    "input": "docs/diagrams/data-lifecycle.fr.json",
+    "output": "docs/public/diagrams/fr/data-lifecycle.html",
+    "generatorVersion": "3.1.0",
+    "type": "architecture",
+    "revision": "155e6e94b1786ea5dae79f23055e207e423a3012",
+    "specificationSha256": "22c5ebed7e4be5fbf5ab13447b450ff1b8cbd778ea7cd65384137fb7679b1690",
+    "artifactSha256": "0722b09e147fdb7c89b6116880e67c3abbf6d0386ba41f4c789ac7fc4b4f909e",
+    "gates": {
+      "validate": "pass",
+      "deliver": "pass",
+      "check": "pass",
+      "browser-check": "pass"
+    }
+  },
+  {
+    "input": "docs/diagrams/self-hosted.en.json",
+    "output": "docs/public/diagrams/en/self-hosted.html",
+    "generatorVersion": "3.1.0",
+    "type": "architecture",
+    "revision": "155e6e94b1786ea5dae79f23055e207e423a3012",
+    "specificationSha256": "368ccc028040ef9a4bca43e9e19d48b0d43db24e822a5cef10bd081cded3247b",
+    "artifactSha256": "2031625409bf118a1ea2f4c1ad6b0eb7e5bbfef1b6e32be20f3e97ee113e6a35",
+    "gates": {
+      "validate": "pass",
+      "deliver": "pass",
+      "check": "pass",
+      "browser-check": "pass"
+    }
+  },
+  {
+    "input": "docs/diagrams/data-lifecycle.en.json",
+    "output": "docs/public/diagrams/en/data-lifecycle.html",
+    "generatorVersion": "3.1.0",
+    "type": "architecture",
+    "revision": "155e6e94b1786ea5dae79f23055e207e423a3012",
+    "specificationSha256": "2ad109d138d1e81afe0e7e6e1a77d5ee21bff3fc13ff4ff6d4f10c81f21c4503",
+    "artifactSha256": "e662187d3c9d5b3452b13d1ce96adf2e8153a7c733ae40b9dc13e85930a9fbb1",
+    "gates": {
+      "validate": "pass",
+      "deliver": "pass",
+      "check": "pass",
+      "browser-check": "pass"
+    }
+  }
+]

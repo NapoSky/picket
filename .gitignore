@@ -16,6 +16,7 @@ deploy/.rollout.lock
 docs/.vitepress/cache/
 docs/.vitepress/.temp/
 draft/
+.archify/
 
 __pycache__/
 

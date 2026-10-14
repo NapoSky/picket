@@ -54,6 +54,8 @@ function sidebar(lang: Lang): DefaultTheme.Sidebar {
       items: [
         { text: s.sections.selfHosting[0], link: `${prefix}/self-hosting/install` },
         { text: s.sections.selfHosting[1], link: `${prefix}/self-hosting/configuration` },
+        { text: lang === 'fr' ? 'Stack applicative' : 'Application stack', link: `${prefix}/self-hosting/architecture` },
+        { text: lang === 'fr' ? 'Export et cycle des données' : 'Data export and lifecycle', link: `${prefix}/self-hosting/data-lifecycle` },
         { text: 'Monitoring', link: `${prefix}/self-hosting/monitoring` },
         { text: lang === 'fr' ? 'Reprise après sinistre' : 'Disaster recovery', link: `${prefix}/self-hosting/disaster_recovery` },
       ],

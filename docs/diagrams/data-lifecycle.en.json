@@ -1,0 +1,339 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PICKET · Data export and deletion",
+    "output": "docs/public/diagrams/en/data-lifecycle.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "git@github.com:NapoSky/picket.git",
+      "revision": "155e6e94b1786ea5dae79f23055e207e423a3012",
+      "link_mode": "local-only"
+    },
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "Export"
+        },
+        "backend": {
+          "label": "Automatic actions"
+        },
+        "database": {
+          "label": "Retained data"
+        },
+        "security": {
+          "label": "Deleted data"
+        },
+        "external": {
+          "label": "Your side"
+        }
+      }
+    },
+    "translations": {
+      "legend.architecture.frontend": "Export",
+      "legend.architecture.backend": "Automatic actions",
+      "legend.architecture.database": "Retained data",
+      "legend.architecture.security": "Deleted data",
+      "legend.architecture.external": "Your side",
+      "viewer.kind.frontend": "Export",
+      "viewer.kind.backend": "Automatic actions",
+      "viewer.kind.database": "Retained data",
+      "viewer.kind.security": "Deleted data",
+      "viewer.kind.external": "Your side",
+      "viewer.export.button": "Export diagram",
+      "viewer.export.menu": "Export diagram"
+    },
+    "animation": "none"
+  },
+  "components": [
+    {
+      "id": "retained",
+      "type": "database",
+      "label": "Guild data",
+      "sublabel": "Settings · activity · timers",
+      "pos": [
+        440,
+        60
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-data-export-repository.ts",
+          "line": 6,
+          "end_line": 32
+        },
+        {
+          "path": "packages/stats/src/domain/model.ts",
+          "line": 1,
+          "end_line": 48
+        }
+      ]
+    },
+    {
+      "id": "export",
+      "type": "frontend",
+      "label": "Your private export",
+      "sublabel": "JSON · administrator",
+      "pos": [
+        840,
+        60
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "packages/guild/src/application/export-guild-data.ts",
+          "line": 3,
+          "end_line": 38
+        },
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-data-export-repository.ts",
+          "line": 44,
+          "end_line": 113
+        },
+        {
+          "path": "packages/guild/src/presentation/discord/settings-panel.ts",
+          "line": 220,
+          "end_line": 225
+        }
+      ]
+    },
+    {
+      "id": "copy",
+      "type": "external",
+      "label": "Your downloaded copy",
+      "sublabel": "You control its retention",
+      "pos": [
+        840,
+        240
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "packages/guild/src/application/export-guild-data.ts",
+          "line": 16,
+          "end_line": 38
+        }
+      ]
+    },
+    {
+      "id": "automatic",
+      "type": "backend",
+      "label": "Automatic expiry",
+      "sublabel": "7 d · 30 d · 60 d by data",
+      "pos": [
+        40,
+        240
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "apps/bot/src/composition.ts",
+          "line": 331,
+          "end_line": 367
+        },
+        {
+          "path": "packages/stats/src/infrastructure/postgres-stats-store.ts",
+          "line": 551,
+          "end_line": 575
+        },
+        {
+          "path": "packages/timers/src/domain/schedule.ts",
+          "line": 75,
+          "end_line": 97
+        }
+      ]
+    },
+    {
+      "id": "choice",
+      "type": "external",
+      "label": "You request erasure",
+      "sublabel": "Voice or the whole guild",
+      "pos": [
+        440,
+        240
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "packages/guild/src/application/guild-lifecycle-use-cases.ts",
+          "line": 28,
+          "end_line": 97
+        },
+        {
+          "path": "packages/stats/src/presentation/discord/stats-panel.ts",
+          "line": 175,
+          "end_line": 187
+        }
+      ]
+    },
+    {
+      "id": "deleted",
+      "type": "security",
+      "label": "Data erased from PICKET",
+      "sublabel": "Relevant database and disk data",
+      "pos": [
+        40,
+        420
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "packages/persistence/migrations/003_guild_lifecycle.sql",
+          "line": 15,
+          "end_line": 37
+        },
+        {
+          "path": "packages/stats/src/infrastructure/postgres-stats-store.ts",
+          "line": 478,
+          "end_line": 503
+        },
+        {
+          "path": "apps/bot/src/composition.ts",
+          "line": 371,
+          "end_line": 382
+        }
+      ]
+    },
+    {
+      "id": "backups",
+      "type": "database",
+      "label": "Backup archives",
+      "sublabel": "Encrypted · no voice history",
+      "pos": [
+        840,
+        420
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "deploy/backup/run.sh",
+          "line": 61,
+          "end_line": 71
+        }
+      ]
+    },
+    {
+      "id": "backup-expiry",
+      "type": "security",
+      "label": "Archives deleted",
+      "sublabel": "At most 5 copies · 30 days",
+      "pos": [
+        840,
+        600
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "deploy/backup/retention.py",
+          "line": 1,
+          "end_line": 28
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "retained",
+      "to": "export",
+      "label": "Export",
+      "variant": "emphasis"
+    },
+    {
+      "from": "export",
+      "to": "copy",
+      "label": "Download",
+      "variant": "emphasis"
+    },
+    {
+      "from": "retained",
+      "to": "automatic",
+      "label": "Data ages",
+      "variant": "dashed"
+    },
+    {
+      "from": "automatic",
+      "to": "deleted",
+      "label": "Cleanup",
+      "variant": "dashed"
+    },
+    {
+      "from": "choice",
+      "to": "deleted",
+      "label": "Within your request",
+      "variant": "emphasis"
+    },
+    {
+      "from": "retained",
+      "to": "backups",
+      "label": "Filtered backup",
+      "variant": "default"
+    },
+    {
+      "from": "backups",
+      "to": "backup-expiry",
+      "label": "Rotation",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "What does your export contain?",
+      "items": [
+        "Your guild’s settings and permissions, timers, war-log subscriptions and currently retained journals.",
+        "For voice: tracking preferences and a per-member summary over 60 days, with pending events counted separately.",
+        "No todolist content, raw voice events, secrets or login sessions.",
+        "Private administrator export; PICKET keeps no copy. Limit: 10 MiB or Discord’s lower attachment limit."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "When does data expire?",
+      "items": [
+        "7 days: records preventing a command from being processed twice.",
+        "30 days: audit journals, timer action history and guild usage logs.",
+        "Rolling 60 days: voice activity and associated names/channels. Reports already exclude older data.",
+        "Expired or struck timers: 24 h by default, configurable. Empty inactive boards: 30 days.",
+        "Completed war-log deliveries are cleaned after one day; public game state has separate retention.",
+        "Jobs perform deletion. An outage can delay them without widening the voice report window."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Erasure and remaining copies",
+      "items": [
+        "Bot removal or guild deletion: erase after 30 days by default. A requested deletion needs explicit cancellation before the deadline.",
+        "Voice erasure removes SQL history and pending disk events; admin results become inaccessible until rebuilt.",
+        "Opting out stops future collection; erasing history is a separate action.",
+        "An older backup may retain other data until rotation. Raw voice history, sessions and admin snapshots are excluded from standard backups.",
+        "PICKET cannot delete your downloaded file or copies transferred elsewhere. Discord messages also have their own lifecycle."
+      ]
+    }
+  ]
+}

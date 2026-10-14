@@ -1,0 +1,438 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PICKET · How your instance works",
+    "output": "docs/public/diagrams/en/self-hosted.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "git@github.com:NapoSky/picket.git",
+      "revision": "155e6e94b1786ea5dae79f23055e207e423a3012",
+      "link_mode": "local-only"
+    },
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "Interfaces"
+        },
+        "backend": {
+          "label": "Services"
+        },
+        "database": {
+          "label": "Storage"
+        },
+        "security": {
+          "label": "Protected entry"
+        },
+        "external": {
+          "label": "External services"
+        }
+      }
+    },
+    "translations": {
+      "legend.architecture.frontend": "Interfaces",
+      "legend.architecture.backend": "Services",
+      "legend.architecture.database": "Storage",
+      "legend.architecture.security": "Protected entry",
+      "legend.architecture.external": "External services",
+      "viewer.kind.frontend": "Interfaces",
+      "viewer.kind.backend": "Services",
+      "viewer.kind.database": "Storage",
+      "viewer.kind.security": "Protected entry",
+      "viewer.kind.external": "External services",
+      "viewer.export.button": "Export diagram",
+      "viewer.export.menu": "Export diagram"
+    },
+    "animation": "none"
+  },
+  "components": [
+    {
+      "id": "discord",
+      "type": "external",
+      "label": "Discord",
+      "sublabel": "Commands and events",
+      "pos": [
+        40,
+        60
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "deploy/compose.yml",
+          "line": 114,
+          "end_line": 149
+        },
+        {
+          "path": "apps/bot/src/main.ts",
+          "line": 56,
+          "end_line": 113
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "type": "security",
+      "label": "HTTPS entry",
+      "sublabel": "Traefik · :443",
+      "pos": [
+        440,
+        60
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "deploy/compose.yml",
+          "line": 43,
+          "end_line": 95
+        },
+        {
+          "path": "deploy/compose.yml",
+          "line": 141,
+          "end_line": 149
+        }
+      ]
+    },
+    {
+      "id": "visitors",
+      "type": "frontend",
+      "label": "Your browser",
+      "sublabel": "Stats and monitoring",
+      "pos": [
+        840,
+        60
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "deploy/compose.yml",
+          "line": 177,
+          "end_line": 184
+        },
+        {
+          "path": "deploy/compose.yml",
+          "line": 340,
+          "end_line": 392
+        }
+      ]
+    },
+    {
+      "id": "bot",
+      "type": "backend",
+      "label": "PICKET bot",
+      "sublabel": "Commands · tracking · jobs",
+      "pos": [
+        40,
+        350
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "deploy/compose.yml",
+          "line": 114,
+          "end_line": 149
+        },
+        {
+          "path": "apps/bot/src/main.ts",
+          "line": 63,
+          "end_line": 113
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "type": "database",
+      "label": "Shared data",
+      "sublabel": "PostgreSQL",
+      "pos": [
+        440,
+        350
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "deploy/compose.yml",
+          "line": 96,
+          "end_line": 112
+        },
+        {
+          "path": "packages/persistence/src/database.ts",
+          "line": 40,
+          "end_line": 86
+        }
+      ]
+    },
+    {
+      "id": "dashboard",
+      "type": "frontend",
+      "label": "Stats dashboard",
+      "sublabel": "Optional · Discord login",
+      "pos": [
+        840,
+        350
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "deploy/compose.yml",
+          "line": 151,
+          "end_line": 184
+        },
+        {
+          "path": "apps/stats/src/runtime.ts",
+          "line": 20,
+          "end_line": 65
+        }
+      ]
+    },
+    {
+      "id": "foxhole",
+      "type": "external",
+      "label": "The Foxhole game",
+      "sublabel": "Public API",
+      "pos": [
+        40,
+        640
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "packages/warlog/src/infrastructure/foxhole-api.ts",
+          "line": 1,
+          "end_line": 60
+        },
+        {
+          "path": "apps/bot/src/composition.ts",
+          "line": 244,
+          "end_line": 263
+        }
+      ]
+    },
+    {
+      "id": "recovery",
+      "type": "database",
+      "label": "Crash recovery",
+      "sublabel": "Shared voice journal",
+      "pos": [
+        840,
+        640
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "deploy/compose.yml",
+          "line": 128,
+          "end_line": 129
+        },
+        {
+          "path": "deploy/compose.yml",
+          "line": 170,
+          "end_line": 171
+        },
+        {
+          "path": "packages/stats/src/infrastructure/disk-voice-buffer.ts",
+          "line": 233,
+          "end_line": 304
+        }
+      ]
+    },
+    {
+      "id": "monitoring",
+      "type": "backend",
+      "label": "Monitoring",
+      "sublabel": "Optional · health and alerts",
+      "pos": [
+        440,
+        930
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "deploy/compose.yml",
+          "line": 340,
+          "end_line": 493
+        },
+        {
+          "path": "deploy/monitoring/prometheus.yml",
+          "line": 1,
+          "end_line": 40
+        },
+        {
+          "path": "deploy/monitoring/config.alloy",
+          "line": 1,
+          "end_line": 46
+        }
+      ]
+    },
+    {
+      "id": "backup",
+      "type": "backend",
+      "label": "Backups",
+      "sublabel": "Encrypted archives · 30 days",
+      "pos": [
+        440,
+        640
+      ],
+      "size": [
+        230,
+        86
+      ],
+      "sources": [
+        {
+          "path": "deploy/compose.yml",
+          "line": 186,
+          "end_line": 225
+        },
+        {
+          "path": "deploy/backup/run.sh",
+          "line": 54,
+          "end_line": 86
+        },
+        {
+          "path": "deploy/backup/retention.py",
+          "line": 1,
+          "end_line": 28
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "discord",
+      "to": "entry",
+      "label": "Commands",
+      "variant": "emphasis"
+    },
+    {
+      "from": "visitors",
+      "to": "entry",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "from": "entry",
+      "to": "bot",
+      "label": "To the bot",
+      "variant": "emphasis"
+    },
+    {
+      "from": "entry",
+      "to": "dashboard",
+      "label": "To Stats",
+      "variant": "emphasis"
+    },
+    {
+      "from": "bot",
+      "to": "data",
+      "label": "Read / write",
+      "variant": "default"
+    },
+    {
+      "from": "dashboard",
+      "to": "data",
+      "label": "Reports",
+      "variant": "default"
+    },
+    {
+      "from": "bot",
+      "to": "discord",
+      "label": "Events / replies",
+      "variant": "dashed"
+    },
+    {
+      "from": "foxhole",
+      "to": "bot",
+      "label": "Game state",
+      "variant": "dashed"
+    },
+    {
+      "from": "bot",
+      "to": "recovery",
+      "label": "Voice journal",
+      "variant": "default"
+    },
+    {
+      "from": "dashboard",
+      "to": "recovery",
+      "label": "Erasure",
+      "variant": "default"
+    },
+    {
+      "from": "backup",
+      "to": "data",
+      "label": "Database copy",
+      "variant": "dashed"
+    },
+    {
+      "from": "monitoring",
+      "to": "bot",
+      "label": "Health and logs",
+      "variant": "dashed"
+    },
+    {
+      "from": "monitoring",
+      "to": "dashboard",
+      "label": "Health and logs",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Read the main path",
+      "items": [
+        "Discord sends a command → Traefik routes it to the bot → the bot reads or changes guild data.",
+        "The browser uses the same HTTPS entry to show the dashboard after signing in with Discord.",
+        "The bot also receives Discord events and collects public Foxhole state for the war log."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "What supports operations",
+      "items": [
+        "PostgreSQL holds shared state. Each guild’s data stays isolated; replicas coordinate their work in the database.",
+        "The voice journal recovers events after a crash. Bot and dashboard share it to apply erasure.",
+        "Backups are encrypted: at most five archives, none older than 30 days. Voice history is excluded."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Options and stack details",
+      "items": [
+        "The dashboard is enabled with DASHBOARD_HOST. Monitoring is enabled with the monitoring profile.",
+        "Monitoring: Grafana displays Prometheus metrics and Loki logs; Alloy and three exporters collect them.",
+        "Traefik also serves Grafana. Certificates use Cloudflare DNS-01; secrets stay in dedicated files.",
+        "Migration, deployment, purge and restore are operational tools. Their details are below the diagram.",
+        "Boxes group responsibilities. The full list of containers, ports, networks and volumes is on the page."
+      ]
+    }
+  ]
+}
