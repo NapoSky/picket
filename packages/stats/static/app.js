@@ -29,6 +29,8 @@ const translations = {
     logout: 'Sign out',
     voiceOnly: 'VOICE ACTIVITY · 60 DAYS',
     signIn: 'Sign in',
+    startupLoading: 'Loading…',
+    retry: 'Retry',
     welcomeTitle: 'Sign in to PICKET',
     welcomeText:
       'Access your voice activity and your regiment’s dashboards.',
@@ -201,6 +203,8 @@ const translations = {
     logout: 'Déconnexion',
     voiceOnly: 'ACTIVITÉ VOCALE · 60 JOURS',
     signIn: 'Connexion',
+    startupLoading: 'Chargement en cours…',
+    retry: 'Réessayer',
     welcomeTitle: 'Connexion à PICKET',
     welcomeText:
       'Retrouvez votre activité vocale et les tableaux de bord de votre régiment.',
@@ -373,6 +377,7 @@ let current = null,
   eraseAll = false;
 let instanceReport = null;
 let privacyFailure = null;
+let startupFailure = null;
 let overviewPage = 'overview';
 const t = (key) => translations[language][key] ?? translations.en[key] ?? key;
 const number = (value, decimals = 0) =>
@@ -445,6 +450,7 @@ function translate() {
   $('theme').value = theme;
   document.documentElement.dataset.theme = theme;
   document.title = `PICKET · ${current ? t(page) : t('signIn')}`;
+  if (startupFailure) text('startup-error', errorText(startupFailure));
   if (current) {
     renderGuildOptions();
     setHeading();
@@ -1124,32 +1130,56 @@ $('erase-submit').addEventListener('click', async () => {
     notice(errorText(error), true);
   }
 });
-translate();
-try {
-  current = await (await api('/api/session')).json();
-  const data = await (await api('/api/guilds')).json();
-  updateGuilds(data);
-  restoreGuildSelection();
-  $('welcome').hidden = true;
+async function initialize() {
+  startupFailure = null;
+  $('main').setAttribute('aria-busy', 'true');
   $('workspace').hidden = false;
-  $('logout').hidden = false;
-  $('erase-all').hidden = false;
-  $('admin-nav').hidden = !current.administrator;
-  setHeading();
-  if (!guilds.length) {
-    page = 'picket';
-    overviewPage = 'picket';
-  }
-  await load();
-} catch (error) {
-  if (error.status !== 401) {
-    $('welcome').hidden = false;
-    const message = document.createElement('p');
-    message.className = 'notice error';
-    message.textContent = errorText(error);
-    document.querySelector('.welcome-copy').append(message);
+  $('workspace').setAttribute('inert', '');
+  $('workspace').setAttribute('aria-hidden', 'true');
+  $('startup').hidden = false;
+  $('startup-message').hidden = false;
+  $('startup-error').hidden = true;
+  $('startup-retry').hidden = true;
+  try {
+    const activeSession = await (await api('/api/session')).json();
+    const data = await (await api('/api/guilds')).json();
+    current = activeSession;
+    updateGuilds(data);
+    restoreGuildSelection();
+    $('welcome').hidden = true;
+    $('workspace').hidden = false;
+    $('logout').hidden = false;
+    $('erase-all').hidden = false;
+    $('admin-nav').hidden = !current.administrator;
+    setHeading();
+    if (!guilds.length) {
+      page = 'picket';
+      overviewPage = 'picket';
+    }
+    await load();
+    $('startup').hidden = true;
+    $('workspace').removeAttribute('inert');
+    $('workspace').removeAttribute('aria-hidden');
+  } catch (error) {
+    current = null;
+    if (error.status === 401) {
+      $('startup').hidden = true;
+      $('workspace').hidden = true;
+      $('welcome').hidden = false;
+    } else {
+      startupFailure = error;
+      $('startup-message').hidden = true;
+      text('startup-error', errorText(error));
+      $('startup-error').hidden = false;
+      $('startup-retry').hidden = false;
+    }
+  } finally {
+    $('main').removeAttribute('aria-busy');
   }
 }
+$('startup-retry').addEventListener('click', () => initialize());
+translate();
+await initialize();
 setInterval(() => {
   if (!document.hidden && !loading && current) load();
 }, 60000);

@@ -244,11 +244,52 @@ select {
 .danger:hover {
   background: color-mix(in srgb, var(--danger) 8%, transparent);
 }
+main {
+  position: relative;
+}
 main:has(> .welcome:not([hidden])) {
   min-height: calc(100svh - 84px);
   display: grid;
   place-items: center;
   padding: 40px 20px;
+}
+.startup {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  padding: 1px 20px 24px;
+  background: color-mix(in srgb, var(--bg) 25%, transparent);
+  backdrop-filter: blur(2px);
+}
+.startup-content {
+  position: sticky;
+  top: max(24px, calc(50svh - 84px));
+  width: fit-content;
+  max-width: min(100%, 380px);
+  margin: max(120px, calc(50svh - 150px)) auto 0;
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.workspace[inert] {
+  opacity: 0.55;
+  user-select: none;
+}
+.workspace[inert] .chart::after,
+.workspace[inert] .channel-bars::after {
+  content: '';
+  display: block;
+  height: 120px;
+  margin-top: 24px;
+  border-radius: 8px;
+  background: repeating-linear-gradient(to top, var(--border) 0 12px, transparent 12px 28px);
+  opacity: 0.5;
 }
 .welcome {
   width: min(100%, 460px);
