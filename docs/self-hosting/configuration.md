@@ -16,6 +16,7 @@ suffixing the name with `_FILE` (Docker secrets); giving both is an error.
 | `ROLES` | `http-ingress` | Comma-separated roles of this process: `http-ingress` (receives interactions), `shard-runner` (Gateway connection) and `job-runner` (timer alerts, board updates and purges). Every replica can run all of them: shards and jobs are held by one replica at a time, through a lease. |
 | `SHARD_COUNT` | `1` | Total number of Gateway shards (1 to 256). One shard is enough up to roughly 2,500 servers. |
 | `GUILD_RETENTION_DAYS` | `30` | Days between a server becoming inactive and the erasure of its data (1 to 365). |
+| `SUPPORT_GUILD_EVENTS_CHANNEL_ID` | empty | Private support channel for bot arrivals, departures and returns, containing only the server name and the purge deadline on departure. Empty disables notifications. The bot needs access to the channel and permission to send messages. Sent messages remain in the channel. |
 | `LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug` or `trace`. |
 | `PICKET_VERSION` | `unknown` | Identifier included in bot and CLI logs. Compose supplies the `PICKET_IMAGE` reference; manual builds can also set the `PICKET_VERSION` build argument. |
 | `NODE_ENV` | `production` | `development`, `test` or `production`. |

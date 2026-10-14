@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
-import { ApplicationId, DomainError, Secret } from '@picket/kernel';
+import { ApplicationId, ChannelId, DomainError, Secret } from '@picket/kernel';
 import { latestCronSchedule } from './schedule';
 export { latestCronSchedule } from './schedule';
 
@@ -48,6 +48,7 @@ const baseEnvSchema = z.object({
   DATABASE_URL: postgresUrl,
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
   GUILD_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+  SUPPORT_GUILD_EVENTS_CHANNEL_ID: z.preprocess(value => value === '' ? undefined : value, z.string().regex(/^\d{15,25}$/).refine(value => value === value.trim()).optional()),
   SHARD_COUNT: z.coerce.number().int().min(1).max(256).default(1),
   WAR_API_URL: z.url({ protocol: /^https$/ }).default('https://war-service-live.foxholeservices.com'),
   WAR_LOG_POLL_INTERVAL: z.coerce.number().int().min(5).max(300).default(15),
@@ -107,6 +108,7 @@ export interface AppConfig {
   readonly database: { readonly url: Secret; readonly poolMax: number };
   /** Delay between guild deactivation and permanent deletion of its data. */
   readonly guildRetentionDays: number;
+  readonly supportGuildEventsChannelId: ChannelId | null;
   /** Total Gateway shard count; each shard has its own lease and a single active connection. */
   readonly shardCount: number;
   readonly warlog: { readonly apiUrl: string; readonly pollIntervalMs: number };
@@ -172,6 +174,7 @@ export function loadConfig(env: Env, options: LoadConfigOptions = {}): AppConfig
     },
     database: { url: new Secret(data.DATABASE_URL), poolMax: data.DATABASE_POOL_MAX },
     guildRetentionDays: data.GUILD_RETENTION_DAYS,
+    supportGuildEventsChannelId: data.SUPPORT_GUILD_EVENTS_CHANNEL_ID ? ChannelId.assert(data.SUPPORT_GUILD_EVENTS_CHANNEL_ID) : null,
     shardCount: data.SHARD_COUNT,
     warlog: { apiUrl: data.WAR_API_URL, pollIntervalMs: data.WAR_LOG_POLL_INTERVAL * 1000 },
     stats:{bufferPath:data.STATS_BUFFER_PATH,bufferMaxBytes:data.STATS_BUFFER_MAX_MIB*1024*1024},

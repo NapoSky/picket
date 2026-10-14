@@ -20,7 +20,8 @@ export function normalizeDispatch(
     case GatewayDispatchEvents.GuildCreate: {
       const guildId = GuildId.parse(payload.d.id);
       if (!guildId.ok) return null;
-      if (!Array.isArray(payload.d.voice_states)) return { type: 'guild_available', guildId: guildId.value };
+      const name = typeof payload.d.name === 'string' ? { name: payload.d.name } : {};
+      if (!Array.isArray(payload.d.voice_states)) return { type: 'guild_available', guildId: guildId.value, ...name };
       const voiced=new Set(payload.d.voice_states.map(s=>s.user_id));
       const members = new Map((payload.d.members ?? []).filter(m=>voiced.has(m.user.id)).map(m=>[m.user.id,m]));
       const people = payload.d.voice_states.flatMap(state=>{
@@ -28,7 +29,7 @@ export function normalizeDispatch(
         const member = state.member ?? members.get(state.user_id);
         return [{userId:state.user_id,channelId:state.channel_id,roles:member?.roles ?? [],rolesKnown:member!==undefined,bot:member?.user?.bot ?? false,name:member?.nick ?? member?.user?.global_name ?? member?.user?.username ?? state.user_id}];
       });
-      return {type:'guild_available',guildId:guildId.value,voiceSnapshot:{name:payload.d.name,afkChannelId:payload.d.afk_channel_id,people,channels:Object.fromEntries((payload.d.channels ?? []).map(c=>[c.id,c.name]))}};
+      return {type:'guild_available',guildId:guildId.value,...name,voiceSnapshot:{name:payload.d.name,afkChannelId:payload.d.afk_channel_id,people,channels:Object.fromEntries((payload.d.channels ?? []).map(c=>[c.id,c.name]))}};
     }
     case GatewayDispatchEvents.GuildUpdate: {
       const guildId=GuildId.parse(payload.d.id);

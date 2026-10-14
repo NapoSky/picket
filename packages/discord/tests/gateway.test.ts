@@ -31,6 +31,7 @@ describe('normalizeDispatch', () => {
     expect(normalizeDispatch(dispatch('GUILD_CREATE', { id: '700000000000000001', name: 'x' }), 0, 1)).toEqual({
       type: 'guild_available',
       guildId: '700000000000000001',
+      name: 'x',
     });
   });
 

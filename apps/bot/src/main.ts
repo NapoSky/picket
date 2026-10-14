@@ -70,6 +70,7 @@ async function run(): Promise<void> {
     statsAdminRefreshCron: config.statsAdminRefreshCron,
     clock: systemClock,
     guildRetentionDays: config.guildRetentionDays,
+    supportGuildEventsChannelId: config.supportGuildEventsChannelId,
     i18n: createI18n(),
     discord,
     metrics,

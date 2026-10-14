@@ -30,6 +30,9 @@ import {
   HandleGuildAvailable,
   HandleGuildRemoved,
   HandleRoleDeleted,
+  ObserveSupportGuildEvents,
+  PostgresSupportGuildEventsRepository,
+  PublishSupportGuildEvents,
   PICKET_ROOT,
   PostgresGuildLifecycleRepository,
   PostgresGuildDataExportRepository,
@@ -53,7 +56,7 @@ import {
   statusCommand,
 } from '@picket/guild';
 import type { I18n } from '@picket/i18n';
-import { noopLogger, type Clock, type Logger, type Secret, type OperationalMetrics } from '@picket/kernel';
+import { noopLogger, type ChannelId, type Clock, type Logger, type Secret, type OperationalMetrics } from '@picket/kernel';
 import { createAppState, purgeExpiredJournals, withTenant, type Db } from '@picket/persistence';
 import {
   CreateTodolist,
@@ -114,6 +117,7 @@ export interface CompositionOptions {
   readonly statsAdminRefreshCron?: string;
   readonly clock: Clock;
   readonly guildRetentionDays: number;
+  readonly supportGuildEventsChannelId?: ChannelId | null;
   readonly i18n: I18n;
   readonly discord?: DiscordPorts;
   readonly flushGuildLogs?: () => Promise<void>;
@@ -298,6 +302,10 @@ export function buildJobRunner(
   const sweep = new TimerSweep({ store: timers.store, maintenance: timers.maintenance, features: timers.features, clock: options.clock, logger });
   const retention = buildNightlyRetentionJob(db, logger, options);
   const audit = buildAuditPublisher(db, logger, options);
+  const support = options.supportGuildEventsChannelId
+    ? new PublishSupportGuildEvents(new PostgresSupportGuildEventsRepository(db), options.supportGuildEventsChannelId,
+      (options.discord ?? offlineDiscordPorts).messaging, options.clock, logger)
+    : null;
   return new LeaderElector({
     store: new PostgresLeaseStore(db),
     name: 'job-runner:timers',
@@ -312,13 +320,14 @@ export function buildJobRunner(
       const stopTimers = startLeasedLoop({ tick: () => sweep.tick(), intervalMs: SWEEP_INTERVAL_MS, logger, component: 'timers', ...(options.metrics ? { metrics: options.metrics } : {}) });
       const stopRetention = startLeasedLoop({ tick: () => retention.execute(), intervalMs: RETENTION_CHECK_INTERVAL_MS, logger, component: 'retention', ...(options.metrics ? { metrics: options.metrics } : {}) });
       const stopAudit = startLeasedLoop({ tick: () => audit.tick(), intervalMs: AUDIT_INTERVAL_MS, logger, component: 'audit', ...(options.metrics ? { metrics: options.metrics } : {}) });
+      const stopSupport = support ? startLeasedLoop({ tick: () => support.tick(), intervalMs: 5_000, logger }) : async () => undefined;
       const stats=options.stats?.store ?? new PostgresStatsStore(db,()=>options.clock.now());
       const stopStats=startLeasedLoop({tick:async()=>{for(const guildId of await stats.allGuildIds()) await stats.maintenance(guildId);},intervalMs:120_000,logger, component: 'stats-maintenance', ...(options.metrics ? { metrics: options.metrics } : {}) });
       const refresh = buildStatsRefreshJob(stats, options.clock, logger, options.statsAdminRefreshCron, options.timeZone, options.metrics);
       const stopRefresh = options.stats?.dashboardUrl
         ? startLeasedLoop({ tick: () => refresh.execute(), intervalMs:60_000, logger, component: 'stats-refresh', ...(options.metrics ? { metrics: options.metrics } : {}) })
         : async () => undefined;
-      return async () => { await Promise.all([stopTimers(), stopRetention(), stopAudit(),stopStats(),stopRefresh()]); };
+      return async () => { await Promise.all([stopTimers(), stopRetention(), stopAudit(), stopSupport(),stopStats(),stopRefresh()]); };
     },
   });
 }
@@ -386,6 +395,8 @@ export function buildPurgeJob(db: Db, logger: Logger, options: CompositionOption
 export function buildGatewayHandler(db: Db, logger: Logger, options: CompositionOptions): GatewayEventHandler {
   const lifecycle = new PostgresGuildLifecycleRepository(db);
   const removed = new HandleGuildRemoved(lifecycle, options.clock);
+  const support = new ObserveSupportGuildEvents(new PostgresSupportGuildEventsRepository(db),
+    options.supportGuildEventsChannelId ?? null, options.guildRetentionDays);
   const guildHandler = createGuildEventHandler(
     {
       available: new HandleGuildAvailable(lifecycle),
@@ -399,6 +410,7 @@ export function buildGatewayHandler(db: Db, logger: Logger, options: Composition
   return { handle: async (event,delivery) => {
     if (event.type === 'channel_unusable') { await store.channelChanged(event.guildId, event.channelId); await options.stats?.collector?.handle(event,delivery); return; }
     await guildHandler.handle(event);
+    await support.handle(event);
     await options.stats?.collector?.handle(event,delivery);
   },connectionChanged:(shardId,connected,lease)=>options.stats?.collector?.connectionChanged(shardId,connected,lease) ?? Promise.resolve() };
 }

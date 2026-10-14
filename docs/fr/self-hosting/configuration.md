@@ -16,6 +16,7 @@ en suffixant le nom par `_FILE` (Docker secrets) ; fournir les deux est une erre
 | `ROLES` | `http-ingress` | Rôles du processus, séparés par des virgules : `http-ingress` (reçoit les interactions), `shard-runner` (connexion Gateway) et `job-runner` (alertes de timers, mise à jour des tableaux et purges). Chaque réplica peut tous les exécuter : les shards et les tâches sont tenus par une seule réplique à la fois, grâce à un bail. |
 | `SHARD_COUNT` | `1` | Nombre total de shards Gateway (1 à 256). Un shard suffit jusqu'à environ 2 500 serveurs. |
 | `GUILD_RETENTION_DAYS` | `30` | Jours entre le moment où un serveur devient inactif et l'effacement de ses données (1 à 365). |
+| `SUPPORT_GUILD_EVENTS_CHANNEL_ID` | vide | Salon privé recevant les arrivées, retraits et retours du bot, avec uniquement le nom du serveur et l'échéance de purge au retrait. Vide : notifications désactivées. Le bot doit pouvoir voir le salon et y envoyer des messages. Les messages envoyés restent dans le salon. |
 | `LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug` ou `trace`. |
 | `PICKET_VERSION` | `unknown` | Identifiant ajouté aux journaux du bot et du CLI. Compose fournit la référence de `PICKET_IMAGE` ; un build manuel peut aussi définir l’argument `PICKET_VERSION`. |
 | `NODE_ENV` | `production` | `development`, `test` ou `production`. |

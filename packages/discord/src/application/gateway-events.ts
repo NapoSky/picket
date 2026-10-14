@@ -25,7 +25,7 @@ export type GatewayEvent =
       /** All guilds on the shard, including temporarily unavailable guilds. */
       readonly guildIds: readonly GuildId[];
     }
-  | { readonly type: 'guild_available'; readonly guildId: GuildId; readonly voiceSnapshot?: GatewayVoiceSnapshot }
+  | { readonly type: 'guild_available'; readonly guildId: GuildId; readonly name?: string; readonly voiceSnapshot?: GatewayVoiceSnapshot }
   | { readonly type:'guild_voice_unavailable'; readonly guildId:GuildId }
   | { readonly type: 'guild_voice_metadata'; readonly guildId: GuildId; readonly name: string; readonly afkChannelId: string | null }
   | { readonly type: 'voice_state'; readonly guildId: GuildId; readonly person: GatewayVoicePerson }

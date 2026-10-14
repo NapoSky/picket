@@ -19,6 +19,7 @@ x-picket-environment: &picket-environment
   DISCORD_BOT_TOKEN_FILE: /run/secrets/discord_bot_token
   DATABASE_URL_FILE: /run/secrets/database_url
   GUILD_RETENTION_DAYS: ${GUILD_RETENTION_DAYS:-30}
+  SUPPORT_GUILD_EVENTS_CHANNEL_ID: ${SUPPORT_GUILD_EVENTS_CHANNEL_ID:-}
   SHARD_COUNT: ${SHARD_COUNT:-1}
   STATS_BUFFER_PATH: /app/data/voice-buffer
   STATS_BUFFER_MAX_MIB: ${STATS_BUFFER_MAX_MIB:-128}

@@ -144,6 +144,8 @@ export interface TimerScheduleTable {
 }
 
 export interface Schema {
+  guild_support_presence: GuildSupportPresenceTable;
+  support_guild_deliveries: SupportGuildDeliveriesTable;
   stats_settings:StatsSettingsTable;
   stats_privacy:StatsPrivacyTable;
   stats_users:StatsUsersTable;
@@ -173,6 +175,21 @@ export interface Schema {
   timer_events: TimerEventsTable;
   timer_alerts: TimerAlertsTable;
   timer_schedule: TimerScheduleTable;
+}
+
+export interface GuildSupportPresenceTable {
+  guild_id: string;
+  name: string;
+  present: boolean;
+}
+
+export interface SupportGuildDeliveriesTable {
+  id: Generated<string>;
+  channel_id: string;
+  content: string;
+  next_attempt_at: Timestamp;
+  attempts: Generated<number>;
+  last_error: Nullable<string>;
 }
 
 export interface StatsSettingsTable {guild_id:string;excluded_channels:ColumnType<string[],string|undefined,string>;afk_channel_id:Nullable<string>;guild_name:Generated<string>;changed_at:Timestamp;enabled_at:Timestamp|null;observed_through:Nullable<Date>;interrupted_at:Nullable<Date>}

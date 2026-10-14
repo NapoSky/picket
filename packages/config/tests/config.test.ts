@@ -8,6 +8,18 @@ const valid: Env = {
 };
 
 describe('loadConfig', () => {
+  it('disables support notifications when the channel is absent or empty', () => {
+    expect(loadConfig(valid).supportGuildEventsChannelId).toBeNull();
+    expect(loadConfig({ ...valid, SUPPORT_GUILD_EVENTS_CHANNEL_ID: '' }).supportGuildEventsChannelId).toBeNull();
+  });
+
+  it('accepts a support channel ID and rejects malformed values without echoing them', () => {
+    expect(loadConfig({ ...valid, SUPPORT_GUILD_EVENTS_CHANNEL_ID: '600000000000000001' }).supportGuildEventsChannelId)
+      .toBe('600000000000000001');
+    for (const value of ['123', 'name', 'https://discord.com/channels/a/b', '600000000000000001\n']) {
+      expect(() => loadConfig({ ...valid, SUPPORT_GUILD_EVENTS_CHANNEL_ID: value })).toThrow(ConfigError);
+    }
+  });
   it('allows the bot to publish a dashboard link without mounting OAuth credentials', () => {
     const config = loadConfig({ ...valid, DASHBOARD_URL: 'https://stats.example.org' });
     expect(config.dashboard.origin).toBe('https://stats.example.org');
