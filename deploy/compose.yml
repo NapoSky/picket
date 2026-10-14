@@ -76,6 +76,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - edge
+      # Prometheus collects the metrics endpoint over the internal network.
+      - internal
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 10s
