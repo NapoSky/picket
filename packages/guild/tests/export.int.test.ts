@@ -21,6 +21,8 @@ describe('guild data export (PostgreSQL integration)', () => {
       await queryAsAdmin(database, `INSERT INTO guild_settings (guild_id, features, emoji_overrides)
         VALUES ($1, '{"timers":true,"todolists":true,"warlog":false,"future":true}', '{"custom":"🏗️"}')`, [guildId]);
       await queryAsAdmin(database, 'INSERT INTO guild_registry (guild_id) VALUES ($1)', [guildId]);
+      await queryAsAdmin(database, 'INSERT INTO guild_support_presence (guild_id, name, present) VALUES ($1, $2, true)',
+        [guildId, guildId === GUILD_A ? 'Own regiment' : 'Other regiment']);
       await queryAsAdmin(database, 'INSERT INTO guild_application_logs (id, guild_id, record) VALUES ($1, $2, $3)', [boardId, guildId, JSON.stringify({ guild_id: guildId, user_id: ACTOR, msg: 'todolist created' })]);
       await queryAsAdmin(database, "INSERT INTO guild_permission_roles (guild_id, level, role_id) VALUES ($1, 'member', $1)", [guildId]);
       await queryAsAdmin(database, "INSERT INTO guild_audit_log (guild_id, actor_id, action, before, after) VALUES ($1, $2, 'settings.language', NULL, '{\"locale\":\"fr\"}')", [guildId, ACTOR]);
@@ -35,6 +37,7 @@ describe('guild data export (PostgreSQL integration)', () => {
     }
     await queryAsAdmin(database, "INSERT INTO app_state (key, value) VALUES ('secret', 'SECRET-DO-NOT-EXPORT')");
     await queryAsAdmin(database, "INSERT INTO gateway_sessions (shard_id, session, lease_token) VALUES (0, '{\"secret\":\"SECRET-DO-NOT-EXPORT\"}', 1)");
+    await queryAsAdmin(database, "INSERT INTO support_guild_deliveries (channel_id, content) VALUES ('600000000000000001', 'SECRET-DO-NOT-EXPORT')");
   });
 
   afterAll(async () => { await database.drop(); });
@@ -47,6 +50,7 @@ describe('guild data export (PostgreSQL integration)', () => {
     if (result.kind !== 'exported') throw new Error('Expected complete export');
     const json = new TextDecoder().decode(result.bytes);
     expect(json).not.toContain(GUILD_B);
+    expect(json).not.toContain('Other regiment');
     expect(json).not.toContain('SECRET-DO-NOT-EXPORT');
     const exported = JSON.parse(json);
     expect(exported.guildId).toBe(GUILD_A);
@@ -57,6 +61,7 @@ describe('guild data export (PostgreSQL integration)', () => {
       expect(exported.data[table]).toEqual(JSON.parse(JSON.stringify(expected)));
     }
     expect(exported.data.guild_settings[0]).toMatchObject({ features: { future: true }, emoji_overrides: { custom: '🏗️' } });
+    expect(exported.data.guild_support_presence).toEqual([{ guild_id: GUILD_A, name: 'Own regiment', present: true }]);
     expect(exported.data.timer_assets[0]).toMatchObject({ name: 'Béton 🏗️', owner_user_id: ACTOR });
     expect(exported.data.timer_alerts[0].acked_by).toBe(ACTOR);
     expect(exported.data.guild_application_logs[0].record).toMatchObject({ guild_id: GUILD_A, user_id: ACTOR, msg: 'todolist created' });

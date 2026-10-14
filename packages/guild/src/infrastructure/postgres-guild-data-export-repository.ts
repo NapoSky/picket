@@ -8,6 +8,7 @@ export const GUILD_EXPORT_TABLES = {
   stats_privacy:['guild_id','user_id'],
   guild_settings: ['guild_id'],
   guild_registry: ['guild_id'],
+  guild_support_presence: ['guild_id'],
   guild_permission_roles: ['guild_id', 'level', 'role_id'],
   guild_audit_log: ['id'],
   guild_application_logs: ['id'],
