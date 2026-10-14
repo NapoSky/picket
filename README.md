@@ -81,7 +81,7 @@ Discord's installation link requests the configured scopes and permissions autom
 **Send Messages**, **Embed Links** and **Read Message History** where you use it, plus **Send Messages in Threads** for
 threads. It requests Server Members Intent to track role eligibility during voice presence; Presence and Message Content intents remain disabled. It reads its own messages to update your lists and boards.
 
-Need help or want to share feedback? Join the **[PICKET support Discord](https://discord.gg/EUnVfq5EYs)**.
+Need help or want to share feedback? Join the **[PICKET support Discord](https://discord.gg/syCQmrPxsV)**.
 
 ## Self-hosting and development
 

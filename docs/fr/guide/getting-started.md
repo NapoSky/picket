@@ -33,4 +33,4 @@ pour suivre la langue Discord de chacun, ou choisissez une langue pour tout le m
 Les noms de commandes restent en anglais ; leurs descriptions suivent la langue de votre Discord.
 Voir [Traduire](../contributing/translating) pour ajouter une langue ou améliorer une traduction existante.
 
-Besoin d’aide ou envie de partager un retour ? Rejoignez le [Discord de support PICKET](https://discord.gg/EUnVfq5EYs).
+Besoin d’aide ou envie de partager un retour ? Rejoignez le [Discord de support PICKET](https://discord.gg/syCQmrPxsV).

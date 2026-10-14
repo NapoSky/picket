@@ -13,7 +13,7 @@ hero:
       link: /fr/self-hosting/install
     - theme: alt
       text: Discord de support
-      link: https://discord.gg/EUnVfq5EYs
+      link: https://discord.gg/syCQmrPxsV
 features:
   - title: Neutre entre les factions
     details: Pensé pour les Wardens comme pour les Colonials, avec une identité visuelle qui ne favorise aucun camp.
