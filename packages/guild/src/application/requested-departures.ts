@@ -9,11 +9,13 @@ export interface RequestedDeparture {
   readonly revision: string;
   readonly requestedAt: Date;
   readonly attemptedAt: Date | null;
+  readonly acknowledged: boolean;
   readonly status: 'pending' | 'executing' | 'uncertain' | 'left' | 'failed' | 'returned';
 }
 export interface RequestedDepartureRepository {
   find(guildId: GuildId): Promise<RequestedDeparture | null>;
   pending(): Promise<readonly GuildId[]>;
+  acknowledge(guildId: GuildId): Promise<void>;
   /** Recheck the deletion request and membership generation under the registry lock. */
   claim(request: RequestedDeparture, now: Date): Promise<boolean>;
   finish(request: RequestedDeparture, status: 'left' | 'failed' | 'returned' | 'uncertain'): Promise<void>;
@@ -34,8 +36,9 @@ export class ExecuteRequestedDepartures implements GuildDepartureExecutor {
     // Serialize with operator departures too, across replicas and both command paths.
     await this.lock.withLock(`ops:${guildId}`, async () => {
       await beforeDispatch?.();
+      if (beforeDispatch) await this.repository.acknowledge(guildId);
       const request = await this.repository.find(guildId);
-      if (!request || !['pending', 'executing', 'uncertain'].includes(request.status)) return;
+      if (!request || !request.acknowledged || !['pending', 'executing', 'uncertain'].includes(request.status)) return;
       if (request.status !== 'pending' && (!request.attemptedAt ||
         this.clock.now().getTime() - request.attemptedAt.getTime() < 30_000)) return;
       try {

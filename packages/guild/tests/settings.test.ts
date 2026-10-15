@@ -49,17 +49,24 @@ function setup(i18n = testI18n, auditControl?: AuditControl, withStats = false) 
     }),
   };
   const stats = { open: jest.fn().mockResolvedValue({ kind: 'message', ephemeral: true, content: 'Stats settings' }), disable: jest.fn().mockResolvedValue('panel.saved') };
+  const replies = new InMemoryInteractionReplies();
   if (withStats) settings = { ...settings, features: { ...settings.features, stats: true } };
   const panel = createSettingsPanel({ settings: new GetGuildSettings(reader), update: new UpdateGuildSettings(store, i18n.locales), permissions: show,
     updatePermissions: new UpdatePermissions(permissions), access: new ResolveAccess(permissions), suspension,
-    request: new RequestGuildDeletion(lifecycle, clock, 30, { execute: async (_guild, beforeDispatch) => { await beforeDispatch?.(); } }), cancel: new CancelGuildDeletion(lifecycle), clock, i18n, warlog, ...(withStats ? { stats } : {}),
+    request: new RequestGuildDeletion(lifecycle, clock, 30, { execute: async (_guild, beforeDispatch) => { await beforeDispatch?.(); } }), cancel: new CancelGuildDeletion(lifecycle), clock, i18n, warlog, replies, ...(withStats ? { stats } : {}),
     exportData: new ExportGuildData({ read: async () => ({ guild_settings: [settings], guild_permission_roles: [config] }) }, clock), ...(auditControl ? { audit: auditControl } : {}) });
   const status = statusCommand(new GetGuildStatus(reader), show);
   const registry = new CommandRegistry([PICKET_ROOT], [status, panel.command], i18n, [...panel.aliases, { ...status, path: ['picket', 'permissions', 'show'] }]);
   const pipeline = new InteractionPipeline({ registry, components: new ComponentRegistry(panel.families), receipts: { claim: async () => true }, access: createGuildAccessPolicy(new ResolveAccess(permissions)), gate: createGuildGate(suspension), language: { localeOf: async () => settings.locale }, features: allFeaturesEnabled, logger: noopLogger });
   async function call(interaction: IncomingInteraction) {
+    const before = replies.replies.length;
     const result = await pipeline.handle(interaction);
-    return result.kind === 'deferred' ? await result.run() : result;
+    const resolved = result.kind === 'deferred' ? await result.run() : result;
+    const sent = replies.replies.length > before ? replies.replies.at(-1)?.content : undefined;
+    if (resolved === null && sent && typeof sent !== 'string' && 'components' in sent) {
+      return { kind: 'message' as const, ephemeral: true, content: sent.components.filter(component => component.kind === 'text').map(component => component.text).join('\n') };
+    }
+    return resolved;
   }
   const open = (overrides: Partial<IncomingInteraction> = {}) => call(makeInteraction({ commandPath: ['picket', 'settings'], memberPermissions: 8n, ...overrides }));
   const click = (customId: string, overrides: Partial<IncomingInteraction> = {}) => call(makeInteraction({ kind: 'component', customId, componentKind: 'button', memberPermissions: 8n, message: { id: MessageId.assert('910000000000000001'), channelId }, ...overrides }));

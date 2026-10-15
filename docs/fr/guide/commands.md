@@ -38,7 +38,7 @@ Chaque changement effectif de réglage ou permission est journalisé en base ave
 
 ## Suppression et récupération
 
-Dans **Données**, prévisualise puis confirme le retrait. PICKET quitte le serveur et programme immédiatement la suppression des données. Après le délai de conservation configuré par l’opérateur (30 jours par défaut), configuration, rôles d’accès, timers, historiques et audits sont supprimés définitivement. Les messages Discord, dont les todolists, ne sont pas supprimés automatiquement.
+Dans **Données**, prévisualise puis confirme le retrait. PICKET envoie la confirmation privée finale avant de quitter le serveur et programme immédiatement la suppression des données. Si cette réponse ne peut pas être envoyée, le bot ne part pas ; réessaie la confirmation. Après le délai de conservation configuré par l’opérateur (30 jours par défaut), configuration, rôles d’accès, timers, historiques et audits sont supprimés définitivement. Les messages Discord, dont les todolists, ne sont pas supprimés automatiquement.
 
 Pour annuler la suppression avant l’échéance, réinvite PICKET, puis ouvre `/picket settings` → **Données** en tant qu’administrateur du serveur et annule la suppression programmée. Réinviter le bot ne suffit pas à annuler une demande explicite de suppression. Voir [Confidentialité](../legal/privacy).
 

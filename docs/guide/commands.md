@@ -38,7 +38,7 @@ Every effective settings or permission change is audited in the database with it
 
 ## Deletion and recovery
 
-In **Data**, preview and confirm removal. PICKET leaves the server and immediately schedules data deletion. After the operator-configured retention period (30 days by default), configuration, access roles, timers, history and audit records are permanently erased. Discord messages, including todolists, are not automatically deleted.
+In **Data**, preview and confirm removal. PICKET sends the final private confirmation before leaving the server and immediately schedules data deletion. If that reply cannot be sent, the bot does not leave; retry the confirmation. After the operator-configured retention period (30 days by default), configuration, access roles, timers, history and audit records are permanently erased. Discord messages, including todolists, are not automatically deleted.
 
 To cancel deletion before the deadline, invite PICKET back, then open `/picket settings` → **Data** as a server administrator and cancel the scheduled deletion. Reinvitation alone does not cancel an explicit deletion request. See [Privacy](../legal/privacy).
 

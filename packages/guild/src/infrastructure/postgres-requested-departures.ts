@@ -6,7 +6,7 @@ import { PostgresSupportGuildEventsRepository } from './postgres-support-guild-e
 
 interface Row {
   id: string; guild_id: string; registered_at: Date; expected_revision: string; requested_at: Date;
-  attempted_at: Date | null; status: RequestedDeparture['status'];
+  attempted_at: Date | null; status: RequestedDeparture['status']; acknowledged: boolean;
 }
 export class PostgresRequestedDepartures implements RequestedDepartureRepository {
   constructor(private readonly db: Db, private readonly channelId: ChannelId | null, private readonly retentionDays: number) {}
@@ -15,11 +15,16 @@ export class PostgresRequestedDepartures implements RequestedDepartureRepository
     return withTenant(this.db, guildId, async trx => {
       const row = (await sql<Row>`SELECT * FROM guild_departure_requests WHERE guild_id=${guildId}`.execute(trx)).rows[0];
       return row ? { id: row.id, guildId, registeredAt: row.registered_at, revision: row.expected_revision,
-        requestedAt: row.requested_at, attemptedAt: row.attempted_at, status: row.status } : null;
+        requestedAt: row.requested_at, attemptedAt: row.attempted_at, status: row.status, acknowledged: row.acknowledged } : null;
     });
   }
   async pending(): Promise<readonly GuildId[]> {
     return (await sql<{ guild_id: string }>`SELECT guild_id FROM picket_pending_departures()`.execute(this.db)).rows.map(row => GuildId.assert(row.guild_id));
+  }
+  acknowledge(guildId: GuildId): Promise<void> {
+    return withTenant(this.db, guildId, async trx => {
+      await sql`UPDATE guild_departure_requests SET acknowledged=true WHERE guild_id=${guildId} AND status='pending'`.execute(trx);
+    });
   }
   private async current(trx: Tx, request: RequestedDeparture) {
     const registry = await trx.selectFrom('guild_registry').selectAll().where('guild_id', '=', request.guildId).forUpdate().executeTakeFirst();
@@ -39,7 +44,7 @@ export class PostgresRequestedDepartures implements RequestedDepartureRepository
         await this.update(trx, request, 'returned'); return false;
       }
       return (await sql`UPDATE guild_departure_requests SET status='executing', attempted_at=${now}
-        WHERE guild_id=${request.guildId} AND status='pending' AND id=${request.id}::uuid RETURNING guild_id`.execute(trx)).rows.length === 1;
+        WHERE guild_id=${request.guildId} AND acknowledged AND status='pending' AND id=${request.id}::uuid RETURNING guild_id`.execute(trx)).rows.length === 1;
     });
   }
   finish(request: RequestedDeparture, status: 'left' | 'failed' | 'returned' | 'uncertain'): Promise<void> {

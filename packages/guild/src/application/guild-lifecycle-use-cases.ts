@@ -45,7 +45,7 @@ export class RequestGuildDeletion {
       const result = await this.#repository.markInactive(guildId, actor, action, this.#clock.now(), 'requested');
       scheduled = { alreadyScheduled: !result.changed, purgeAt: purgeDate(result.inactiveSince, this.#retentionDays) };
       // The job-runner holds the same lock: it cannot leave before this acknowledgement.
-      await onScheduled?.(scheduled).catch(() => undefined);
+      await onScheduled?.(scheduled);
     });
     return scheduled;
   }

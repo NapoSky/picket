@@ -1,6 +1,6 @@
 import { createInteractionServer, type PanelView } from '@picket/discord';
 import { GuildId, RoleId, noopLogger, systemClock } from '@picket/kernel';
-import { InMemoryInteractionReplies, createTestDatabase, createTestKeys, queryAsAdmin, testI18n, type TestDatabase } from '@picket/testing';
+import { InMemoryInteractionReplies, InMemoryMessaging, createTestDatabase, createTestKeys, queryAsAdmin, testI18n, type TestDatabase } from '@picket/testing';
 import { buildGatewayHandler, buildPipeline } from '../src/composition';
 
 const GUILD = GuildId.assert('700000000000000051');
@@ -31,7 +31,7 @@ describe('Gateway events -> guild lifecycle and permissions (integration)', () =
     const replies = new InMemoryInteractionReplies();
     const app = createInteractionServer({
       publicKey: keys.publicKeyHex,
-      pipeline: buildPipeline(database.handle.db, noopLogger, composition),
+      pipeline: buildPipeline(database.handle.db, noopLogger, { ...composition, discord: { replies, messaging: new InMemoryMessaging() } }),
       replies,
       logger: noopLogger,
       clock: systemClock,

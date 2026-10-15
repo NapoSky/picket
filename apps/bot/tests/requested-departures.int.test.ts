@@ -26,6 +26,7 @@ describe('administrator removal and data deletion (PostgreSQL)', () => {
   const request = () => new RequestGuildDeletion(lifecycle(), clock, 30, executor());
   const gateway = () => buildGatewayHandler(database.handle.db, noopLogger, options());
   const state = () => new PostgresRequestedDepartures(database.handle.db, channelId, 30).find(guildId);
+  const acknowledge = () => new PostgresRequestedDepartures(database.handle.db, channelId, 30).acknowledge(guildId);
   const step = async (reply: Reply): Promise<Reply | null> => reply.kind === 'deferred' ? reply.run() : reply;
   const control = (reply: Reply | null, label: string) => {
     if (reply?.kind !== 'panel') throw new Error('Expected settings panel');
@@ -62,6 +63,13 @@ describe('administrator removal and data deletion (PostgreSQL)', () => {
     const denied = await click(confirm, 0n);
     expect(JSON.stringify(denied)).toContain('required level: admin');
     expect(await state()).toBeNull();
+    const failedReply = jest.spyOn(replies, 'editOriginal').mockRejectedValueOnce(new Error('Discord reply failed'));
+    const failed = await click(confirm);
+    expect(JSON.stringify(failed)).toContain(testI18n.translator('en').t('errors.failure'));
+    expect(await state()).toMatchObject({ acknowledged: false });
+    await executor().recover();
+    expect(leave).not.toHaveBeenCalled();
+    failedReply.mockRestore();
     leave.mockImplementation(async () => {
       expect(replies.replies).toHaveLength(1);
       expect(JSON.stringify(replies.replies[0]!.content)).toContain('PICKET will leave');
@@ -83,6 +91,7 @@ describe('administrator removal and data deletion (PostgreSQL)', () => {
   it('works without a configured support channel and dispatches only once across replicas', async () => {
     const run = buildRequestedDepartures(database.handle.db, { ...options(), supportGuildEventsChannelId: null });
     await lifecycle().markInactive(guildId, actor, 'guild.deletion_requested', now, 'requested');
+    await acknowledge();
     await Promise.all([run.execute(guildId), executor().execute(guildId), run.recover()]);
     expect(leave).toHaveBeenCalledTimes(1);
     expect((await state())!.status).toBe('left');
@@ -102,7 +111,7 @@ describe('administrator removal and data deletion (PostgreSQL)', () => {
       ready(); await announcement;
     });
     await preparing;
-    const recovery = run.recover();
+    const recovery = run.execute(guildId);
     await competing;
     expect(leave).not.toHaveBeenCalled();
     release(); await Promise.all([confirmation, recovery]);
@@ -112,6 +121,7 @@ describe('administrator removal and data deletion (PostgreSQL)', () => {
   it('recovers a committed request after restart and preserves its original deletion deadline', async () => {
     const original = new Date(now.getTime() - 86_400_000);
     await lifecycle().markInactive(guildId, actor, 'guild.deletion_requested', original, 'requested');
+    await acknowledge();
     await executor().recover();
     await request().execute(guildId, actor);
     expect(leave).toHaveBeenCalledTimes(1);
@@ -178,10 +188,25 @@ describe('administrator removal and data deletion (PostgreSQL)', () => {
 
   it('does not remove a membership that changed before an undispatched request was recovered', async () => {
     await lifecycle().markInactive(guildId, actor, 'guild.deletion_requested', now, 'requested');
+    await acknowledge();
     await gateway().handle({ type: 'guild_removed', guildId });
     await gateway().handle({ type: 'guild_available', guildId, name: 'Amicale test' });
     await executor().recover();
     expect((await state())!.status).toBe('returned'); expect(leave).not.toHaveBeenCalled();
+  });
+
+  it('does not leave or recover a departure whose final Discord reply failed, and allows a confirmed retry', async () => {
+    await expect(request().execute(guildId, actor, 'guild.deletion_requested', async () => {
+      throw new Error('Final reply not delivered');
+    })).rejects.toThrow('Final reply not delivered');
+    expect(await state()).toMatchObject({ status: 'pending', acknowledged: false });
+    await executor().execute(guildId); await executor().recover();
+    expect(leave).not.toHaveBeenCalled();
+    const delivered = jest.fn(async () => undefined);
+    await request().execute(guildId, actor, 'guild.deletion_requested', delivered);
+    expect(delivered).toHaveBeenCalledTimes(1);
+    expect(leave).toHaveBeenCalledTimes(1);
+    expect(await state()).toMatchObject({ status: 'left', acknowledged: true });
   });
 
   it('respects cancellation and erases its durable request with tenant data', async () => {

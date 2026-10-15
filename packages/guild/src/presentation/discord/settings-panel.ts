@@ -236,7 +236,8 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
             if (result.kind === 'too_large') return ephemeral(context.t('data.exportTooLarge', { limitMb: Math.round(result.maxBytes / (1024 * 1024) * 10) / 10 }));
             return { kind: 'file', ephemeral: true, content: context.t('data.exportReady'), file: { filename: result.filename, bytes: result.bytes } };
           }
-          if (namespace !== 'psnav' && namespace !== 'psback' && await deps.suspension.execute(context.guildId) !== null) return render(context, 'data');
+          const confirmingDeparture = namespace === 'psdata' && action === 'delete' && context.interaction.componentKind === 'button';
+          if (namespace !== 'psnav' && namespace !== 'psback' && !confirmingDeparture && await deps.suspension.execute(context.guildId) !== null) return render(context, 'data');
           if (namespace === 'psnav') {
             if (context.interaction.componentKind !== 'button') return ephemeral(context.t('settings.invalidOption'));
             if (['view', 'refresh', 'cancel'].includes(action) && PAGES.includes(argument as Page)) return render(context, argument as Page);
@@ -304,7 +305,7 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
           if (namespace === 'psdata' && action === 'delete' && context.interaction.componentKind === 'button') {
             let announced = false;
             const result = await deps.request.execute(context.guildId, context.interaction.userId, 'guild.deletion_requested', async scheduled => {
-              if (!deps.replies) return;
+              if (!deps.replies) throw new Error('Interaction replies are required before departure');
               await deps.replies.editOriginal({ applicationId: context.interaction.applicationId, token: context.interaction.token }, {
                 components: [{ kind: 'text', text: context.t('data.departureRequested', { timestamp: Math.floor(scheduled.purgeAt.getTime() / 1000) }) }],
                 accentColor: PAGE_COLORS.delete,
@@ -327,7 +328,7 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
     { namespace: 'psnav', version: VERSION, level: 'officer', availableWhenSuspended: true, onComponent: handler('psnav') },
     { namespace: 'psedit', version: VERSION, level: 'officer', onComponent: handler('psedit'), onModal: handler('psedit') },
     { namespace: 'psperm', version: VERSION, level: 'admin', onComponent: handler('psperm') },
-    { namespace: 'psdata', version: VERSION, level: 'admin', onComponent: handler('psdata') },
+    { namespace: 'psdata', version: VERSION, level: 'admin', availableWhenSuspended: true, onComponent: handler('psdata') },
     { namespace: 'psback', version: VERSION, level: 'admin', availableWhenSuspended: true, onComponent: handler('psback') },
     { namespace: 'psexport', version: VERSION, level: 'admin', availableWhenSuspended: true, onComponent: handler('psexport') },
   ];
