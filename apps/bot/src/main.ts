@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { hostname } from 'node:os';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { loadConfig, loggingConfig, type Role } from '@picket/config';
-import { DiscordRestGuildChannels, DiscordRestGuildRoles, DiscordRestInteractionReplies, DiscordRestMessaging, createDiscordBotRest, createInteractionServer } from '@picket/discord';
+import { DiscordRestGuildChannels, DiscordRestGuildRoles, DiscordRestGuildOperations, DiscordRestInteractionReplies, DiscordRestMessaging, createDiscordBotRest, createInteractionServer } from '@picket/discord';
 import { createI18n } from '@picket/i18n';
 import { systemClock } from '@picket/kernel';
 import { createGuildLogDestination, createHealthServer, createLogger, createMetrics, createMonitoringDestination } from '@picket/observability';
@@ -53,13 +53,20 @@ async function run(): Promise<void> {
   const guildLogs = new PostgresGuildApplicationLogs(database.db);
   const logDestination = createGuildLogDestination({ version: config.version, append: (entries) => guildLogs.append(entries), monitoring, diagnostics: { write: () => undefined } });
   logger = createLogger({ level: config.logLevel, service: 'picket', version: config.version, destination: logDestination.destination });
-  const rest = createDiscordBotRest(config.discord.botToken, { globalRequestsPerSecond: config.discord.restGlobalRps }, new PostgresDiscordBudget(database.db), metrics);
+  const restBudget = new PostgresDiscordBudget(database.db);
+  const rest = createDiscordBotRest(config.discord.botToken, { globalRequestsPerSecond: config.discord.restGlobalRps }, restBudget, metrics);
   const discord = {
     messaging: new DiscordRestMessaging(config.discord.botToken, {}, rest),
     replies: new DiscordRestInteractionReplies({}, metrics),
     guildRoles: new DiscordRestGuildRoles(config.discord.botToken, {}, rest),
     guildChannels: new DiscordRestGuildChannels(config.discord.botToken, {}, rest),
+    operations: new DiscordRestGuildOperations(rest, createDiscordBotRest(config.discord.botToken,
+      { globalRequestsPerSecond: config.discord.restGlobalRps, retries: 0, rejectOnRateLimit: () => true }, restBudget, metrics)),
   };
+  if (config.supportGuildEventsChannelId && config.roles.includes('http-ingress')) {
+    try { await discord.operations.scope(config.supportGuildEventsChannelId); }
+    catch { logger.warn({}, 'operator administration unavailable: support channel or application owner could not be resolved'); }
+  }
   const statsStore=new PostgresStatsStore(database.db);
   const voiceBuffer=new DiskVoiceBuffer(config.stats.bufferPath,config.stats.bufferMaxBytes, () => new Date(), metrics);
   await voiceBuffer.initialize();

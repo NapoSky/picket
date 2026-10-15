@@ -3,12 +3,16 @@ import {
   DiscordRestCommandsApi,
   PostgresDeployedHashStore,
   deployCommands,
+  deployOperatorCommands,
+  DiscordRestGuildOperations,
+  createDiscordBotRest,
 } from '@picket/discord';
 import { createI18n } from '@picket/i18n';
 import { systemClock } from '@picket/kernel';
 import { createLogger } from '@picket/observability';
 import { createDatabase, migrate } from '@picket/persistence';
-import { buildCommandRegistry, buildRetentionJob } from './composition';
+import { buildCommandRegistry, buildOperatorRegistry, buildRetentionJob } from './composition';
+import { createAppState } from '@picket/persistence';
 import { DiskVoiceBuffer, PostgresStatsStore } from '@picket/stats';
 
 const USAGE = 'Usage: cli <migrate | deploy-commands [--force] | purge>';
@@ -36,6 +40,21 @@ async function runDeployCommands(force: boolean): Promise<void> {
       force,
     });
     logger.info({ ...result }, result.deployed ? 'commands deployed' : 'commands unchanged, nothing to deploy');
+    const state = createAppState(database.db);
+    const opsKey = `operator_commands:${config.discord.applicationId}`;
+    try {
+      const operatorResult = await deployOperatorCommands({
+        registry: buildOperatorRegistry(database.db, { clock: systemClock, guildRetentionDays: config.guildRetentionDays, i18n: createI18n() }),
+        api: new DiscordRestCommandsApi(config.discord.applicationId, config.discord.botToken),
+        discord: new DiscordRestGuildOperations(createDiscordBotRest(config.discord.botToken)),
+        channelId: config.supportGuildEventsChannelId,
+        store: { get: () => state.get(opsKey), set: hash => state.set(opsKey, hash) }, force,
+      });
+      logger.info({ ...operatorResult }, 'operator commands deployment checked');
+    } catch {
+      // Optional operations must not prevent the public bot from being deployed.
+      logger.warn({}, 'operator commands unavailable: deployment will be retried on the next deploy-commands run');
+    }
   } finally {
     await database.close();
   }

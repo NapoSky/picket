@@ -16,7 +16,7 @@ en suffixant le nom par `_FILE` (Docker secrets) ; fournir les deux est une erre
 | `ROLES` | `http-ingress` | Rôles du processus, séparés par des virgules : `http-ingress` (reçoit les interactions), `shard-runner` (connexion Gateway) et `job-runner` (alertes de timers, mise à jour des tableaux et purges). Chaque réplica peut tous les exécuter : les shards et les tâches sont tenus par une seule réplique à la fois, grâce à un bail. |
 | `SHARD_COUNT` | `1` | Nombre total de shards Gateway (1 à 256). Un shard suffit jusqu'à environ 2 500 serveurs. |
 | `GUILD_RETENTION_DAYS` | `30` | Jours entre le moment où un serveur devient inactif et l'effacement de ses données (1 à 365). |
-| `SUPPORT_GUILD_EVENTS_CHANNEL_ID` | vide | Salon privé recevant les arrivées, retraits et retours du bot, avec uniquement le nom du serveur et l'échéance de purge au retrait. Vide : notifications désactivées. Le bot doit pouvoir voir le salon et y envoyer des messages. Les messages envoyés restent dans le salon. |
+| `SUPPORT_GUILD_EVENTS_CHANNEL_ID` | vide | Salon privé des notifications de cycle de vie et de `/picket-ops servers`, réservé au propriétaire de l’application. Son serveur est déduit via Discord, sans identifiant de serveur supplémentaire. Un retrait opérateur mentionne son auteur et son motif. Vide : les deux fonctionnalités sont désactivées. Le bot doit voir le salon et pouvoir y écrire. Les messages envoyés restent dans Discord. |
 | `LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug` ou `trace`. |
 | `PICKET_VERSION` | `unknown` | Identifiant ajouté aux journaux du bot et du CLI. Compose fournit la référence de `PICKET_IMAGE` ; un build manuel peut aussi définir l’argument `PICKET_VERSION`. |
 | `NODE_ENV` | `production` | `development`, `test` ou `production`. |
@@ -101,6 +101,50 @@ Depuis `deploy/`, pour les sauvegardes :
 ./backup.sh prune                 # applique uniquement la rotation et la limite d’âge
 ./backup.sh start                 # démarre le service quotidien avec les droits détectés automatiquement
 ```
+
+## Administration privée du service
+
+Exécutez `migrate`, puis `deploy-commands`, et déployez le bot mis à jour. La CLI déduit le serveur contenant
+`SUPPORT_GUILD_EVENTS_CHANNEL_ID` et y enregistre **`/picket-ops servers` uniquement**, séparément des commandes
+publiques. Ouvrez-la dans le salon privé configuré. Le panneau éphémère est indépendant de Stats.
+
+Seul le **propriétaire de l’application Discord**, ou le **propriétaire de l’équipe de développeurs** si elle possède
+l’application, est habilité. L’identité provient de l’API du bot : aucune nouvelle variable d’environnement ni intent
+Gateway supplémentaire. Les permissions Discord de la commande doivent aussi autoriser cette personne ; elle est
+enregistrée avec un accès administrateur par défaut. Un rôle administrateur de serveur ne suffit jamais à obtenir
+les droits opérateur. Cette version ne propose pas de délégation.
+
+Recherchez un serveur par nom, sans distinction de casse ou d’accents, filtrez sa présence et examinez sa date
+d’enregistrement, ses modules, ses nombres de tableaux/timers actifs et sa configuration Warlog. Présence du bot
+et suspension du service sont distinctes. L’enregistrement n’est pas nécessairement la dernière invitation et un
+module activé ne prouve pas son utilisation. Cinq serveurs sont affichés par page. Les noms et motifs sont échappés,
+les mentions neutralisées. Le retrait est bloqué pour des serveurs indiscernables de même nom enregistrés à la même minute.
+
+Choisissez **Préparer le retrait**, renseignez un motif interne de 10 à 500 caractères, puis saisissez **`QUITTER`**.
+L’envoi du formulaire demande le départ. Une session dure dix minutes ; une confirmation reste valable au plus
+deux minutes et n’est utilisable qu’une fois entre toutes les répliques. Actualisez la fiche après expiration.
+Propriétaire, salon/serveur support, génération de présence, nom, configuration et rétention sont revérifiés avant
+l’envoi. Le serveur support est toujours protégé.
+
+Le départ suit la rétention habituelle et conserve une échéance de suppression déjà fixée. Une réinvitation peut
+réactiver le serveur, mais n’annule pas une suppression explicitement demandée. Aucun effacement immédiat,
+retrait en masse ou blocage des réinvitations. Auteur et motif restent dans l’historique privé de l’instance, hors exports de guilde.
+
+Les demandes sont persistantes. Le job-runner réconcilie les opérations inachevées toutes les 15 secondes. Une
+réponse incertaine est vérifiée après au moins 30 secondes **sans répéter le départ**. Actualisez l’opération ou
+consultez l’historique pour son dernier état ; la synchronisation locale est retentée et une présence ultérieure est
+protégée. Une seule notification privée mentionne auteur, motif et échéance ; les autres messages Discord restent.
+L’historique abrège les motifs ; **Examiner** affiche l’opération et son motif complet.
+
+Les opérations terminées sont conservées 30 jours après leur fin, indépendamment de la purge des guildes.
+Les demandes non résolues restent disponibles pour réconciliation. Le job-runner nettoie sessions expirées et
+confirmations non envoyées. Les notifications déjà envoyées dans le salon privé y restent.
+
+Relancez `deploy-commands` si le salon change de serveur ou si la variable est vidée : les anciennes commandes
+sont retirées et les nouvelles enregistrées si la fonctionnalité reste activée. Les contrôles d’exécution imposent
+toujours le salon actuel. Si le salon ou le propriétaire est indéterminable, les actions sensibles sont refusées ;
+les fonctions ordinaires et le déploiement public continuent, avec un diagnostic opérateur. Rétablissez l’accès au
+salon puis relancez `deploy-commands` si l’enregistrement privé avait échoué.
 
 ## Statistiques vocales et dashboard
 

@@ -61,7 +61,10 @@ export function toWireResponse(reply: Reply): APIInteractionResponse {
         data: {
           custom_id: reply.customId,
           title: clip(reply.title, MODAL_TITLE_MAX),
-          components: reply.inputs.map(toTextInput),
+          components: [
+            ...(reply.description ? [{ type: 10 as const, content: clip(reply.description, 4000) }] : []),
+            ...reply.inputs.map(toTextInput),
+          ],
         },
       };
     case 'deferred':

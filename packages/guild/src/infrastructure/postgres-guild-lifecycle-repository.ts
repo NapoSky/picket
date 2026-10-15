@@ -46,35 +46,38 @@ export class PostgresGuildLifecycleRepository implements GuildLifecycleRepositor
     now: Date,
     reason: DeactivationReason,
   ): Promise<DeactivationResult> {
-    return withTenant(this.#db, guildId, async (trx) => {
-      if (reason === 'requested') {
-        await ensureGuildInitialized(trx, guildId);
-      } else {
-        const known = await trx.selectFrom('guild_registry').select('guild_id').where('guild_id', '=', guildId).executeTakeFirst();
-        if (!known) return { changed: false, inactiveSince: now };
-      }
+    return withTenant(this.#db, guildId, trx => this.markInactiveInTransaction(trx, guildId, actor, action, now, reason));
+  }
 
-      // Conditional: a repeated call or event never postpones the original date.
-      const updated = await trx
-        .updateTable('guild_registry')
-        .set({ inactive_since: now, inactive_reason: reason })
-        .where('guild_id', '=', guildId)
-        .where('inactive_since', 'is', null)
-        .returning('inactive_since')
-        .executeTakeFirst();
+  /** Operator finalization holds the registry lock through lifecycle, presence and notification changes. */
+  async markInactiveInTransaction(trx: Tx, guildId: GuildId, actor: AuditActor, action: string, now: Date, reason: DeactivationReason): Promise<DeactivationResult> {
+    if (reason === 'requested') {
+      await ensureGuildInitialized(trx, guildId);
+    } else {
+      const known = await trx.selectFrom('guild_registry').select('guild_id').where('guild_id', '=', guildId).executeTakeFirst();
+      if (!known) return { changed: false, inactiveSince: now };
+    }
 
-      if (updated?.inactive_since) {
-        await audit(trx, guildId, actor, action, state(null, null), state(updated.inactive_since, reason));
-        return { changed: true, inactiveSince: updated.inactive_since };
-      }
+    // Conditional: a repeated call or event never postpones the original date.
+    const updated = await trx
+      .updateTable('guild_registry')
+      .set({ inactive_since: now, inactive_reason: reason })
+      .where('guild_id', '=', guildId)
+      .where('inactive_since', 'is', null)
+      .returning('inactive_since')
+      .executeTakeFirst();
 
-      const current = await trx
-        .selectFrom('guild_registry')
-        .select('inactive_since')
-        .where('guild_id', '=', guildId)
-        .executeTakeFirstOrThrow();
-      return { changed: false, inactiveSince: current.inactive_since ?? now };
-    });
+    if (updated?.inactive_since) {
+      await audit(trx, guildId, actor, action, state(null, null), state(updated.inactive_since, reason));
+      return { changed: true, inactiveSince: updated.inactive_since };
+    }
+
+    const current = await trx
+      .selectFrom('guild_registry')
+      .select('inactive_since')
+      .where('guild_id', '=', guildId)
+      .executeTakeFirstOrThrow();
+    return { changed: false, inactiveSince: current.inactive_since ?? now };
   }
 
   reactivate(guildId: GuildId, actor: AuditActor, action: string, onlyReason?: DeactivationReason): Promise<boolean> {

@@ -29,13 +29,13 @@ avant la purge définitive.
 
 | Famille | Tables incluses, avec toutes leurs colonnes |
 | --- | --- |
-| Configuration et cycle de la guilde | `guild_settings`, `guild_registry`, `guild_permission_roles` |
+| Configuration et cycle de la guilde | `guild_settings`, `guild_registry`, `guild_support_presence`, `guild_permission_roles` |
 | Audit et exploitation de la guilde | `guild_audit_log`, `guild_application_logs`, `guild_audit_delivery`, `guild_audit_schedule`, `interaction_receipts` |
 | Timers | `timer_boards`, `timer_board_messages`, `timer_assets`, `timer_events`, `timer_alerts`, `timer_schedule` |
 | War-log du serveur | `warlog_subscriptions`, `warlog_deliveries`, `warlog_hooks`, `warlog_hook_jobs`, `warlog_schedule` |
 | Réglages Stats et opposition au suivi | `stats_settings`, `stats_privacy` |
 
-Ces **21 tables** sont sélectionnées explicitement et filtrées par `guild_id` sous RLS. Les horodatages d'observation
+Ces **22 tables** sont sélectionnées explicitement et filtrées par `guild_id` sous RLS. Les horodatages d'observation
 de `stats_settings` sont masqués lorsqu'ils dépassent les 60 jours de rétention.
 
 Deux collections dérivées complètent les lignes SQL :
@@ -63,6 +63,7 @@ de fichier partiel. La copie téléchargée dépend ensuite de la politique de s
 | Sessions du dashboard et états OAuth | Identité et tokens chiffrés d'authentification ; exclus de l'export et des sauvegardes standard. |
 | État public Foxhole partagé | Guerres, objets, événements et timers de béton globaux ; aucune donnée de membre Discord. L'export contient les abonnements/livraisons propres au serveur. |
 | État applicatif global et coordination | Leases, verrous, sessions Gateway et budgets REST ; hors export de guilde. |
+| Administration privée du service | Sessions et historique des retraits opérateur, motifs internes compris : données d’instance hors export de guilde. |
 | Secrets et diagnostics opérationnels | Secrets hors des tables exportées ; diagnostics assainis séparés des logs de guilde, sans identifiants Discord ni contenu utilisateur. |
 
 Les exports d'activité **`/stats export`** et du dashboard sont des rapports CSV/JSON de statistiques accessibles selon
@@ -73,6 +74,7 @@ le périmètre de l'utilisateur. Leur contrat est distinct de l'export général
 | Données | Déclencheur et traitement |
 | --- | --- |
 | Reçus d'interaction | Suppression après 7 jours. Ils servent uniquement à éviter les doublons. |
+| Sessions et retraits opérateur privés | Sessions expirées après dix minutes ; confirmations non envoyées après au plus deux minutes. L’historique des opérations terminées expire après 30 jours, indépendamment de la purge des guildes. Les demandes non résolues restent pour réconciliation. Nettoyage toutes les 15 secondes par le job-runner ; les notifications Discord restent dans leur salon privé. |
 | Audit, événements de timers, logs applicatifs de guilde | Suppression après 30 jours fixes, même si le serveur reste actif. |
 | Activité vocale SQL et métadonnées des participants/salons | Fenêtre glissante de 60 jours. Les rapports appliquent la borne à la lecture ; maintenance SQL toutes les deux minutes, par lots. Les segments qui traversent la borne sont tronqués. |
 | Journal vocal disque | Les événements expirent après 60 jours ; nettoyage sous verrou. Les événements rejoués avec succès sont retirés du buffer. Les marqueurs d'effacement expirent aussi après 60 jours. |

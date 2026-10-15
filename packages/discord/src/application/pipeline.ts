@@ -12,6 +12,7 @@ export interface InteractionReceipts {
 export interface AccessPolicy {
   /** User access level in the guild, or `null` for no access. Errors deny access. */
   levelOf(interaction: IncomingInteraction, guildId: GuildId): Promise<AccessLevel | null>;
+  denialMessage?(interaction: IncomingInteraction, required: AccessLevel, t: Translator['t']): string;
 }
 
 export interface Suspension {
@@ -115,7 +116,8 @@ export class InteractionPipeline {
       if (level === null || ACCESS_RANK[level] < ACCESS_RANK[target.level]) {
         outcome = 'rejected';
         logger.warn({ command: target.label, required: target.level, actual: level }, 'access denied');
-        return this.#fallback(interaction, t('errors.denied', { level: t(`levels.${target.level}`) }));
+        return this.#fallback(interaction, this.#deps.access.denialMessage?.(interaction, target.level, t)
+          ?? t('errors.denied', { level: t(`levels.${target.level}`) }));
       }
 
       if (target.feature !== undefined && !(await beforeDeadline(() => this.#deps.features.isEnabled(guildId, target.feature!)))) {

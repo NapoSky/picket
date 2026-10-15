@@ -18,6 +18,7 @@ import {
   type GuildChannels,
   type InteractionReplies,
   type Messaging,
+  type GuildOperationsDiscord,
 } from '@picket/discord';
 import { PostgresGatewaySessionStore, PostgresKeyedLock, PostgresLeaseStore, LeaderElector, startLeasedLoop, type KeyedLock } from '@picket/coordination';
 import {
@@ -33,6 +34,11 @@ import {
   ObserveSupportGuildEvents,
   PostgresSupportGuildEventsRepository,
   PublishSupportGuildEvents,
+  GuildOperatorService,
+  PostgresGuildOperationsRepository,
+  createOperationsPanel,
+  OPS_ROOT,
+  isOpsInteraction,
   PICKET_ROOT,
   PostgresGuildLifecycleRepository,
   PostgresGuildDataExportRepository,
@@ -101,6 +107,7 @@ export interface DiscordPorts {
   readonly replies: InteractionReplies;
   readonly guildRoles?: GuildRoles;
   readonly guildChannels?: GuildChannels;
+  readonly operations?: GuildOperationsDiscord;
 }
 
 const unavailable = async (): Promise<never> => {
@@ -245,6 +252,18 @@ function timerServices(db: Db, options: CompositionOptions, logger: Logger, sett
 
 const ROOTS = [PICKET_ROOT, TODOLIST_ROOT, TIMERS_ROOT, WARLOG_ROOT,STATS_ROOT];
 
+export function buildOperatorService(db: Db, options: CompositionOptions, logger: Logger = noopLogger): GuildOperatorService {
+  const channel = options.supportGuildEventsChannelId ?? null;
+  return new GuildOperatorService(new PostgresGuildOperationsRepository(db, channel, options.guildRetentionDays), options.discord?.operations ?? {
+    scope: unavailable, guild: unavailable, leave: unavailable,
+  }, channel, options.locks ?? new PostgresKeyedLock(db), options.clock, options.guildRetentionDays, logger);
+}
+
+export function buildOperatorRegistry(db: Db, options: CompositionOptions): CommandRegistry {
+  const ops = createOperationsPanel(buildOperatorService(db, options), options.i18n, options.clock);
+  return new CommandRegistry([OPS_ROOT], [ops.command], options.i18n);
+}
+
 /** One fenced collector and one paced distributor. HTTP requests never hold database transactions. */
 export function buildWarLogRunner(db: Db, logger: Logger, options: CompositionOptions & { readonly holder: string; readonly apiUrl: string; readonly pollIntervalMs: number; readonly version: string }): LeaderElector {
   const store = new PostgresWarStore(db);
@@ -275,11 +294,19 @@ export function buildCommandRegistry(db: Db, options: CompositionOptions): Comma
 
 export function buildPipeline(db: Db, logger: Logger, options: CompositionOptions): InteractionPipeline {
   const guild = guildModule(db, options, logger);
+  const service = buildOperatorService(db, options, logger);
+  const ops = createOperationsPanel(service, options.i18n, options.clock, options.discord?.replies);
   return new InteractionPipeline({
-    registry: new CommandRegistry(ROOTS, guild.entries, options.i18n, guild.aliases),
-    components: new ComponentRegistry(guild.families),
+    registry: new CommandRegistry([...ROOTS, OPS_ROOT], [...guild.entries, ops.command], options.i18n, guild.aliases),
+    components: new ComponentRegistry([...guild.families, ops.family]),
     receipts: new PostgresInteractionReceipts(db),
-    access: guild.access,
+    access: {
+      levelOf: async (interaction, guildId) => isOpsInteraction(interaction)
+        ? await service.authorize(interaction) ? 'admin' : null
+        : guild.access.levelOf(interaction, guildId),
+      denialMessage: (interaction, required, t) => isOpsInteraction(interaction)
+        ? t('ops.denied') : t('errors.denied', { level: t(`levels.${required}`) }),
+    },
     gate: guild.gate,
     language: guild.language,
     features: guild.features,
@@ -307,6 +334,7 @@ export function buildJobRunner(
     ? new PublishSupportGuildEvents(new PostgresSupportGuildEventsRepository(db), options.supportGuildEventsChannelId,
       (options.discord ?? offlineDiscordPorts).messaging, options.clock, logger)
     : null;
+  const operators = buildOperatorService(db, options, logger);
   return new LeaderElector({
     store: new PostgresLeaseStore(db),
     name: 'job-runner:timers',
@@ -322,13 +350,14 @@ export function buildJobRunner(
       const stopRetention = startLeasedLoop({ tick: () => retention.execute(), intervalMs: RETENTION_CHECK_INTERVAL_MS, logger, component: 'retention', ...(options.metrics ? { metrics: options.metrics } : {}) });
       const stopAudit = startLeasedLoop({ tick: () => audit.tick(), intervalMs: AUDIT_INTERVAL_MS, logger, component: 'audit', ...(options.metrics ? { metrics: options.metrics } : {}) });
       const stopSupport = support ? startLeasedLoop({ tick: () => support.tick(), intervalMs: 5_000, logger }) : async () => undefined;
+      const stopOperators = startLeasedLoop({ tick: () => operators.recover(), intervalMs: 15_000, logger });
       const stats=options.stats?.store ?? new PostgresStatsStore(db,()=>options.clock.now());
       const stopStats=startLeasedLoop({tick:async()=>{for(const guildId of await stats.allGuildIds()) await stats.maintenance(guildId);},intervalMs:120_000,logger, component: 'stats-maintenance', ...(options.metrics ? { metrics: options.metrics } : {}) });
       const refresh = buildStatsRefreshJob(stats, options.clock, logger, options.statsAdminRefreshCron, options.timeZone, options.metrics);
       const stopRefresh = options.stats?.dashboardUrl
         ? startLeasedLoop({ tick: () => refresh.execute(), intervalMs:60_000, logger, component: 'stats-refresh', ...(options.metrics ? { metrics: options.metrics } : {}) })
         : async () => undefined;
-      return async () => { await Promise.all([stopTimers(), stopRetention(), stopAudit(), stopSupport(),stopStats(),stopRefresh()]); };
+      return async () => { await Promise.all([stopTimers(), stopRetention(), stopAudit(), stopSupport(), stopOperators(),stopStats(),stopRefresh()]); };
     },
   });
 }

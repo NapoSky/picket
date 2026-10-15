@@ -26,13 +26,13 @@ older than 30 days are purged before reading. Export remains available during su
 
 | Family | Included tables, with all their columns |
 | --- | --- |
-| Guild configuration and lifecycle | `guild_settings`, `guild_registry`, `guild_permission_roles` |
+| Guild configuration and lifecycle | `guild_settings`, `guild_registry`, `guild_support_presence`, `guild_permission_roles` |
 | Guild audit and operations | `guild_audit_log`, `guild_application_logs`, `guild_audit_delivery`, `guild_audit_schedule`, `interaction_receipts` |
 | Timers | `timer_boards`, `timer_board_messages`, `timer_assets`, `timer_events`, `timer_alerts`, `timer_schedule` |
 | Guild war log | `warlog_subscriptions`, `warlog_deliveries`, `warlog_hooks`, `warlog_hook_jobs`, `warlog_schedule` |
 | Stats configuration and tracking preferences | `stats_settings`, `stats_privacy` |
 
-These **21 tables** are explicitly selected, filtered by `guild_id`, and subject to RLS. Observation timestamps in
+These **22 tables** are explicitly selected, filtered by `guild_id`, and subject to RLS. Observation timestamps in
 `stats_settings` are masked when outside the 60-day retention window.
 
 Two derived collections supplement the SQL rows:
@@ -59,6 +59,7 @@ The recipient controls retention of the downloaded copy.
 | Dashboard sessions and OAuth states | Authentication identity and encrypted tokens; excluded from exports and standard backups. |
 | Shared public Foxhole state | Global wars, objects, events and concrete timers; no Discord member data. The export includes the guild's subscriptions/deliveries. |
 | Global application state and coordination | Leases, locks, Gateway sessions and REST budgets; outside guild exports. |
+| Private service administration | Operator sessions and departure history, including internal reasons, are instance records outside guild exports. |
 | Secrets and operational diagnostics | Secrets live outside exported tables; sanitized diagnostics are separate from guild logs and contain no Discord identifiers or user content. |
 
 Activity exports from **`/stats export`** and the dashboard are CSV/JSON statistical reports controlled by the caller's
@@ -69,6 +70,7 @@ access scope. Their contract differs from the guild export above: see [voice sta
 | Data | Trigger and cleanup |
 | --- | --- |
 | Interaction receipts | Deleted after 7 days; used only to prevent duplicates. |
+| Private operator sessions and departures | Sessions expire after ten minutes; unsubmitted confirmations after at most two minutes. Completed operation history expires after 30 days, independently of tenant purge. Unresolved requests remain for reconciliation. Cleanup runs in the job-runner every 15 seconds; Discord notifications remain in their private channel. |
 | Audit, timer events and guild application logs | Deleted after a fixed 30 days, even while the guild remains active. |
 | SQL voice activity and participant/channel metadata | Rolling 60-day window. Reports enforce the cutoff at read time; SQL maintenance runs in batches every two minutes. Segments crossing the cutoff are clipped. |
 | Disk voice journal | Events expire after 60 days; cleanup under lock. Successfully replayed events leave the buffer. Erasure markers also expire after 60 days. |

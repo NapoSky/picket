@@ -1,5 +1,5 @@
 import { GuildId, type ChannelId } from '@picket/kernel';
-import { sql, withTenant, type Db } from '@picket/persistence';
+import { sql, withTenant, type Db, type Tx } from '@picket/persistence';
 import type { SupportDelivery, SupportGuildChange, SupportGuildEventsRepository } from '../application/support-guild-events';
 import { ensureGuildInitialized } from './ensure-guild';
 
@@ -27,23 +27,31 @@ export class PostgresSupportGuildEventsRepository implements SupportGuildEventsR
 
   observe(guildId: GuildId, present: boolean, name: string | undefined, offline: boolean,
     notification: { readonly channelId: ChannelId; readonly format: (change: SupportGuildChange) => string } | null): Promise<void> {
-    return withTenant(this.db, guildId, async (trx) => {
-      // Lifecycle and purge use this row too; unknown/deleted guilds must never be recreated by a departure.
-      const guild = await trx.selectFrom('guild_registry').select(['inactive_since', 'inactive_reason'])
-        .where('guild_id', '=', guildId).forUpdate().executeTakeFirst();
-      if (!guild) return;
-      const previous = await trx.selectFrom('guild_support_presence').selectAll().where('guild_id', '=', guildId).executeTakeFirst();
-      const currentName = name ?? previous?.name ?? '';
-      await trx.insertInto('guild_support_presence').values({ guild_id: guildId, present, name: currentName })
-        .onConflict(c => c.column('guild_id').doUpdateSet({ present, name: currentName })).execute();
-      if (previous?.present === present || (!previous && !present) || notification === null) return;
-      const change: SupportGuildChange = {
-        kind: present ? previous ? 'returned' : 'joined' : 'left', name: currentName,
-        inactiveSince: guild.inactive_since, deletionRequested: guild.inactive_reason === 'requested', detectedOffline: offline,
-      };
-      // State transition and delivery are committed together, so repeats cannot enqueue twice.
-      await trx.insertInto('support_guild_deliveries').values({ channel_id: notification.channelId, content: notification.format(change) }).execute();
-    });
+    return withTenant(this.db, guildId, trx => this.observeInTransaction(trx, guildId, present, name, offline, notification));
+  }
+
+  async observeInTransaction(trx: Tx, guildId: GuildId, present: boolean, name: string | undefined, offline: boolean,
+    notification: { readonly channelId: ChannelId; readonly format: (change: SupportGuildChange) => string } | null): Promise<void> {
+    // Lifecycle and purge use this row too; unknown/deleted guilds must never be recreated by a departure.
+    const guild = await trx.selectFrom('guild_registry').select(['inactive_since', 'inactive_reason'])
+      .where('guild_id', '=', guildId).forUpdate().executeTakeFirst();
+    if (!guild) return;
+    const previous = await trx.selectFrom('guild_support_presence').selectAll().where('guild_id', '=', guildId).executeTakeFirst();
+    const currentName = name ?? previous?.name ?? '';
+    await trx.insertInto('guild_support_presence').values({ guild_id: guildId, present, name: currentName })
+      .onConflict(c => c.column('guild_id').doUpdateSet({ present, name: currentName })).execute();
+    if (previous?.present === present || (!previous && !present) || notification === null) return;
+    const operator = !present && previous ? (await sql<{ actor_name: string; reason: string }>`
+      SELECT actor_name, reason FROM operator_departures WHERE target_id=${guildId}
+        AND expected_revision=${previous.revision}::bigint AND status IN ('executing','uncertain','left','absent')
+        AND requested_at IS NOT NULL ORDER BY requested_at DESC LIMIT 1`.execute(trx)).rows[0] : undefined;
+    const change: SupportGuildChange = {
+      kind: present ? previous ? 'returned' : 'joined' : 'left', name: currentName,
+      inactiveSince: guild.inactive_since, deletionRequested: guild.inactive_reason === 'requested', detectedOffline: offline,
+      ...(operator ? { operator: { name: operator.actor_name, reason: operator.reason } } : {}),
+    };
+    // State transition and delivery are committed together, so repeats cannot enqueue twice.
+    await trx.insertInto('support_guild_deliveries').values({ channel_id: notification.channelId, content: notification.format(change) }).execute();
   }
 
   deliver(channelId: ChannelId, now: Date, publish: (delivery: SupportDelivery) => Promise<string | null>): Promise<boolean> {

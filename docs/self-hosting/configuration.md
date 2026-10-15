@@ -16,7 +16,7 @@ suffixing the name with `_FILE` (Docker secrets); giving both is an error.
 | `ROLES` | `http-ingress` | Comma-separated roles of this process: `http-ingress` (receives interactions), `shard-runner` (Gateway connection) and `job-runner` (timer alerts, board updates and purges). Every replica can run all of them: shards and jobs are held by one replica at a time, through a lease. |
 | `SHARD_COUNT` | `1` | Total number of Gateway shards (1 to 256). One shard is enough up to roughly 2,500 servers. |
 | `GUILD_RETENTION_DAYS` | `30` | Days between a server becoming inactive and the erasure of its data (1 to 365). |
-| `SUPPORT_GUILD_EVENTS_CHANNEL_ID` | empty | Private support channel for bot arrivals, departures and returns, containing only the server name and the purge deadline on departure. Empty disables notifications. The bot needs access to the channel and permission to send messages. Sent messages remain in the channel. |
+| `SUPPORT_GUILD_EVENTS_CHANNEL_ID` | empty | Private channel for lifecycle notifications and owner-only `/picket-ops servers`. Its server is resolved through Discord; no separate server ID is needed. Operator departures include the operator name and reason. Empty disables both features. The bot needs access to the channel and permission to send messages. Sent messages remain in Discord. |
 | `LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug` or `trace`. |
 | `PICKET_VERSION` | `unknown` | Identifier included in bot and CLI logs. Compose supplies the `PICKET_IMAGE` reference; manual builds can also set the `PICKET_VERSION` build argument. |
 | `NODE_ENV` | `production` | `development`, `test` or `production`. |
@@ -101,6 +101,47 @@ For backups, from `deploy/`:
 ./backup.sh prune                 # apply only count and age retention
 ./backup.sh start                 # start the daily service with automatically detected permissions
 ```
+
+## Private service administration
+
+Run `migrate`, then `deploy-commands`, and deploy the updated bot. The CLI resolves the server containing
+`SUPPORT_GUILD_EVENTS_CHANNEL_ID` and registers **`/picket-ops servers` only in that server**, separately from
+public commands. Open it in the configured private channel. The ephemeral panel is independent of Stats.
+
+Only the **Discord application owner**, or the **developer team owner** for a team-owned application, is authorized.
+Ownership comes from the bot API: no new environment variables or Gateway intents are needed. Discord command
+permissions must also allow this person to use it; registration uses administrator-only defaults. Server administrator
+roles alone never grant operator access. There is no delegation interface.
+
+Search by name (case- and accent-insensitive), filter by presence, and examine a server's registration date, enabled
+modules, timer-board/active-timer counts and Warlog configuration. Presence and service suspension are separate.
+Registration time is not necessarily the latest invitation time, and enabled modules do not prove usage.
+Five servers appear per page. Names and reasons are escaped and mentions suppressed. Indistinguishable servers
+with the same name and registration minute cannot be removed.
+
+Choose **Prepare departure**, enter an internal reason of 10–500 characters, then type **`QUITTER`**. Submitting
+requests the departure. Sessions last ten minutes; confirmations last at most two minutes and are single-use
+across replicas. Refresh the server view after expiry. Ownership, support scope, membership generation, name,
+configuration and retention are checked again before dispatch. The support server is always protected.
+
+The normal data retention period applies; existing deletion deadlines are preserved. Reinvitation can reactivate
+a departed server, but does not cancel an explicit deletion request. No immediate erasure, mass departure or
+reinvitation block is provided. Operator identity and reason remain in private instance history, outside tenant exports.
+
+Requests are durable. The job-runner reconciles unfinished operations every 15 seconds. An uncertain response
+is checked after at least 30 seconds **without repeating the departure**. Refresh the operation or open History
+for the latest result; local synchronization failures are retried and later memberships are protected. A single
+private lifecycle notification includes the operator, reason and purge deadline; other Discord messages remain.
+History entries show a shortened reason; **Examine** displays the full operation and reason.
+
+Completed operations are retained for 30 days after completion, independently of tenant purge. Unresolved requests
+remain for reconciliation. The job-runner cleans expired sessions and unsubmitted confirmations. Discord messages
+already sent to the private channel remain there.
+
+Rerun `deploy-commands` after changing the support server or clearing the setting: it removes the previous scoped
+commands and registers the new ones when enabled. Runtime checks always enforce the current channel. Failed
+channel/owner resolution denies sensitive actions while ordinary features and public deployment continue, with
+an operator diagnostic. Restore channel access and rerun `deploy-commands` if scoped registration failed.
 
 ## Voice statistics and dashboard
 

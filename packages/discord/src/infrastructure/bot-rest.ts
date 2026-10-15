@@ -22,6 +22,7 @@ export function instrumentRestOptions(options: Partial<RESTOptions>, metrics?: O
       try { await budget.acquire(); metrics?.record('discord_budget', (Date.now() - waiting) / 1000, 'success', component); }
       catch (error) { metrics?.record('discord_budget', (Date.now() - waiting) / 1000, 'error', component); throw error; }
     }
+    init.signal?.throwIfAborted();
     const started = Date.now();
     try {
       const response = await request(url, init);

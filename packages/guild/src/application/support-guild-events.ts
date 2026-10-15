@@ -8,6 +8,7 @@ export interface SupportGuildChange {
   readonly inactiveSince: Date | null;
   readonly deletionRequested: boolean;
   readonly detectedOffline: boolean;
+  readonly operator?: { readonly name: string; readonly reason: string };
 }
 
 export interface SupportDelivery {
@@ -27,8 +28,8 @@ export interface SupportGuildEventsRepository {
 }
 
 /** Server names are untrusted text; neutralize mentions and Markdown formatting. */
-function displayName(value: string): string {
-  const name = value.replace(/[\r\n\t]/g, ' ').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 100);
+function displayName(value: string, limit = 100): string {
+  const name = value.replace(/[\r\n\t]/g, ' ').replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/g, '').trim().slice(0, limit);
   return (name || 'Serveur au nom inconnu').replace(/([\\`*_{}\[\]()<>~|])/g, '\\$1').replace(/@/g, '@\u200b');
 }
 
@@ -41,7 +42,9 @@ export function supportGuildMessage(change: SupportGuildChange, retentionDays: n
       ? `La suppression demandée reste prévue à partir du ${date}.`
       : 'Purge liée au retrait annulée.'}`;
   }
-  const departure = change.detectedOffline ? `Retrait de PICKET de ${name} détecté après reconnexion.` : `PICKET a été retiré de ${name}.`;
+  const departure = change.operator
+    ? `PICKET a quitté ${name} à la demande de **${displayName(change.operator.name)}**. Motif : ${displayName(change.operator.reason, 500)}.`
+    : change.detectedOffline ? `Retrait de PICKET de ${name} détecté après reconnexion.` : `PICKET a été retiré de ${name}.`;
   const retention = date === null ? '' : ` Purge des données prévue à partir du ${date}${change.deletionRequested ? '.' : ', sauf retour avant cette échéance.'}`;
   return `🔴 ${departure}${retention}`;
 }

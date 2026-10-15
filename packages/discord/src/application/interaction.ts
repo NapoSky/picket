@@ -72,7 +72,7 @@ export type Reply =
   | { readonly kind: 'panel'; readonly panel: PanelView; readonly update: boolean }
   | { readonly kind: 'file'; readonly content: string; readonly file: ReplyFile; readonly ephemeral: true }
   | { readonly kind: 'autocomplete'; readonly choices: readonly { readonly name: string; readonly value: string }[] }
-  | { readonly kind: 'modal'; readonly customId: string; readonly title: string; readonly inputs: readonly ModalInput[] }
+  | { readonly kind: 'modal'; readonly customId: string; readonly title: string; readonly inputs: readonly ModalInput[]; readonly description?: string }
   | {
       /**
        * Immediate acknowledgement (3 s), then background work. With `update`, acknowledge a component click

@@ -178,6 +178,7 @@ export interface Schema {
 }
 
 export interface GuildSupportPresenceTable {
+  revision: Generated<string>;
   guild_id: string;
   name: string;
   present: boolean;

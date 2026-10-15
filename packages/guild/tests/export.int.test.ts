@@ -61,7 +61,7 @@ describe('guild data export (PostgreSQL integration)', () => {
       expect(exported.data[table]).toEqual(JSON.parse(JSON.stringify(expected)));
     }
     expect(exported.data.guild_settings[0]).toMatchObject({ features: { future: true }, emoji_overrides: { custom: '🏗️' } });
-    expect(exported.data.guild_support_presence).toEqual([{ guild_id: GUILD_A, name: 'Own regiment', present: true }]);
+    expect(exported.data.guild_support_presence).toEqual([{ guild_id: GUILD_A, name: 'Own regiment', present: true, revision: '0' }]);
     expect(exported.data.timer_assets[0]).toMatchObject({ name: 'Béton 🏗️', owner_user_id: ACTOR });
     expect(exported.data.timer_alerts[0].acked_by).toBe(ACTOR);
     expect(exported.data.guild_application_logs[0].record).toMatchObject({ guild_id: GUILD_A, user_id: ACTOR, msg: 'todolist created' });
