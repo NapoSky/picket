@@ -65,9 +65,16 @@ Dashboards et règles provisionnés se modifient dans les fichiers.
 | Aucune archive, ou dernier succès au-delà de 26 heures | Condition maintenue 1 heure | Lancer `./backup.sh daily` et vérifier une archive complète |
 | Restauration non vérifiée depuis 35 jours | 1 jour | Jouer la vérification mensuelle isolée |
 
-Les notifications indiquent symptôme, gravité, lien Grafana et action. Elles sont
-regroupées ; le rétablissement est signalé et un incident non résolu est rappelé
-toutes les quatre heures. Un serveur calme ou une réplique de secours sans bail
+Les notifications Discord indiquent la gravité, le symptôme, la zone concernée,
+les détails de service/composant disponibles, le début, la première action et des
+liens nommés vers Grafana et la procédure. À la résolution, elles indiquent la fin
+sans répéter les consignes d'intervention : la condition d'alerte est levée, sans
+garantir que sa cause a été vérifiée. Les horaires suivent le fuseau du lecteur
+dans Discord. Les notifications regroupées présentent les alertes actives avant
+les résolues ; un incident non résolu est rappelé toutes les quatre heures.
+Après avoir recopié les fichiers de notification sur l'hôte, lancer
+`docker compose restart grafana` depuis `deploy/` pour recharger le provisioning.
+Un serveur calme ou une réplique de secours sans bail
 est normal. Un rollout attendu ne demande pas de couper toutes les alertes.
 
 ```sh

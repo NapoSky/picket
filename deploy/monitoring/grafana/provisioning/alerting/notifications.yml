@@ -1,38 +1,62 @@
-{
-  "apiVersion": 1,
-  "contactPoints": [
-    {
-      "orgId": 1,
-      "name": "PICKET Discord",
-      "receivers": [
-        {
-          "uid": "picket-discord",
-          "type": "discord",
-          "disableResolveMessage": false,
-          "settings": {
-            "url": "$MONITORING_DISCORD_WEBHOOK_URL",
-            "use_discord_username": false,
-            "title": "PICKET \u2014 {{ .Status }}",
-            "message": "{{ range .Alerts }}**{{ .Annotations.summary }}**\n{{ .Annotations.description }}\nService: {{ .Labels.scope }} / {{ .Labels.service }} / {{ .Labels.component }}\nSeverity: {{ .Labels.severity }}\n{{ .DashboardURL }}\n{{ .Annotations.runbook_url }}\n{{ end }}"
-          }
-        }
-      ]
-    }
-  ],
-  "policies": [
-    {
-      "orgId": 1,
-      "receiver": "PICKET Discord",
-      "group_by": [
-        "grafana_folder",
-        "alertname",
-        "service",
-        "component",
-        "job"
-      ],
-      "group_wait": "30s",
-      "group_interval": "5m",
-      "repeat_interval": "4h"
-    }
-  ]
-}
+apiVersion: 1
+
+templates:
+  - orgId: 1
+    name: picket.discord
+    template: |
+      {{ define "picket.discord.title" -}}
+      PICKET — {{ if .Alerts.Firing }}{{ len .Alerts.Firing }} active{{ if .Alerts.Resolved }} · {{ len .Alerts.Resolved }} resolved{{ end }}{{ else }}Resolved{{ end }}
+      {{- end }}
+
+      {{ define "picket.discord.area" -}}
+      {{ if eq . "picket" }}PICKET bot{{ else if eq . "picket-stats" }}Stats{{ else if eq . "postgres" }}PostgreSQL{{ else if eq . "backup" }}Backups{{ else if eq . "host" }}Host{{ else if eq . "database" }}Database{{ else if eq . "infrastructure" }}Infrastructure{{ else if eq . "monitoring" }}Monitoring{{ else }}{{ . }}{{ end }}
+      {{- end }}
+
+      {{ define "picket.discord.alert" -}}
+      {{ if eq .Status "resolved" }}✅ **Resolved{{ else if eq .Labels.severity "critical" }}🔴 **Critical{{ else if eq .Labels.severity "warning" }}⚠️ **Warning{{ else }}🔔 **Active{{ end }} — {{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else if .Labels.alertname }}{{ .Labels.alertname }}{{ else }}Monitoring alert{{ end }}**
+      {{- with .Labels.scope }}{{ "\n" }}**Area:** {{ template "picket.discord.area" . }}{{ end -}}
+      {{ with .Labels.service }}{{ "\n" }}**Service:** {{ . }}{{ end -}}
+      {{ with .Labels.component }}{{ "\n" }}**Component:** {{ . }}{{ end -}}
+      {{ with .Labels.job }}{{ "\n" }}**Job:** {{ . }}{{ end -}}
+      {{ with .Labels.operation }}{{ "\n" }}**Operation:** {{ . }}{{ end -}}
+      {{ with .Labels.mountpoint }}{{ "\n" }}**Filesystem:** {{ . }}{{ end -}}
+      {{ if not .StartsAt.IsZero }}{{ "\n" }}**Started:** <t:{{ .StartsAt.Unix }}:f>{{ end -}}
+      {{ if eq .Status "resolved" -}}
+      {{ if not .EndsAt.IsZero }}{{ "\n" }}**Ended:** <t:{{ .EndsAt.Unix }}:f>{{ end -}}
+      {{ "\n\n" }}The alert condition is no longer active.
+      {{- else -}}
+      {{ with .Annotations.description }}{{ "\n\n" }}**Action:** {{ . }}{{ end -}}
+      {{ end -}}
+      {{ if .DashboardURL }}{{ "\n\n" }}[Dashboard]({{ .DashboardURL }}){{ if .Annotations.runbook_url }} · [Runbook]({{ .Annotations.runbook_url }}){{ end }}{{ else if .Annotations.runbook_url }}{{ "\n\n" }}[Runbook]({{ .Annotations.runbook_url }}){{ end }}
+      {{- end }}
+
+      {{ define "picket.discord.message" -}}
+      {{ range .Alerts.Firing -}}
+      {{ template "picket.discord.alert" . }}{{ "\n\n" }}
+      {{- end -}}
+      {{ range .Alerts.Resolved -}}
+      {{ template "picket.discord.alert" . }}{{ "\n\n" }}
+      {{- end -}}
+      {{- end }}
+
+contactPoints:
+  - orgId: 1
+    name: PICKET Discord
+    receivers:
+      - uid: picket-discord
+        type: discord
+        disableResolveMessage: false
+        settings:
+          url: $MONITORING_DISCORD_WEBHOOK_URL
+          use_discord_username: false
+          use_embed_description: true
+          title: '{{ template "picket.discord.title" . }}'
+          message: '{{ template "picket.discord.message" . }}'
+
+policies:
+  - orgId: 1
+    receiver: PICKET Discord
+    group_by: [grafana_folder, alertname, service, component, job]
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h

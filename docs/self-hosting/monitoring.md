@@ -63,9 +63,15 @@ dashboards and rules are managed in files, rather than edited in Grafana.
 | No archive, or last success older than 26 hours | Condition persists 1 hour | Run `./backup.sh daily` and verify a complete archive |
 | Restore verification older than 35 days | 1 day | Run the isolated monthly check below |
 
-Notifications include the symptom, severity, dashboard link and action. Incidents
-are grouped; a recovery message is sent and unresolved incidents repeat every
-four hours. A quiet server or a standby replica without a lease is normal.
+Discord notifications show the severity, symptom, affected area and available
+service/component details, start time, first action, and named dashboard/runbook
+links. Resolved alerts show the end time instead of repeating intervention
+instructions; this means the alert condition cleared, not that its cause was
+verified. Times display in the reader's Discord timezone. Grouped notifications
+list active alerts before resolved alerts; unresolved incidents repeat every
+four hours. After copying notification changes to the host, run
+`docker compose restart grafana` from `deploy/` to reload provisioning.
+A quiet server or a standby replica without a lease is normal.
 Expected rolling updates do not require manually muting all alerts.
 
 ```sh
