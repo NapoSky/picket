@@ -104,6 +104,7 @@ export type MessageKey =
   | 'ops.absent'
   | 'ops.active'
   | 'ops.ambiguous'
+  | 'ops.authorizationUnavailable'
   | 'ops.busy'
   | 'ops.changed'
   | 'ops.checked'

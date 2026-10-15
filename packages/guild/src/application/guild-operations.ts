@@ -1,4 +1,4 @@
-import type { GuildOperationsDiscord, IncomingInteraction, OperatorScope } from '@picket/discord';
+import { AccessCheckError, type GuildOperationsDiscord, type IncomingInteraction, type OperatorScope } from '@picket/discord';
 import { noopLogger, type ChannelId, type Clock, type GuildId, type Logger, type UserId } from '@picket/kernel';
 
 export type OpsFilter = 'present' | 'absent' | 'pending' | 'all';
@@ -107,11 +107,35 @@ export class GuildOperatorService {
   ) {}
 
   async authorize(interaction: IncomingInteraction, fresh = false): Promise<OperatorScope | null> {
-    if (!this.channelId || interaction.channelId !== this.channelId) return null;
+    if (!this.channelId) {
+      this.logger.warn({}, 'operator access denied: support channel not configured');
+      return null;
+    }
+    if (interaction.channelId !== this.channelId) {
+      this.logger.warn({}, 'operator access denied: channel mismatch');
+      return null;
+    }
+    let scope: OperatorScope;
     try {
-      const scope = await this.discord.scope(this.channelId, fresh);
-      return interaction.guildId === scope.guildId && interaction.userId === scope.ownerId ? scope : null;
-    } catch { return null; }
+      scope = await this.discord.scope(this.channelId, fresh);
+    } catch (error) {
+      // Keep operational diagnostics useful without logging REST request bodies or tokens.
+      const failure = error as { status?: unknown; code?: unknown } | null;
+      this.logger.warn({
+        ...(typeof failure?.status === 'number' ? { status: failure.status } : {}),
+        ...(typeof failure?.code === 'number' ? { code: failure.code } : {}),
+      }, 'operator access verification unavailable');
+      throw new AccessCheckError('ops.authorizationUnavailable');
+    }
+    if (interaction.guildId !== scope.guildId) {
+      this.logger.warn({}, 'operator access denied: support guild mismatch');
+      return null;
+    }
+    if (interaction.userId !== scope.ownerId) {
+      this.logger.warn({}, 'operator access denied: application owner mismatch');
+      return null;
+    }
+    return scope;
   }
 
   async start(interaction: IncomingInteraction): Promise<OpsSession> {

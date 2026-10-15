@@ -1,9 +1,9 @@
 import type { GuildOperationsDiscord, IncomingInteraction, OperatorScope, PanelButton, Reply } from '@picket/discord';
-import { buildCommandsPayload, toWireResponse } from '@picket/discord';
+import { AccessCheckError, buildCommandsPayload, toWireResponse } from '@picket/discord';
 import { ChannelId, GuildId, InteractionId, UserId, noopLogger } from '@picket/kernel';
 import { HandleGuildAvailable, PostgresGuildLifecycleRepository, PostgresGuildOperationsRepository, PostgresGuildDataExportRepository, PostgresSupportGuildEventsRepository, OpsError } from '@picket/guild';
 import { withTenant, sql } from '@picket/persistence';
-import { createTestDatabase, InMemoryInteractionReplies, InMemoryMessaging, makeInteraction, queryAsAdmin, testI18n, type TestDatabase } from '@picket/testing';
+import { createTestDatabase, InMemoryInteractionReplies, InMemoryMessaging, makeInteraction, queryAsAdmin, recordingLogger, testI18n, type TestDatabase } from '@picket/testing';
 import { buildCommandRegistry, buildGatewayHandler, buildOperatorService, buildPipeline } from '../src/composition';
 
 const support = GuildId.assert('700000000000000001');
@@ -76,7 +76,35 @@ describe('private service operations (PostgreSQL)', () => {
     const disabled = buildOperatorService(database.handle.db, { ...options(), supportGuildEventsChannelId: null });
     expect(await disabled.authorize(interaction())).toBeNull();
     discord.scope = async () => { throw new Error('Discord unavailable'); };
-    expect(await service().authorize(interaction())).toBeNull();
+    await expect(service().authorize(interaction())).rejects.toBeInstanceOf(AccessCheckError);
+  });
+
+  it('distinguishes verification failures from denied permissions without opening a session', async () => {
+    const logger = recordingLogger();
+    discord.scope = async () => { throw new Error('Discord unavailable'); };
+    const reply = await buildPipeline(database.handle.db, logger, options()).handle(interaction());
+    expect(reply).toEqual({ kind: 'message', content: testI18n.translator('fr').t('ops.authorizationUnavailable'), ephemeral: true });
+    expect(logger.records.some(record => record.message === 'operator access verification unavailable')).toBe(true);
+    expect(await queryAsAdmin(database, 'SELECT id FROM operator_sessions')).toHaveLength(0);
+    expect(leave).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['support channel not configured', 'disabled'],
+    ['channel mismatch', 'channel'],
+    ['support guild mismatch', 'guild'],
+    ['application owner mismatch', 'owner'],
+  ])('logs a safe actionable reason for denied operator access: %s', async (reason, mismatch) => {
+    const logger = recordingLogger();
+    const ops = buildOperatorService(database.handle.db, { ...options(), ...(mismatch === 'disabled' ? { supportGuildEventsChannelId: null } : {}) }, logger);
+    const request = interaction({
+      ...(mismatch === 'channel' ? { channelId: ChannelId.assert('600000000000000002') } : {}),
+      ...(mismatch === 'guild' ? { guildId: target } : {}),
+      ...(mismatch === 'owner' ? { userId: outsider } : {}),
+    });
+    expect(await ops.authorize(request)).toBeNull();
+    expect(logger.records.some(record => record.message === `operator access denied: ${reason}`)).toBe(true);
+    expect(leave).not.toHaveBeenCalled();
   });
 
   it('runs search, details, the non-editable modal, confirmation and result through the real pipeline', async () => {

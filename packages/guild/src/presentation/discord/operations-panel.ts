@@ -1,5 +1,5 @@
 import {
-  encodeCustomId, ephemeral, type CommandContext, type CommandEntry, type ComponentContext,
+  AccessCheckError, encodeCustomId, ephemeral, type CommandContext, type CommandEntry, type ComponentContext,
   type ComponentFamily, type PanelButton, type PanelContent, type Reply, type RootDescriptor, type InteractionReplies,
 } from '@picket/discord';
 import type { I18n, MessageKey } from '@picket/i18n';
@@ -122,7 +122,11 @@ export function createOperationsPanel(service: GuildOperatorService, i18n: I18n,
   }
   async function safe(ctx: CommandContext, run: () => Promise<Reply>): Promise<Reply> {
     try { return await run(); }
-    catch (error) { if (error instanceof OpsError) return ephemeral(ctx.t(`ops.${error.reason}`)); throw error; }
+    catch (error) {
+      if (error instanceof AccessCheckError) return ephemeral(ctx.t(error.messageKey));
+      if (error instanceof OpsError) return ephemeral(ctx.t(`ops.${error.reason}`));
+      throw error;
+    }
   }
   const deferred = (ctx: CommandContext, run: () => Promise<Reply>): Reply => ({ kind: 'deferred', ephemeral: true, update: ctx.interaction.message !== null, run: () => safe(ctx, run) });
 

@@ -609,6 +609,7 @@
     "absent": "PICKET ya está ausente o el servidor ya no está registrado.",
     "ambiguous": "No se pueden distinguir estos servidores con certeza. La salida no está disponible.",
     "denied": "Esta acción está reservada al propietario de la aplicación en el canal de soporte configurado.",
+    "authorizationUnavailable": "No se pudieron verificar el propietario de la aplicación y el canal de soporte. Inténtalo de nuevo más tarde. No se ha solicitado abandonar ningún servidor.",
     "expired": "Esta confirmación o sesión ha caducado o ya se ha usado. Abre /picket-ops servers de nuevo.",
     "changed": "La situación del servidor cambió desde la vista previa. Actualiza su ficha y confirma de nuevo.",
     "invalid": "Introduce un motivo de 10 a 500 caracteres y escribe exactamente QUITTER. No se solicitó ninguna salida.",

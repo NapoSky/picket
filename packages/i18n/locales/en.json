@@ -609,6 +609,7 @@
     "absent": "PICKET is already absent, or the server is no longer registered.",
     "ambiguous": "These servers cannot be distinguished reliably. Departure is unavailable.",
     "denied": "This action is restricted to the application owner in the configured support channel.",
+    "authorizationUnavailable": "The application owner and support channel could not be verified. Please try again later. No server departure was requested.",
     "expired": "This confirmation or session has expired or was already used. Open /picket-ops servers again.",
     "changed": "The server changed since the preview. Refresh its details and confirm again.",
     "invalid": "Enter a reason of 10–500 characters and type QUITTER exactly. No departure was requested.",

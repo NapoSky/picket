@@ -1,4 +1,4 @@
-import type { Translator } from '@picket/i18n';
+import type { MessageKey, Translator } from '@picket/i18n';
 import type { GuildId, InteractionId, Logger, MetricOutcome, OperationalMetrics } from '@picket/kernel';
 import { ACCESS_RANK, type AccessLevel, type CommandRegistry } from './commands';
 import type { ComponentRegistry } from './components';
@@ -13,6 +13,13 @@ export interface AccessPolicy {
   /** User access level in the guild, or `null` for no access. Errors deny access. */
   levelOf(interaction: IncomingInteraction, guildId: GuildId): Promise<AccessLevel | null>;
   denialMessage?(interaction: IncomingInteraction, required: AccessLevel, t: Translator['t']): string;
+}
+
+/** An access check failed before permissions could be established. Always fail closed. */
+export class AccessCheckError extends Error {
+  constructor(readonly messageKey: MessageKey) {
+    super('Access verification unavailable');
+  }
 }
 
 export interface Suspension {
@@ -135,6 +142,11 @@ export class InteractionPipeline {
       return reply.kind === 'deferred' ? { ...reply, run: () => this.#runDeferred(reply.run, target.label, logger, t) } : reply;
     } catch (error) {
       const label = interaction.commandPath.join(' ') || interaction.customId;
+      if (error instanceof AccessCheckError) {
+        outcome = 'error';
+        logger.warn({ command: label }, 'access verification unavailable');
+        return this.#fallback(interaction, t(error.messageKey));
+      }
       if (error instanceof HandlerTimeoutError) {
         outcome = 'timeout';
         logger.error({ command: label }, 'handler timeout');
