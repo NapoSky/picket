@@ -281,6 +281,8 @@
   "panel": {
     "title": "PICKET · Configuration du serveur",
     "home": "Accueil",
+    "picketSettings": "Réglages PICKET",
+    "configure": "Configurer",
     "homeHelp": "Choisis la langue et les modules de ton serveur. Chaque modification s’applique immédiatement.",
     "permissions": "Permissions",
     "advanced": "Avancé",

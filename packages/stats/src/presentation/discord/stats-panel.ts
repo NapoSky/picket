@@ -27,16 +27,17 @@ export interface StatsPanelDependencies {
   readonly gate: GuildGate;
   readonly clock: Clock;
   readonly dashboardUrl?: string | null;
+  readonly settingsHome?: (context: CommandContext) => PanelButton;
 }
 
 export function createStatsPanel(deps: StatsPanelDependencies) {
   const ttl = 900;
   const now = () => Math.floor(deps.clock.now().getTime() / 1000);
-  const id = (context: CommandContext, namespace: string, action: string) =>
+  const id = (context: CommandContext, namespace: string, action: string, fromSettings = false) =>
     encodeCustomId(
       namespace,
       1,
-      `${context.interaction.userId}.${context.guildId}.${(now() + ttl).toString(36)}.${action}`,
+      `${context.interaction.userId}.${context.guildId}.${(now() + ttl).toString(36)}.${action}${fromSettings ? '.p' : ''}`,
     );
   const button = (
     context: CommandContext,
@@ -44,13 +45,14 @@ export function createStatsPanel(deps: StatsPanelDependencies) {
     namespace: string,
     action: string,
     style: PanelButton['style'] = 'secondary',
+    fromSettings = false,
   ): PanelButton => ({
     kind: 'button',
-    customId: id(context, namespace, action),
+    customId: id(context, namespace, action, fromSettings),
     label: context.t(label),
     style,
   });
-  async function settings(context: CommandContext, notice?: MessageKey): Promise<Reply> {
+  async function settings(context: CommandContext, notice?: MessageKey, fromSettings = false): Promise<Reply> {
     const config = await deps.store.config(context.guildId);
     const valid = validTargets(context.guildId, config.roles);
     const components: PanelContent[] = [
@@ -66,7 +68,7 @@ export function createStatsPanel(deps: StatsPanelDependencies) {
     if (context.level === 'admin')
       components.push({
         kind: 'roleSelect',
-        customId: id(context, 'ssroles', 'replace'),
+        customId: id(context, 'ssroles', 'replace', fromSettings),
         placeholder: context.t('stats.chooseRoles'),
         maxValues: 25,
       });
@@ -78,7 +80,7 @@ export function createStatsPanel(deps: StatsPanelDependencies) {
       },
       {
         kind: 'channelSelect',
-        customId: id(context, 'ssnav', 'exclude'),
+        customId: id(context, 'ssnav', 'exclude', fromSettings),
         placeholder: context.t('stats.chooseChannels'),
         channelKinds: ['voice', 'stage'],
         maxValues: 25,
@@ -90,13 +92,15 @@ export function createStatsPanel(deps: StatsPanelDependencies) {
       'ssnav',
       config.enabled ? 'disable' : 'enable',
       config.enabled ? 'danger' : 'success',
+      fromSettings,
     );
     components.push({
       kind: 'buttons',
       buttons: [
         { ...toggle, disabled: !valid && !config.enabled },
-        button(context, 'stats.clearChannels', 'ssnav', 'clear'),
-        button(context, 'panel.refresh', 'ssnav', 'refresh'),
+        button(context, 'stats.clearChannels', 'ssnav', 'clear', 'secondary', fromSettings),
+        button(context, 'panel.refresh', 'ssnav', 'refresh', 'secondary', fromSettings),
+        ...(fromSettings && deps.settingsHome ? [deps.settingsHome(context)] : []),
       ],
     });
     if (deps.dashboardUrl)
@@ -143,20 +147,24 @@ export function createStatsPanel(deps: StatsPanelDependencies) {
       panel: { components, accentColor: 0x8aa07a },
     };
   }
-  const open = async (context: CommandContext): Promise<Reply> => settings(context);
+  const open = async (context: CommandContext, fromSettings = false): Promise<Reply> => settings(context, undefined, fromSettings);
   function handler(namespace: 'ssnav' | 'ssroles' | 'sspriv') {
     return async (context: ComponentContext): Promise<Reply> => {
-      const [owner, guild, expiry, action, extra] = context.payload.split('.');
+      const [owner, guild, expiry, action, origin, extra] = context.payload.split('.');
+      const fromSettings = origin === 'p';
       if (owner !== context.interaction.userId) return ephemeral(context.t('panel.owner'));
       const expires = parseInt(expiry ?? '', 36);
       if (
         guild !== context.guildId ||
         extra !== undefined ||
+        (origin !== undefined && (!fromSettings || namespace === 'sspriv')) ||
+        !/^[a-z0-9]+$/.test(expiry ?? '') ||
         !Number.isSafeInteger(expires) ||
         expires <= now() ||
         expires > now() + ttl ||
         !action ||
-        context.interaction.message === null
+        context.interaction.message === null ||
+        context.interaction.message.channelId !== context.interaction.channelId
       )
         return ephemeral(context.t('panel.expired'));
       return {
@@ -164,6 +172,7 @@ export function createStatsPanel(deps: StatsPanelDependencies) {
         ephemeral: true,
         update: true,
         run: async () => {
+          if (expires <= now()) return ephemeral(context.t('panel.expired'));
           const required = namespace === 'sspriv' ? 'member' : namespace === 'ssroles' ? 'admin' : 'officer';
           const level = await deps.access.levelOf(context.interaction, context.guildId);
           if (level === null || ACCESS_RANK[level] < ACCESS_RANK[required])
@@ -200,9 +209,9 @@ export function createStatsPanel(deps: StatsPanelDependencies) {
               roles.length > 25 ||
               roles.some((r) => r === context.guildId || !context.interaction.resolvedRoles[r])
             )
-              return settings(context, 'stats.invalidRoles');
+              return settings(context, 'stats.invalidRoles', fromSettings);
             await deps.store.configure(context.guildId, owner, { memberRoles: roles });
-            return settings(context, 'panel.saved');
+            return settings(context, 'panel.saved', fromSettings);
           }
           if (namespace === 'ssnav') {
             if (action === 'exclude' && context.interaction.componentKind === 'channelSelect') {
@@ -213,21 +222,21 @@ export function createStatsPanel(deps: StatsPanelDependencies) {
                   (c) => !['voice', 'stage'].includes(context.interaction.resolvedChannels[c]?.kind ?? ''),
                 )
               )
-                return settings(context, 'settings.invalidOption');
+                return settings(context, 'settings.invalidOption', fromSettings);
               await deps.store.configure(context.guildId, owner, { excludedChannels: channels });
-              return settings(context, 'panel.saved');
+              return settings(context, 'panel.saved', fromSettings);
             }
             if (action === 'clear') {
               await deps.store.configure(context.guildId, owner, { excludedChannels: [] });
-              return settings(context, 'panel.saved');
+              return settings(context, 'panel.saved', fromSettings);
             }
             if (action === 'enable' || action === 'disable') {
               const result = await deps.store.configure(context.guildId, owner, {
                 enabled: action === 'enable',
               });
-              return settings(context, result === 'invalid_roles' ? 'stats.invalidRoles' : 'panel.saved');
+              return settings(context, result === 'invalid_roles' ? 'stats.invalidRoles' : 'panel.saved', fromSettings);
             }
-            if (action === 'refresh') return settings(context);
+            if (action === 'refresh') return settings(context, undefined, fromSettings);
           }
           return ephemeral(context.t('settings.invalidOption'));
         },

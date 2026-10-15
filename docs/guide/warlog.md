@@ -103,6 +103,10 @@ The war log also appears alongside Timers and Todolists on the home page of `/pi
 **Enable** opens the war-log panel so you can review the channel and zones before confirming.
 **Disable** asks for confirmation, pauses the subscription and cancels pending messages.
 
+Once enabled, **Configure** reopens the war-log panel from `/picket settings` without changing its activation.
+When opened from PICKET, the panel and zone list include **PICKET settings** to return to the overview in the same
+private message. Saved changes are kept. Panels opened directly with `/warlog settings` do not show this button.
+
 ::: details Available settings and defaults
 
 | Setting | Choices | Default |

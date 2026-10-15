@@ -44,6 +44,7 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
   afterAll(async () => { await database.drop(); });
   beforeEach(() => { businessNow = new Date('2026-10-05T12:00:00Z'); serverOptions = composition; });
   interface RequestOptions {
+    root?: string;
     permissions?: string; roles?: string[]; guildId?: string; locale?: string;
     path?: object[]; customId?: string; componentType?: number; values?: string[];
     resolved?: object; modal?: boolean; fields?: object[];
@@ -55,7 +56,7 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
     guild_id: options.guildId ?? GUILD, channel_id: '600000000000000001', locale: options.locale ?? 'en-US',
     member: { user: { id: caller }, roles: options.roles ?? [], permissions: options.permissions ?? '0' },
     ...(options.customId ? { message: { id: '900000000000000001', channel_id: '600000000000000001' } } : {}),
-    data: options.customId ? options.modal ? { custom_id: options.customId, components: options.fields ?? [] } : { custom_id: options.customId, component_type: options.componentType ?? 2, ...(options.values ? { values: options.values } : {}), ...(options.resolved ? { resolved: options.resolved } : {}) } : { id: '1', name: 'picket', type: 1, options: options.path ?? [{ type: 1, name: 'settings' }] },
+    data: options.customId ? options.modal ? { custom_id: options.customId, components: options.fields ?? [] } : { custom_id: options.customId, component_type: options.componentType ?? 2, ...(options.values ? { values: options.values } : {}), ...(options.resolved ? { resolved: options.resolved } : {}) } : { id: '1', name: options.root ?? 'picket', type: 1, options: options.path ?? [{ type: 1, name: 'settings' }] },
   });
   function signed(value: object) {
     const timestamp = String(Math.floor(Date.now() / 1000)); const body = JSON.stringify(value);
@@ -145,6 +146,14 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
     const enabled = await click(refreshed, 'enable', '0', options);
     expect(JSON.stringify(enabled)).toContain('Enabled');
     expect(await store.subscription(GuildId.assert(guildId))).toMatchObject({ paused: false, confirmedWar: 100, zones: ['center'] });
+    const auditBefore = await queryAsAdmin(database, 'SELECT * FROM guild_audit_log WHERE guild_id = $1 ORDER BY id', [guildId]);
+    const returned = await click(await click(enabled, 'coverage', '0', options), 'view', 'home', options);
+    const configured = await click(returned, 'configure', 'warlog', options);
+    expect(JSON.stringify(configured)).toContain('psnav:1:');
+    expect(await store.subscription(GuildId.assert(guildId))).toMatchObject({ paused: false, confirmedWar: 100, zones: ['center'] });
+    expect(await queryAsAdmin(database, 'SELECT * FROM guild_audit_log WHERE guild_id = $1 ORDER BY id', [guildId])).toEqual(auditBefore);
+    const direct = await say({ ...options, root: 'warlog' });
+    expect(JSON.stringify(direct)).not.toContain('psnav:1:');
     const object: WarObject = { key: 'DeadLandsHex:1B:0.10000:0.20000', region: 'DeadLandsHex', code: '1B', x: 0.1, y: 0.2, location: 'Abandoned Ward', state: '1W', stateAt: businessNow.getTime() };
     businessNow = new Date(businessNow.getTime() + 1_000);
     expect(await store.commit(lease, { ...snapshot, objects: { [object.key]: object } }, [{ type: 'claimed', war: 100, object, faction: 'WARDENS', occurredAt: businessNow.getTime(), detectedAt: businessNow.getTime() }], false, businessNow)).toBe(true);
@@ -156,6 +165,30 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
     expect((await store.subscription(GuildId.assert(guildId))).paused).toBe(true);
     expect(await queryAsAdmin(database, 'SELECT features FROM guild_settings WHERE guild_id = $1', [guildId])).toEqual([{ features: { timers: true, todolists: true, warlog: false } }]);
     expect(await queryAsAdmin(database, 'SELECT guild_id FROM warlog_deliveries WHERE guild_id = $1', [guildId])).toHaveLength(0);
+  });
+  it('keeps Stats navigation contextual through edits, disable, reconfiguration and suspension recovery', async () => {
+    const guildId = '700000000000000097', options = { ...admin, guildId };
+    const home = await say(options);
+    const store = new PostgresStatsStore(database.handle.db, () => businessNow);
+    await store.configure(guildId, caller, { memberRoles: [OFFICER_ROLE] });
+    const opened = await click(home, 'enable', 'stats', options);
+    const enabled = await click(opened, 'enable', undefined, options);
+    const returned = await click(enabled, 'view', 'home', options);
+    const auditBefore = await queryAsAdmin(database, 'SELECT * FROM guild_audit_log WHERE guild_id = $1 ORDER BY id', [guildId]);
+    const configured = await click(returned, 'configure', 'stats', options);
+    expect((await store.config(guildId)).enabled).toBe(true);
+    expect(await queryAsAdmin(database, 'SELECT * FROM guild_audit_log WHERE guild_id = $1 ORDER BY id', [guildId])).toEqual(auditBefore);
+    const disabled = await click(configured, 'disable', undefined, options);
+    expect((await store.config(guildId)).enabled).toBe(false);
+    expect(control(await click(disabled, 'view', 'home', options), 'enable', 'stats')).toBeDefined();
+    const direct = await say({ ...options, root: 'stats' });
+    expect(JSON.stringify(direct)).not.toContain('psnav:1:');
+    expect(JSON.stringify(await click(direct, 'refresh', undefined, options))).not.toContain('psnav:1:');
+    const data = await click(returned, 'view', 'data', options);
+    await click(await click(data, 'view', 'delete', options), 'delete', '0', options);
+    const recovery = await click(configured, 'view', 'home', options);
+    expect(JSON.stringify(recovery)).toContain(testI18n.translator('en').t('panel.suspendedTitle'));
+    await click(recovery, 'cancel', '0', options);
   });
   it('previews deletion, blocks writes during suspension, recovers after expiry and purges on time', async () => {
     const guildId = '700000000000000077'; const options = { ...admin, guildId };

@@ -165,6 +165,11 @@ An officer opens `/stats settings` to enable or disable collection and change ex
 administrator can replace tracked member roles. The panel is private, belongs to the person who opens it, and its
 controls expire after fifteen minutes; run the command again if needed.
 
+You can also open the panel from `/picket settings`: **Enable** opens settings for an inactive module, and
+**Configure** reopens an active module without changing its activation. In this path, **PICKET settings** returns
+to the overview in the same private message and keeps saved changes. This button is absent when opened directly
+with `/stats settings` and is not part of the personal `/stats privacy` panel.
+
 ::: details Available settings and defaults
 
 | Setting | Choices | Default |

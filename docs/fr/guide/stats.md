@@ -170,6 +170,11 @@ Un officier ouvre `/stats settings` pour activer ou désactiver la collecte et c
 administrateur Discord peut remplacer les rôles membres ciblés. Le panneau est privé, appartient à la personne qui
 l'ouvre et ses contrôles expirent après quinze minutes ; relancez la commande si nécessaire.
 
+Le panneau est aussi accessible depuis `/picket settings` : **Activer** ouvre les réglages du module désactivé,
+et **Configurer** rouvre ceux du module actif sans changer son activation. Dans ce parcours, **Réglages PICKET**
+revient à l'accueil dans le même message privé et conserve les modifications enregistrées. Ce bouton n'apparaît
+pas après une ouverture directe avec `/stats settings`, ni dans le panneau personnel `/stats privacy`.
+
 ::: details Réglages disponibles et valeurs par défaut
 
 | Réglage | Choix | Par défaut |

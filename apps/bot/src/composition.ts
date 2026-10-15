@@ -53,6 +53,7 @@ import {
   createGuildGate,
   createGuildLanguage,
   createSettingsPanel,
+  settingsHomeButton,
   statusCommand,
 } from '@picket/guild';
 import type { I18n } from '@picket/i18n';
@@ -150,7 +151,7 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
   const configureWarLog = new ConfigureWarLog(warStore, options.discord?.guildChannels ?? { inspect: unavailable }, options.clock);
   const warPanel = createWarLogSettingsPanel({ store: warStore,
     configure: configureWarLog,
-    clock: options.clock, access, gate,
+    clock: options.clock, access, gate, settingsHome: context => settingsHomeButton(context, options.clock),
   });
   const timerPanel = createTimerSettingsPanel({
     getSettings: new GetBoardSettings(timers.store), updateSettings: new UpdateBoardSettings(timers.deps),
@@ -160,7 +161,7 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
   const showPermissions = new ShowPermissions(permissions);
   const statsStore=options.stats?.store ?? new PostgresStatsStore(db,()=>options.clock.now());
   const statsBuffer=options.stats?.buffer ?? new DiskVoiceBuffer('./data/voice-buffer');
-  const statsPanel=createStatsPanel({store:statsStore,buffer:statsBuffer,access,gate,clock:options.clock,dashboardUrl:options.stats?.dashboardUrl ?? null});
+  const statsPanel=createStatsPanel({store:statsStore,buffer:statsBuffer,access,gate,clock:options.clock,dashboardUrl:options.stats?.dashboardUrl ?? null,settingsHome:context=>settingsHomeButton(context,options.clock)});
   const panel = createSettingsPanel({
     settings: new GetGuildSettings(settings), update: new UpdateGuildSettings(settings, options.i18n.locales),
     permissions: showPermissions, updatePermissions: new UpdatePermissions(permissions), access: new ResolveAccess(permissions),
@@ -172,10 +173,10 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
     guildRoles: options.discord?.guildRoles ?? { names: async () => ({}) },
     audit: buildAuditPublisher(db, logger, options),
     warlog: {
-      open: warPanel.open,
+      open: context => warPanel.open(context, true),
       disable: async (guildId, actorId) => `warlog.results.${await configureWarLog.execute(guildId, actorId, { kind: 'disable' })}`,
     },
-    stats:{open:statsPanel.open,disable:async(guildId,actorId)=>{await statsStore.configure(guildId,actorId,{enabled:false});return 'panel.saved';}},
+    stats:{open:context=>statsPanel.open(context,true),disable:async(guildId,actorId)=>{await statsStore.configure(guildId,actorId,{enabled:false});return 'panel.saved';}},
   });
   const status = statusCommand(new GetGuildStatus(settings), showPermissions);
   return {

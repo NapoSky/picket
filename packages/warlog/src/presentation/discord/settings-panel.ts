@@ -1,4 +1,4 @@
-import { ACCESS_RANK, encodeCustomId, ephemeral, type AccessPolicy, type CommandContext, type CommandEntry, type ComponentContext, type ComponentFamily, type GuildGate, type PanelContent, type Reply, type RootDescriptor } from '@picket/discord';
+import { ACCESS_RANK, encodeCustomId, ephemeral, type AccessPolicy, type CommandContext, type CommandEntry, type ComponentContext, type ComponentFamily, type GuildGate, type PanelButton, type PanelContent, type Reply, type RootDescriptor } from '@picket/discord';
 import { WAR_REGION_NAMES, WAR_ZONES, WAR_ZONE_KEYS, type WarZone } from '@picket/game-data';
 import { ChannelId, type Clock } from '@picket/kernel';
 import type { ConfigureWarLog } from '../../application/settings';
@@ -6,7 +6,7 @@ import type { SettingsChange, WarStore } from '../../application/ports';
 
 export const WARLOG_ROOT: RootDescriptor = { name: 'warlog', description: 'commands.warlog.description' };
 const TTL = 15 * 60;
-export function createWarLogSettingsPanel(deps: { store: WarStore; configure: ConfigureWarLog; clock: Clock; access: AccessPolicy; gate: GuildGate }) {
+export function createWarLogSettingsPanel(deps: { store: WarStore; configure: ConfigureWarLog; clock: Clock; access: AccessPolicy; gate: GuildGate; settingsHome?: (context: CommandContext) => PanelButton }) {
   const now = () => Math.floor(deps.clock.now().getTime() / 1000);
   async function guard(context: CommandContext): Promise<Reply | null> {
     const [level, suspended] = await Promise.all([deps.access.levelOf(context.interaction, context.guildId), deps.gate.suspensionOf(context.guildId)]);
@@ -14,11 +14,11 @@ export function createWarLogSettingsPanel(deps: { store: WarStore; configure: Co
     if (suspended) return ephemeral(context.t('errors.suspended', { date: suspended.purgeAt.toISOString().slice(0, 10) }));
     return null;
   }
-  async function render(context: CommandContext, notice?: string): Promise<Reply> {
+  async function render(context: CommandContext, notice?: string, fromSettings = false): Promise<Reply> {
     const [sub, state] = await Promise.all([deps.store.subscription(context.guildId), deps.store.state()]);
     const war = state.snapshot?.war.number ?? 0;
     const enabled = !sub.paused && sub.confirmedWar === war;
-    const id = (action: string, arg = '0') => encodeCustomId('wl', 1, `${context.interaction.userId}.${context.guildId}.${(now() + TTL).toString(36)}.${action}.${arg}.${war}`);
+    const id = (action: string, arg = '0') => encodeCustomId('wl', 1, `${context.interaction.userId}.${context.guildId}.${(now() + TTL).toString(36)}.${action}.${arg}.${war}${fromSettings ? '.p' : ''}`);
     const t = context.t;
     const components: PanelContent[] = [
       { kind: 'text', text: `## 📡 ${t('warlog.title')}\n${t('warlog.help')}` },
@@ -35,29 +35,34 @@ export function createWarLogSettingsPanel(deps: { store: WarStore; configure: Co
       { kind: 'buttons', buttons: [
         { kind: 'button', customId: id(enabled ? 'disable' : 'enable'), label: t(enabled ? 'panel.disable' : 'warlog.confirm'), style: enabled ? 'secondary' : 'success' },
         { kind: 'button', customId: id('refresh'), label: t('panel.refresh'), style: 'secondary' },
+        ...(fromSettings && deps.settingsHome ? [deps.settingsHome(context)] : []),
       ] },
     ];
     return { kind: 'panel', update: context.interaction.message !== null, panel: { components, accentColor: 0x435768 } };
   }
-  const open = async (context: CommandContext): Promise<Reply> => await guard(context) ?? render(context);
+  const open = async (context: CommandContext, fromSettings = false): Promise<Reply> => await guard(context) ?? render(context, undefined, fromSettings);
   const command: CommandEntry = { path: ['warlog', 'settings'], level: 'officer', description: 'commands.warlog.settings.description', handler: async context => ({
     kind: 'deferred', ephemeral: true, update: false, run: () => open(context),
   }) };
   const handler = async (context: ComponentContext): Promise<Reply> => {
-    const [owner, guild, expires, action, arg, expectedWar, extra] = context.payload.split('.');
+    const [owner, guild, expires, action, arg, expectedWar, origin, extra] = context.payload.split('.');
+    const fromSettings = origin === 'p';
     if (owner !== context.interaction.userId) return ephemeral(context.t('panel.owner'));
     const expiry = parseInt(expires ?? '', 36);
-    if (guild !== context.guildId || !/^[a-z0-9]+$/.test(expires ?? '') || !Number.isSafeInteger(expiry) || expiry <= now() || expiry > now() + TTL || extra !== undefined || !action || !arg || !/^\d+$/.test(expectedWar ?? '') || context.interaction.message === null || context.interaction.message.channelId !== context.interaction.channelId) return ephemeral(context.t('panel.expired'));
+    if (guild !== context.guildId || !/^[a-z0-9]+$/.test(expires ?? '') || !Number.isSafeInteger(expiry) || expiry <= now() || expiry > now() + TTL || extra !== undefined || (origin !== undefined && !fromSettings) || !action || !arg || !/^\d+$/.test(expectedWar ?? '') || context.interaction.message === null || context.interaction.message.channelId !== context.interaction.channelId) return ephemeral(context.t('panel.expired'));
     return { kind: 'deferred', ephemeral: true, update: true, run: async () => {
       if (expiry <= now()) return ephemeral(context.t('panel.expired'));
       const denied = await guard(context); if (denied) return denied;
       const interaction = context.interaction;
-      if (action === 'refresh' && interaction.componentKind === 'button') return render(context);
+      if (action === 'refresh' && interaction.componentKind === 'button') return render(context, undefined, fromSettings);
       if (action === 'coverage' && interaction.componentKind === 'button') return {
         kind: 'panel', update: true, panel: { accentColor: 0x435768, components: [
           { kind: 'text', text: `## 🗺️ ${context.t('warlog.zoneContents')}` },
           ...WAR_ZONE_KEYS.map((zone): PanelContent => ({ kind: 'text', text: `### ${context.t(`warlog.zones.${zone}`)}\n${WAR_ZONES[zone].map(region => WAR_REGION_NAMES[region] ?? region).join(' · ')}` })),
-          { kind: 'buttons', buttons: [{ kind: 'button', customId: encodeCustomId('wl', 1, `${owner}.${guild}.${expires}.refresh.0.${expectedWar}`), label: context.t('warlog.backToSettings'), style: 'secondary' }] },
+          { kind: 'buttons', buttons: [
+            { kind: 'button', customId: encodeCustomId('wl', 1, `${owner}.${guild}.${expires}.refresh.0.${expectedWar}${fromSettings ? '.p' : ''}`), label: context.t('warlog.backToSettings'), style: 'secondary' },
+            ...(fromSettings && deps.settingsHome ? [deps.settingsHome(context)] : []),
+          ] },
         ] },
       };
       let change: SettingsChange | null = null;
@@ -77,9 +82,9 @@ export function createWarLogSettingsPanel(deps: { store: WarStore; configure: Co
           change = { kind: 'zones', zones };
         }
       }
-      if (!change) return render(context, context.t('settings.invalidOption'));
+      if (!change) return render(context, context.t('settings.invalidOption'), fromSettings);
       const result = await deps.configure.execute(context.guildId, interaction.userId, change);
-      return render(context, context.t(`warlog.results.${result}`));
+      return render(context, context.t(`warlog.results.${result}`), fromSettings);
     } };
   };
   const family: ComponentFamily = { namespace: 'wl', version: 1, level: 'officer', onComponent: handler };

@@ -104,6 +104,11 @@ Le journal de guerre figure aussi à côté des Timers et des Todolists sur l'ac
 **Activer** ouvre son panneau pour vérifier le salon et les zones avant de confirmer.
 **Désactiver** demande confirmation, suspend l'abonnement et annule les messages en attente.
 
+Une fois activé, **Configurer** rouvre le panneau depuis `/picket settings` sans changer son activation.
+Après une ouverture depuis PICKET, le panneau et la liste des régions proposent **Réglages PICKET** pour revenir
+à l'accueil dans le même message privé. Les modifications enregistrées sont conservées. Ce bouton n'apparaît pas
+quand le panneau est ouvert directement avec `/warlog settings`.
+
 ::: details Réglages disponibles et valeurs par défaut
 
 | Réglage | Choix | Par défaut |

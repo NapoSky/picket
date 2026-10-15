@@ -14,11 +14,12 @@ function setup(locale = 'en') {
   } satisfies WarStore;
   const channels = { inspect: jest.fn().mockResolvedValue({ kind: 'ready', locale: 'en' }) };
   const access = { levelOf: jest.fn().mockResolvedValue('officer') }, gate = { suspensionOf: jest.fn().mockResolvedValue(null) };
-  const panel = createWarLogSettingsPanel({ store, configure: new ConfigureWarLog(store, channels, { now: () => now }), clock: { now: () => now }, access, gate });
+  const clock = { now: () => now };
+  const panel = createWarLogSettingsPanel({ store, configure: new ConfigureWarLog(store, channels, clock), clock, access, gate, settingsHome: () => ({ kind: 'button', customId: 'psnav:1:home', label: 'PICKET settings' }) });
   const context: CommandContext = { interaction: makeInteraction(), guildId: GuildId.assert('700000000000000001'), logger: noopLogger, level: 'officer', t: createI18n().translator(locale).t };
   const settle = async (reply: Reply): Promise<Reply | null> => reply.kind === 'deferred' ? reply.run() : reply;
   let previous: Reply | null = null;
-  const open = async () => { previous = await settle(await panel.command.handler(context)); return previous; };
+  const open = async (fromSettings = false) => { previous = await settle(fromSettings ? await panel.open(context, true) : await panel.command.handler(context)); return previous; };
   async function click(action: string, overrides: Partial<ComponentContext['interaction']> = {}, argument?: string) {
     const reply = previous ?? await open(); if (reply?.kind !== 'panel') throw new Error('panel expected');
     const ids = reply.panel.components.flatMap(item => item.kind === 'buttons' ? item.buttons.map(button => button.customId) : 'customId' in item ? [item.customId] : []);
@@ -37,6 +38,46 @@ it('opens a private configuration panel without REST diagnostics or a status com
   const select = reply.panel.components.find(item => item.kind === 'channelSelect');
   expect(select).toMatchObject({ channelKinds: ['text'] });
   expect(() => toWireResponse({ kind: 'panel', panel: reply.panel, update: false })).not.toThrow();
+});
+
+it.each(createI18n().locales)('preserves contextual navigation through edits, errors, refresh and regions in %s', async locale => {
+  for (const fromSettings of [false, true]) {
+    const h = setup(locale);
+    const check = (reply: Reply | null) => {
+      if (reply?.kind !== 'panel') throw new Error('panel expected');
+      toWireResponse(reply);
+      const ids = reply.panel.components.flatMap(item => item.kind === 'buttons' ? item.buttons.map(button => button.customId) : []);
+      expect(ids.some(id => decodeCustomId(id)?.namespace === 'psnav')).toBe(fromSettings);
+    };
+    check(await h.open(fromSettings));
+    check(await h.click('perspective', {}, 'WARDENS'));
+    expect(h.store.configure).toHaveBeenLastCalledWith(h.context.guildId, h.context.interaction.userId, { kind: 'perspective', perspective: 'WARDENS' }, now);
+    check(await h.click('channel', { componentKind: 'channelSelect', selectedValues: ['invalid'] }));
+    check(await h.click('refresh'));
+    check(await h.click('coverage'));
+    check(await h.click('refresh'));
+    h.store.configure.mockClear();
+    check(await h.click('coverage'));
+    check(await h.click('refresh'));
+    expect(h.store.configure).not.toHaveBeenCalled();
+  }
+});
+
+it.each(['invalid', 'picket.extra', ''])('rejects malformed navigation origin %j without writes', async origin => {
+  const h = setup();
+  const payload = `${h.context.interaction.userId}.${h.context.guildId}.${(Math.floor(now.getTime() / 1000) + 900).toString(36)}.disable.0.100.${origin}`;
+  const reply = await h.panel.family.onComponent!({ ...h.context, payload, interaction: makeInteraction({ kind: 'component', componentKind: 'button', message: { id: MessageId.assert('800000000000000001'), channelId: h.context.interaction.channelId! } }) });
+  expect(reply).toMatchObject({ kind: 'message', ephemeral: true });
+  expect(h.store.configure).not.toHaveBeenCalled();
+});
+
+it('fits contextual controls with full-length Discord identifiers', async () => {
+  const h = setup();
+  const guildId = GuildId.assert('18446744073709551614');
+  const context = { ...h.context, guildId, interaction: makeInteraction({ guildId, userId: UserId.assert('18446744073709551615') }) };
+  const reply = await h.panel.open(context, true);
+  expect(reply.kind).toBe('panel');
+  expect(() => toWireResponse(reply)).not.toThrow();
 });
 it('rejects an announcement channel supplied outside the text-only picker', async () => {
   const h = setup(); await h.click('channel', { componentKind: 'channelSelect', selectedValues: ['600000000000000001'], resolvedChannels: { '600000000000000001': { kind: 'announcement' } } });

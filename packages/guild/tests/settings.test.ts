@@ -3,7 +3,7 @@ import { createI18n, loadCatalogs } from '@picket/i18n';
 import { ChannelId, GuildId, MessageId, RoleId, UserId, noopLogger } from '@picket/kernel';
 import {
   CancelGuildDeletion, ExportGuildData, GetGuildSettings, GetGuildStatus, GetSuspension, PICKET_ROOT, RequestGuildDeletion, ResolveAccess,
-  ShowPermissions, UpdateGuildSettings, UpdatePermissions, createGuildAccessPolicy, createGuildGate, createSettingsPanel,
+  ShowPermissions, UpdateGuildSettings, UpdatePermissions, createGuildAccessPolicy, createGuildGate, createSettingsPanel, settingsHomeButton,
   defaultPermissionConfig, statusCommand, type GuildLifecycleRepository, type GuildSettings, type GuildSettingsWriter,
   type PermissionConfig, type PermissionRepository,
   type AuditControl,
@@ -14,7 +14,7 @@ const guildId = GuildId.assert('700000000000000001');
 const roleId = RoleId.assert('400000000000000011');
 const channelId = ChannelId.assert('600000000000000001');
 
-function setup(i18n = testI18n, auditControl?: AuditControl) {
+function setup(i18n = testI18n, auditControl?: AuditControl, withStats = false) {
   let time = new Date('2026-10-05T12:00:00Z');
   const clock = { now: () => time };
   let settings: GuildSettings = { guildId, locale: null, timezone: 'UTC', auditChannelId: null, features: { timers: true, todolists: true, warlog: true }, installedAt: time };
@@ -48,9 +48,11 @@ function setup(i18n = testI18n, auditControl?: AuditControl) {
       return 'warlog.results.saved';
     }),
   };
+  const stats = { open: jest.fn().mockResolvedValue({ kind: 'message', ephemeral: true, content: 'Stats settings' }), disable: jest.fn().mockResolvedValue('panel.saved') };
+  if (withStats) settings = { ...settings, features: { ...settings.features, stats: true } };
   const panel = createSettingsPanel({ settings: new GetGuildSettings(reader), update: new UpdateGuildSettings(store, i18n.locales), permissions: show,
     updatePermissions: new UpdatePermissions(permissions), access: new ResolveAccess(permissions), suspension,
-    request: new RequestGuildDeletion(lifecycle, clock, 30), cancel: new CancelGuildDeletion(lifecycle), clock, i18n, warlog,
+    request: new RequestGuildDeletion(lifecycle, clock, 30), cancel: new CancelGuildDeletion(lifecycle), clock, i18n, warlog, ...(withStats ? { stats } : {}),
     exportData: new ExportGuildData({ read: async () => ({ guild_settings: [settings], guild_permission_roles: [config] }) }, clock), ...(auditControl ? { audit: auditControl } : {}) });
   const status = statusCommand(new GetGuildStatus(reader), show);
   const registry = new CommandRegistry([PICKET_ROOT], [status, panel.command], i18n, [...panel.aliases, { ...status, path: ['picket', 'permissions', 'show'] }]);
@@ -61,7 +63,7 @@ function setup(i18n = testI18n, auditControl?: AuditControl) {
   }
   const open = (overrides: Partial<IncomingInteraction> = {}) => call(makeInteraction({ commandPath: ['picket', 'settings'], memberPermissions: 8n, ...overrides }));
   const click = (customId: string, overrides: Partial<IncomingInteraction> = {}) => call(makeInteraction({ kind: 'component', customId, componentKind: 'button', memberPermissions: 8n, message: { id: MessageId.assert('910000000000000001'), channelId }, ...overrides }));
-  return { panel, registry, pipeline, open, click, audit, warlog, read: () => ({ settings, config, inactive }), advance: (ms: number) => { time = new Date(time.getTime() + ms); }, setConfig: (value: PermissionConfig) => { config = value; } };
+  return { panel, registry, pipeline, open, click, audit, warlog, stats, clock, read: () => ({ settings, config, inactive }), advance: (ms: number) => { time = new Date(time.getTime() + ms); }, setConfig: (value: PermissionConfig) => { config = value; } };
 }
 function view(reply: Reply | null): PanelView {
   if (reply?.kind !== 'panel') throw new Error(`Expected panel: ${JSON.stringify(reply)}`);
@@ -78,6 +80,35 @@ function control(reply: Reply | null, action: string, arg?: string): string {
 const text = (reply: Reply | null) => reply?.kind === 'message' ? reply.content : JSON.stringify(reply?.kind === 'panel' ? reply.panel : reply);
 
 describe('private server settings panel', () => {
+  it.each(testI18n.locales)('opens enabled Warlog and Stats settings without mutation in %s', async locale => {
+    const env = setup(testI18n, undefined, true);
+    const home = await env.open({ locale });
+    const before = env.read();
+    await env.click(control(home, 'configure', 'warlog'));
+    await env.click(control(home, 'configure', 'stats'));
+    expect(env.warlog.open).toHaveBeenCalledTimes(1);
+    expect(env.stats.open).toHaveBeenCalledTimes(1);
+    expect(env.read()).toEqual(before);
+    expect(env.warlog.disable).not.toHaveBeenCalled();
+    expect(env.stats.disable).not.toHaveBeenCalled();
+    expect(env.audit).toEqual([]);
+  });
+  it('returns through Guild guards, including suspension recovery and expired or revoked access', async () => {
+    const env = setup();
+    const interaction = makeInteraction();
+    const context = { interaction, guildId, level: 'admin' as const, t: testI18n.translator('en').t, logger: noopLogger };
+    const back = settingsHomeButton(context, env.clock).customId;
+    expect(text(await env.click(back))).toContain('PICKET · Server settings');
+    expect(text(await env.click(back, { memberPermissions: 0n }))).toContain('required level: officer');
+    expect(text(await env.click(back, { userId: UserId.assert('500000000000000002') }))).toContain('another user');
+    expect(text(await env.click(back, { guildId: GuildId.assert('700000000000000002') }))).toContain('expired');
+    const data = await env.click(control(await env.open(), 'view', 'data'));
+    const confirmation = await env.click(control(data, 'view', 'delete'));
+    await env.click(control(confirmation, 'delete'));
+    expect(text(await env.click(back))).toContain(testI18n.translator('en').t('panel.suspendedTitle'));
+    env.advance(900_000);
+    expect(text(await env.click(back))).toContain('expired');
+  });
   it('publishes exactly status and settings, while resolving old commands without publishing them', () => {
     const { registry } = setup();
     const payload = buildCommandsPayload(registry)[0];

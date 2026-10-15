@@ -61,6 +61,15 @@ function nativeName(locale: string): string {
   return name.charAt(0).toLocaleUpperCase(locale) + name.slice(1);
 }
 
+/** Reuses Guild navigation so returning also works after a module is disabled or the guild is suspended. */
+export function settingsHomeButton(context: CommandContext, clock: Clock): PanelButton {
+  const expires = (Math.floor(clock.now().getTime() / 1000) + TTL_SECONDS).toString(36);
+  return {
+    kind: 'button', label: context.t('panel.picketSettings'), emoji: '↩️', style: 'secondary',
+    customId: encodeCustomId('psnav', VERSION, `${context.interaction.userId}.${context.guildId}.${expires}.view.home`),
+  };
+}
+
 /** Navigation state lives in Discord; writes reread state in the use cases. */
 export function createSettingsPanel(deps: SettingsPanelDependencies) {
   const now = () => Math.floor(deps.clock.now().getTime() / 1000);
@@ -107,10 +116,12 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
         components.push(
           text(t('panel.homeHelp')),
           { kind: 'section', text: `### 🌐 ${t('panel.language')}\n**${settings.locale === null ? t('panel.auto') : nativeName(settings.locale)}**`, button: button('panel.language', 'psnav', 'view', 'language', 'primary') },
-          ...(['timers', 'todolists', 'warlog', ...(deps.stats ? ['stats' as const] : [])] as const).map((feature): PanelContent => ({
+          ...(['timers', 'todolists', 'warlog', ...(deps.stats ? ['stats' as const] : [])] as const).flatMap((feature): PanelContent[] => [{
             kind: 'section', text: `### ${feature === 'timers' ? '⏱️' : feature === 'todolists' ? '📋' : feature==='stats' ? '📊' : '📡'} ${t(`features.${feature}`)}\n${settings.features[feature] ? '🟢' : '⚪'} **${t(settings.features[feature] ? 'panel.enabled' : 'panel.disabled')}**\n${t(feature === 'timers' ? 'panel.timersHelp' : feature === 'todolists' ? 'panel.todolistsHelp' : feature==='stats' ? 'stats.help' : 'panel.warlogHelp')}`,
             button: settings.features[feature] ? button('panel.disable', 'psnav', 'disable', feature) : button('panel.enable', 'psedit', 'enable', feature, 'success'),
-          })),
+          }, ...(settings.features[feature] && (feature === 'warlog' || feature === 'stats') ? [{
+            kind: 'buttons' as const, buttons: [button('panel.configure', 'psedit', 'configure', feature, 'primary')],
+          }] : [])]),
           text(`🔑 ${t('panel.access', { level: t(`levels.${context.level}`) })}`),
         );
         break;
@@ -233,11 +244,11 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
           }
           if (namespace === 'psedit') {
             if(argument==='stats'&&context.interaction.componentKind==='button'&&deps.stats) {
-              if(action==='enable') return deps.stats.open(context);
+              if(action==='enable'||action==='configure') return deps.stats.open(context);
               if(action==='disable') return render(context,'home','0',await deps.stats.disable(context.guildId,context.interaction.userId));
             }
             if (argument === 'warlog' && context.interaction.componentKind === 'button') {
-              if (action === 'enable') return deps.warlog.open(context);
+              if (action === 'enable' || action === 'configure') return deps.warlog.open(context);
               if (action === 'disable') return render(context, 'home', '0', await deps.warlog.disable(context.guildId, context.interaction.userId));
             }
             if (action === 'auditTest' && context.interaction.componentKind === 'button' && deps.audit) {
