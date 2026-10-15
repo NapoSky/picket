@@ -517,6 +517,13 @@ export class PostgresStatsStore {
       features: FEATURES.map((feature) => ({ feature, enabledGuilds: Number(row[feature]) })),
       updatedAt: this.now().toISOString() };
   }
+  async guildFeatures(guildId: string): Promise<readonly { feature: Feature; enabled: boolean }[]> {
+    return withTenant(this.db, GuildId.assert(guildId), async (trx) => {
+      const row = (await sql<{ features: Record<string, boolean> }>
+        `SELECT features FROM guild_settings WHERE guild_id=${guildId}`.execute(trx)).rows[0];
+      return FEATURES.map(feature => ({ feature, enabled: row?.features[feature] === true }));
+    });
+  }
   async allGuildIds(): Promise<string[]> {
     return (
       await sql<{ guild_id: string }>`SELECT guild_id FROM guild_registry ORDER BY guild_id`.execute(this.db)

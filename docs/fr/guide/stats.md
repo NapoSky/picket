@@ -134,6 +134,10 @@ segments de la période. **Aucune activité observée** ne signifie pas **jamais
 
 ### Comparer les serveurs de l'instance
 
+Dans **Administration**, la sélection d'un serveur affiche l'état activé/désactivé de **Timers**, **TodoLists**,
+**Warlog** et des **Statistiques vocales** au-dessus des indicateurs vocaux. Ces réglages sont indépendants des filtres
+de période et de salon. Cette vue est réservée aux administrateurs de l'instance PICKET.
+
 Les administrateurs d'instance ouvrent **Administration**, puis choisissent **Tous les serveurs**.
 Le graphique quotidien des heures vocales empile une série colorée par Discord : la hauteur totale donne les heures
 vocales de l'instance ce jour-là. **Les personnes actives au fil des jours** affiche une courbe par serveur et un total

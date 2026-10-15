@@ -153,6 +153,13 @@
             <div class="freshness">
               <span id="updated" role="status" aria-live="polite"></span><span id="timezone"></span>
             </div>
+            <section id="guild-features" aria-labelledby="guild-features-title" hidden>
+              <div class="card-heading">
+                <div><h2 id="guild-features-title" data-i18n="serverFeatures">Server features</h2>
+                  <p data-i18n="serverFeaturesHelp">Current settings for this server, independent of the period and channel filters.</p></div>
+              </div>
+              <div id="guild-feature-states" class="metrics feature-states"></div>
+            </section>
             <div id="empty" class="empty" hidden>
               <span aria-hidden="true">◌</span>
               <h2 data-i18n="emptyTitle">Nothing to show yet</h2>

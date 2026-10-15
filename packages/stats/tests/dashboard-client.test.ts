@@ -43,7 +43,7 @@ function element(): ClientElement {
 }
 
 type Failure = { status: number; error: string; retry?: number };
-async function client(language = 'en') {
+async function client(language = 'en', administrator = false) {
   let instant = Date.parse('2026-10-15T08:00:00Z');
   class Clock extends Date { static override now() { return instant; } }
   const nodes = new Map([...html.matchAll(/<[^>]*\bid="([^"]+)"[^>]*>/g)].map(([tag, id]) => {
@@ -63,6 +63,10 @@ async function client(language = 'en') {
   const requests: string[] = [];
   const intervals = new Map<number, () => unknown>();
   let failure: Failure | null = null;
+  const features = new Map([A, B].map(id => [id, [
+    { feature: 'timers', enabled: id === A }, { feature: 'todolists', enabled: true },
+    { feature: 'warlog', enabled: id === B }, { feature: 'stats', enabled: false },
+  ]]));
   const response = (body: unknown, status = 200, retry?: number) => ({
     ok: status < 400, status, json: async () => body,
     headers: { get: () => retry === undefined ? null : String(retry) },
@@ -80,13 +84,16 @@ async function client(language = 'en') {
     setInterval: (handler: () => unknown, ms: number) => intervals.set(ms, handler),
     fetch: async (path: string) => {
       requests.push(path);
-      if (path === '/api/session') return response({ user: { id: 'test-user', name: 'Member' }, csrf: 'test', administrator: false });
+      if (path === '/api/session') return response({ user: { id: 'test-user', name: 'Member' }, csrf: 'test', administrator });
       if (path === '/api/guilds') return response({ guilds: [A, B].map(id => ({ id, name: id, level: 'unknown', isMember: true, enabled: true })) });
+      if (path === '/api/admin/status') return response({ buffer: { bytes: 0, count: 0, oldest: null } });
       if (path.startsWith('/api/activity')) {
         if (failure) return response({ error: failure.error }, failure.status, failure.retry);
         const query = new URLSearchParams(path.split('?')[1]);
-        return response({ scope: query.get('mode') === 'overview' ? 'overview' : 'self',
-          accessLevel: query.get('guild') === A ? 'officer' : 'member', seconds: 7200, activeUsers: 2, sessions: 3, inVoice: 1,
+        return response({ scope: query.get('guild') === 'all' ? 'global' : query.get('mode') === 'overview' ? 'overview' : administrator ? 'guild' : 'self',
+          ...(administrator && query.get('mode') !== 'overview' && features.has(query.get('guild')!)
+            ? { guildFeatures: features.get(query.get('guild')!) } : {}),
+          accessLevel: administrator ? 'instance_admin' : query.get('guild') === A ? 'officer' : 'member', seconds: 7200, activeUsers: 2, sessions: 3, inVoice: 1,
           daily: [], hourly: [], channels: [], users: [], timezone: 'UTC', peakConcurrency: 2, updatedAt: new Date(instant).toISOString() });
       }
       if (path.startsWith('/api/privacy')) return response({ optedOut: false });
@@ -107,8 +114,45 @@ async function client(language = 'en') {
     intervals.get(60000)!(); intervals.get(1000)!();
     await settle();
   };
-  return { get, requests, count, change, refresh, click, advance, fail: (value: Failure | null) => { failure = value; } };
+  return { get, requests, count, change, refresh, click, advance, features, fail: (value: Failure | null) => { failure = value; } };
 }
+
+it('shows current server feature states only in Administration and refreshes and translates them', async () => {
+  const c = await client('en', true);
+  const states = () => c.get('guild-feature-states').options.map(card => card.options[1]!.textContent);
+  expect(c.get('guild-features').hidden).toBe(true);
+  await c.click('nav:admin');
+  expect(c.get('guild-features').hidden).toBe(true);
+  await c.change('guild', A);
+  expect(c.get('guild-features').hidden).toBe(false);
+  expect(states()).toEqual(['Enabled', 'Enabled', 'Disabled', 'Disabled']);
+  await c.change('period', '1');
+  await c.change('channel', '600000000000000001');
+  expect(states()).toEqual(['Enabled', 'Enabled', 'Disabled', 'Disabled']);
+  await c.change('guild', B);
+  expect(states()).toEqual(['Disabled', 'Enabled', 'Enabled', 'Disabled']);
+  c.features.get(B)![1]!.enabled = false;
+  await c.refresh();
+  expect(states()).toEqual(['Disabled', 'Disabled', 'Enabled', 'Disabled']);
+  await c.change('language', 'fr');
+  expect(states()).toEqual(['Désactivé', 'Désactivé', 'Activé', 'Désactivé']);
+  await c.click('nav:activity');
+  expect(c.get('guild-features').hidden).toBe(true);
+  await c.click('nav:admin');
+  await c.change('guild', A);
+  c.fail({ status: 503, error: 'discord_unavailable' });
+  await c.change('guild', B);
+  expect(c.get('guild-features').hidden).toBe(true);
+  expect(states()).toEqual([]);
+});
+
+it('keeps server feature states hidden for regiment officers', async () => {
+  const c = await client();
+  await c.click('nav:activity');
+  await c.change('access', 'guild');
+  expect(c.get('guild-features').hidden).toBe(true);
+  expect(c.get('guild-feature-states').options).toEqual([]);
+});
 
 it('reuses privacy reads for period changes and revisited servers, while explicit refresh checks them again', async () => {
   const c = await client();

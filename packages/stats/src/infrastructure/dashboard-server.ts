@@ -389,7 +389,10 @@ export function createDashboardServer(options: DashboardOptions) {
     const report = selected.kind === 'global'
       ? await options.store.adminReport(selected, requested, { offset })
       : await options.store.report(selected, requested, { offset });
-    return { ...report, scope: selected.kind, accessLevel: selected.accessLevel, offset };
+    const guildFeatures = selected.accessLevel === 'instance_admin' && selected.guildId !== null
+      ? await options.store.guildFeatures(selected.guildId) : undefined;
+    return { ...report, scope: selected.kind, accessLevel: selected.accessLevel, offset,
+      ...(guildFeatures ? { guildFeatures } : {}) };
   });
   app.get('/api/export', async (request, reply) => {
     const current = await session(request);

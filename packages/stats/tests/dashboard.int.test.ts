@@ -289,6 +289,39 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
       { feature: 'warlog', enabledGuilds: 0 }, { feature: 'stats', enabledGuilds: 0 },
     ] });
   });
+  it('exposes per-server feature settings only to PICKET instance administrators', async () => {
+    for (const permissions of ['0', '8']) {
+      memberships = [{ ...guild(A), permissions }];
+      roles = [R, O];
+      const response = await get(`/api/activity?guild=${A}&mode=guild`);
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('guildFeatures');
+    }
+    team = true;
+    memberships = [];
+    await queryAsAdmin(database, "UPDATE guild_settings SET features=features || '{\"timers\":false,\"warlog\":true}'::jsonb WHERE guild_id=$1", [A]);
+    const features = [
+      { feature: 'timers', enabled: false }, { feature: 'todolists', enabled: true },
+      { feature: 'warlog', enabled: true }, { feature: 'stats', enabled: true },
+    ];
+    for (const filters of ['', '&days=1&channel=600000000000000002']) {
+      const response = await get(`/api/activity?guild=${A}&mode=guild${filters}`);
+      expect(response.statusCode).toBe(200);
+      expect(response.json().guildFeatures).toEqual(features);
+    }
+    expect((await get(`/api/activity?guild=${B}&mode=guild`)).json().guildFeatures).toEqual([
+      { feature: 'timers', enabled: true }, { feature: 'todolists', enabled: true },
+      { feature: 'warlog', enabled: false }, { feature: 'stats', enabled: true },
+    ]);
+    await store.configure(A, U, { enabled: false });
+    await queryAsAdmin(database, "UPDATE guild_registry SET inactive_since=now(),inactive_reason='left' WHERE guild_id=$1", [A]);
+    expect((await get(`/api/activity?guild=${A}&mode=guild`)).json().guildFeatures).toEqual(
+      features.map(row => row.feature === 'stats' ? { ...row, enabled: false } : row));
+    expect((await get('/api/activity?guild=all')).json()).not.toHaveProperty('guildFeatures');
+    expect((await get(`/api/activity?guild=${OTHER}&mode=guild`)).statusCode).toBe(403);
+    team = false;
+    expect((await get(`/api/activity?guild=${A}&mode=guild`)).statusCode).toBe(403);
+  });
   it('only grants officer access in the guild with the configured role and rechecks exports', async () => {
     roles = [R, O];
     expect(

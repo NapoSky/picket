@@ -50,6 +50,10 @@ const translations = {
     featureTodolists: 'TodoLists',
     featureWarlog: 'Warlog',
     featureStats: 'Voice stats',
+    serverFeatures: 'Server features',
+    serverFeaturesHelp: 'Current settings for this server, independent of the period and channel filters.',
+    featureEnabled: 'Enabled',
+    featureDisabled: 'Disabled',
     instanceHelperTitle: 'How these figures are counted',
     instanceHelper: 'These are current settings, not usage counts. Servers where PICKET has left or been suspended are excluded. A server can enable several features, so feature counts overlap. Voice tracking can be disabled while the server remains active.',
     overview: 'Overview',
@@ -229,6 +233,10 @@ const translations = {
     featureTodolists: 'TodoLists',
     featureWarlog: 'Warlog',
     featureStats: 'Statistiques vocales',
+    serverFeatures: 'Fonctionnalités du serveur',
+    serverFeaturesHelp: 'Réglages actuels de ce serveur, indépendants des filtres de période et de salon.',
+    featureEnabled: 'Activé',
+    featureDisabled: 'Désactivé',
     instanceHelperTitle: 'Comment ces chiffres sont calculés',
     instanceHelper: 'Ces chiffres décrivent les réglages actuels, pas le nombre d’utilisations. Les serveurs quittés par PICKET ou suspendus sont exclus. Un serveur peut activer plusieurs fonctionnalités : leurs effectifs se recoupent. Le suivi vocal peut être désactivé alors que le serveur reste actif.',
     overview: 'Vue d’ensemble',
@@ -393,6 +401,7 @@ let displayedReportKey = null;
 const privacyCache = new Map();
 let overviewPage = 'overview';
 const t = (key) => translations[language][key] ?? translations.en[key] ?? key;
+const featureLabels = { timers: 'featureTimers', todolists: 'featureTodolists', warlog: 'featureWarlog', stats: 'featureStats' };
 const number = (value, decimals = 0) =>
   new Intl.NumberFormat(language, { maximumFractionDigits: decimals }).format(value);
 const date = (value) =>
@@ -554,7 +563,8 @@ function clearReport() {
   displayedReportKey = null;
   ['metric-hours', 'metric-users', 'metric-sessions', 'metric-live', 'instance-total'].forEach(id => text(id, '—'));
   for (const id of ['daily-chart', 'people-daily-chart', 'hourly-chart', 'server-summary-body',
-    'channels-chart', 'people-body', 'segments-body', 'instance-features', 'instance-adoption']) $(id).replaceChildren();
+    'channels-chart', 'people-body', 'segments-body', 'instance-features', 'instance-adoption', 'guild-feature-states']) $(id).replaceChildren();
+  $('guild-features').hidden = true;
   $('empty').hidden = true;
 }
 function renderLoadFailure() {
@@ -604,6 +614,7 @@ function setHeading() {
   if (page === 'picket') text('scope-badge', t('scopeShared'));
   if (page === 'overview') text('scope-badge', t('scopeOverview'));
   $('admin-card').hidden = page !== 'admin';
+  $('guild-features').hidden = page !== 'admin' || !current.administrator || !report?.guildFeatures || $('guild').value === 'all';
   $('people-card').hidden = page === 'overview';
   $('segments-card').hidden = page === 'overview';
   $('privacy-card').hidden = page === 'admin' || $('guild').value === 'all';
@@ -626,19 +637,18 @@ function renderInstance(data) {
   text('instance-updated', `${t('updated')} · ${date(data.updatedAt)}`);
   $('instance-features').replaceChildren();
   $('instance-adoption').replaceChildren();
-  const labels = { timers: 'featureTimers', todolists: 'featureTodolists', warlog: 'featureWarlog', stats: 'featureStats' };
   for (const row of data.features) {
     const share = data.activeGuilds ? row.enabledGuilds / data.activeGuilds : 0;
     const percent = new Intl.NumberFormat(language, { style: 'percent', maximumFractionDigits: 1 }).format(share);
     const card = document.createElement('article'); card.className = 'metric'; card.dataset.feature = row.feature;
     const name = document.createElement('span'), count = document.createElement('strong'), helper = document.createElement('small');
-    name.textContent = t(labels[row.feature]); count.textContent = number(row.enabledGuilds);
+    name.textContent = t(featureLabels[row.feature]); count.textContent = number(row.enabledGuilds);
     helper.textContent = `${percent} · ${t('enabledServers')}`;
     card.append(name, count, helper); $('instance-features').append(card);
     const item = document.createElement('div'); item.className = 'channel-row';
     const caption = document.createElement('div'); caption.className = 'channel-caption';
     const label = document.createElement('span'), value = document.createElement('strong');
-    label.textContent = t(labels[row.feature]); value.textContent = `${number(row.enabledGuilds)} / ${number(data.activeGuilds)} · ${percent}`;
+    label.textContent = t(featureLabels[row.feature]); value.textContent = `${number(row.enabledGuilds)} / ${number(data.activeGuilds)} · ${percent}`;
     caption.append(label, value);
     const track = document.createElement('div'); track.className = 'bar-track';
     const fill = document.createElement('div'); fill.className = 'bar-fill'; fill.style.width = `${share * 100}%`;
@@ -851,8 +861,23 @@ function channelChart(rows) {
     host.append(item);
   });
 }
+function renderGuildFeatures(features) {
+  const host = $('guild-feature-states');
+  host.replaceChildren();
+  $('guild-features').hidden = page !== 'admin' || !current.administrator || !features || $('guild').value === 'all';
+  if ($('guild-features').hidden) return;
+  for (const row of features) {
+    const card = document.createElement('article'); card.className = 'metric';
+    card.dataset.feature = row.feature; card.dataset.enabled = String(row.enabled);
+    const name = document.createElement('span'), state = document.createElement('strong');
+    name.textContent = t(featureLabels[row.feature]);
+    state.textContent = t(row.enabled ? 'featureEnabled' : 'featureDisabled');
+    card.append(name, state); host.append(card);
+  }
+}
 function render(data) {
   report = data;
+  renderGuildFeatures(data.guildFeatures);
   text('metric-hours', number(data.seconds / 3600, 1));
   text('metric-users', number(data.activeUsers));
   text('metric-users-help', t(data.scope === 'global' ? 'globalUniquePeopleHelp' : 'activePeopleHelp'));

@@ -576,6 +576,14 @@ main:has(> .welcome:not([hidden])) {
   color: var(--muted);
   font-size: 10px;
 }
+.feature-states .metric strong {
+  font-size: 22px;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+.feature-states .metric[data-enabled="true"] strong {
+  color: var(--green);
+}
 .chart-grid {
   display: grid;
   grid-template-columns: 1.7fr 1fr;

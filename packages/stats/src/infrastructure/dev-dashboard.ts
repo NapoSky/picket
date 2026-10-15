@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import Fastify from 'fastify';
 import { exportActivity } from '../application/activity-export';
 import { parsePeriod } from '../domain/model';
+import { FEATURES } from '@picket/guild';
 
 export type PreviewRole = 'member' | 'officer' | 'admin';
 const A = '700000000000000001', B = '700000000000000002', U = '300000000000000001';
@@ -118,7 +119,11 @@ export function createStatsDevServer(role: PreviewRole = 'admin', now = new Date
       concurrent += delta;
       peakConcurrency = Math.max(peakConcurrency, concurrent);
     }
-    return { scope, ...(global ? {snapshotAt:now.toISOString()} : {}), from: period.from.toISOString(), to: period.to.toISOString(), timezone: 'UTC',
+    const guildFeatures = role === 'admin' && guild && scope !== 'overview' && !exporting
+      ? FEATURES.map(feature => ({ feature, enabled: feature === 'stats' ? guild.enabled
+        : feature === 'timers' || (feature === 'todolists' ? guild.id !== B : [A, B].includes(guild.id)) }))
+      : undefined;
+    return { scope, ...(guildFeatures ? { guildFeatures } : {}), ...(global ? {snapshotAt:now.toISOString()} : {}), from: period.from.toISOString(), to: period.to.toISOString(), timezone: 'UTC',
       seconds: visible.reduce((sum, s) => sum + s.seconds, 0), activeUsers: new Set(visible.map((s) => s.userId)).size,
       sessions: visible.length, inVoice: 0, peakConcurrency,
       serverActivity: guilds.filter((g) => global || g.id === guild!.id).map((g) => {

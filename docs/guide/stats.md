@@ -132,6 +132,10 @@ or may have used an excluded channel.
 
 ### Comparing servers across the instance
 
+In **Administration**, selecting a specific server shows the current **Timers**, **TodoLists**, **Warlog** and
+**Voice stats** enabled/disabled states above the voice metrics. These settings are independent of the period and
+channel filters. This view is reserved for PICKET instance administrators.
+
 Instance administrators can open **Administration** and select **All servers**. The daily voice chart
 stacks one coloured series per Discord server: the height of the stack is the instance's total voice hours for that day.
 The **Active people over time** chart shows one curve per server and a dashed instance total, counting each person
