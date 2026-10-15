@@ -106,7 +106,8 @@ Depuis `deploy/`, pour les sauvegardes :
 
 Exécutez `migrate`, puis `deploy-commands`, et déployez le bot mis à jour. La CLI déduit le serveur contenant
 `SUPPORT_GUILD_EVENTS_CHANNEL_ID` et y enregistre **`/picket-ops servers` uniquement**, séparément des commandes
-publiques. Ouvrez-la dans le salon privé configuré. Le panneau éphémère est indépendant de Stats.
+publiques. Ouvrez-la dans n’importe quel salon de ce serveur. Le salon configuré reste la destination des
+notifications de cycle de vie. Le panneau éphémère est indépendant de Stats.
 
 Seul le **propriétaire de l’application Discord**, ou le **propriétaire de l’équipe de développeurs** si elle possède
 l’application, est habilité. L’identité provient de l’API du bot : aucune nouvelle variable d’environnement ni intent
@@ -123,7 +124,7 @@ les mentions neutralisées. Le retrait est bloqué pour des serveurs indiscernab
 Choisissez **Préparer le retrait**, renseignez un motif interne de 10 à 500 caractères, puis saisissez **`QUITTER`**.
 L’envoi du formulaire demande le départ. Une session dure dix minutes ; une confirmation reste valable au plus
 deux minutes et n’est utilisable qu’une fois entre toutes les répliques. Actualisez la fiche après expiration.
-Propriétaire, salon/serveur support, génération de présence, nom, configuration et rétention sont revérifiés avant
+Propriétaire, serveur support, génération de présence, nom, configuration et rétention sont revérifiés avant
 l’envoi. Le serveur support est toujours protégé.
 
 Le départ suit la rétention habituelle et conserve une échéance de suppression déjà fixée. Une réinvitation peut

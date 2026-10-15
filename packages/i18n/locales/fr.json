@@ -608,8 +608,8 @@
     "verification": "La présence Discord n’a pas pu être vérifiée. Aucun retrait n’a été demandé.",
     "absent": "PICKET est déjà absent, ou le serveur n’est plus enregistré.",
     "ambiguous": "Ces serveurs ne peuvent pas être distingués avec certitude. Le retrait est indisponible.",
-    "denied": "Cette action est réservée au propriétaire de l’application, dans le salon support configuré.",
-    "authorizationUnavailable": "Le propriétaire de l’application et le salon support n’ont pas pu être vérifiés. Réessaie plus tard. Aucun départ de serveur n’a été demandé.",
+    "denied": "Cette action est réservée au propriétaire de l’application, dans le serveur support.",
+    "authorizationUnavailable": "Le propriétaire de l’application et le serveur support n’ont pas pu être vérifiés. Réessaie plus tard. Aucun départ de serveur n’a été demandé.",
     "expired": "Cette confirmation ou session a expiré ou a déjà été utilisée. Rouvre /picket-ops servers.",
     "changed": "La situation du serveur a changé depuis l’aperçu. Actualise sa fiche et confirme à nouveau.",
     "invalid": "Renseigne un motif de 10 à 500 caractères et saisis exactement QUITTER. Aucun retrait n’a été demandé.",
@@ -627,7 +627,7 @@
       "expired": "La confirmation a expiré avant l’envoi.",
       "changed": "La situation du serveur a changé. Actualise sa fiche avant de réessayer.",
       "protected": "Le serveur support est protégé.",
-      "denied": "L’opérateur ou le salon support n’est plus autorisé.",
+      "denied": "L’opérateur ou le serveur support n’est plus autorisé.",
       "verification": "Les vérifications Discord nécessaires ont échoué. Aucun départ n’a été envoyé.",
       "present": "PICKET est toujours présent. La demande précédente ne sera pas répétée."
     }

@@ -10,6 +10,7 @@ const support = GuildId.assert('700000000000000001');
 const target = GuildId.assert('700000000000000081');
 const other = GuildId.assert('700000000000000082');
 const channel = ChannelId.assert('600000000000000001');
+const otherChannel = ChannelId.assert('600000000000000002');
 const owner = UserId.assert('500000000000000001');
 const outsider = UserId.assert('500000000000000002');
 const reason = 'Test server verified by the service operator.';
@@ -63,16 +64,17 @@ describe('private service operations (PostgreSQL)', () => {
 
   it('denies server administrators who are not the application owner, including forged components', async () => {
     const pipeline = buildPipeline(database.handle.db, noopLogger, options());
-    expect((await pipeline.handle(interaction({ userId: outsider, memberPermissions: 8n }))).kind).toBe('message');
+    expect((await pipeline.handle(interaction({ channelId: otherChannel, userId: outsider, memberPermissions: 8n }))).kind).toBe('message');
     const { session } = await prepared();
-    const result = await pipeline.handle(interaction({ kind: 'component', commandPath: [], customId: `ops:1:${session.id}.refresh.0`, userId: outsider, memberPermissions: 8n }));
+    const result = await pipeline.handle(interaction({ kind: 'component', commandPath: [], customId: `ops:1:${session.id}.refresh.0`, channelId: otherChannel, userId: outsider, memberPermissions: 8n }));
     expect(result.kind).toBe('message');
     expect(leave).not.toHaveBeenCalled();
   });
 
-  it('binds access to the configured channel and resolved support guild, and fails closed without configuration', async () => {
+  it('allows any channel in the resolved support guild and fails closed outside it or without configuration', async () => {
     expect(await service().authorize(interaction({ guildId: target }))).toBeNull();
-    expect(await service().authorize(interaction({ channelId: ChannelId.assert('600000000000000002') }))).toBeNull();
+    expect(await service().authorize(interaction({ channelId: otherChannel }))).toEqual(scope);
+    expect(await service().authorize(interaction({ guildId: target, channelId: otherChannel }))).toBeNull();
     const disabled = buildOperatorService(database.handle.db, { ...options(), supportGuildEventsChannelId: null });
     expect(await disabled.authorize(interaction())).toBeNull();
     discord.scope = async () => { throw new Error('Discord unavailable'); };
@@ -89,16 +91,27 @@ describe('private service operations (PostgreSQL)', () => {
     expect(leave).not.toHaveBeenCalled();
   });
 
+  it('rejects copied buttons and confirmation modals outside the support guild', async () => {
+    const { session, operation } = await prepared();
+    const pipeline = buildPipeline(database.handle.db, noopLogger, options());
+    for (const request of [
+      interaction({ kind: 'component', commandPath: [], guildId: other, channelId: otherChannel, customId: `ops:1:${session.id}.refresh.0` }),
+      interaction({ kind: 'modal', commandPath: [], guildId: other, channelId: otherChannel, customId: `ops:1:${session.id}.submit.${operation.id}`, fields: { reason, confirmation: 'QUITTER' } }),
+    ]) {
+      expect(await pipeline.handle(request)).toEqual({ kind: 'message', content: testI18n.translator('fr').t('ops.denied'), ephemeral: true });
+    }
+    expect((await repo().operation(operation.id))!.status).toBe('prepared');
+    expect(leave).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['support channel not configured', 'disabled'],
-    ['channel mismatch', 'channel'],
     ['support guild mismatch', 'guild'],
     ['application owner mismatch', 'owner'],
   ])('logs a safe actionable reason for denied operator access: %s', async (reason, mismatch) => {
     const logger = recordingLogger();
     const ops = buildOperatorService(database.handle.db, { ...options(), ...(mismatch === 'disabled' ? { supportGuildEventsChannelId: null } : {}) }, logger);
     const request = interaction({
-      ...(mismatch === 'channel' ? { channelId: ChannelId.assert('600000000000000002') } : {}),
       ...(mismatch === 'guild' ? { guildId: target } : {}),
       ...(mismatch === 'owner' ? { userId: outsider } : {}),
     });
@@ -107,10 +120,10 @@ describe('private service operations (PostgreSQL)', () => {
     expect(leave).not.toHaveBeenCalled();
   });
 
-  it('runs search, details, the non-editable modal, confirmation and result through the real pipeline', async () => {
+  it('runs search, details, the modal and departure from another channel in the support guild', async () => {
     const pipeline = buildPipeline(database.handle.db, noopLogger, options());
-    const click = async (customId: string, changes: Partial<IncomingInteraction> = {}) => pipeline.handle(interaction({ kind: 'component', commandPath: [], customId, ...changes }));
-    const home = await finish(await pipeline.handle(interaction()));
+    const click = async (customId: string, changes: Partial<IncomingInteraction> = {}) => pipeline.handle(interaction({ kind: 'component', commandPath: [], customId, channelId: otherChannel, ...changes }));
+    const home = await finish(await pipeline.handle(interaction({ channelId: otherChannel })));
     expect(home.kind).toBe('panel');
     const searchButton = buttons(home).find(button => button.label === 'Rechercher')!;
     const search = await click(searchButton.customId);
@@ -136,6 +149,8 @@ describe('private service operations (PostgreSQL)', () => {
     expect(messages).toHaveLength(1);
     expect(messages[0]!.content).toContain('NapoSky');
     expect(messages[0]!.content).toContain(reason);
+    const notifications = await queryAsAdmin<{ channel_id: string }>(database, 'SELECT channel_id FROM support_guild_deliveries');
+    expect(notifications.map(notification => notification.channel_id)).toEqual([channel]);
     await gateway().handle({ type: 'guild_removed', guildId: target });
     expect(await queued()).toHaveLength(1);
   });
@@ -176,10 +191,11 @@ describe('private service operations (PostgreSQL)', () => {
     expect(leave).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['rename', 'owner', 'membership', 'deadline', 'modules'] as const)('rechecks %s before dispatch', async change => {
+  it.each(['rename', 'owner', 'support guild', 'membership', 'deadline', 'modules'] as const)('rechecks %s before dispatch', async change => {
     const { ops, session, operation } = await prepared();
     if (change === 'rename') names.set(target, 'New name');
     if (change === 'owner') scope = { ...scope, ownerId: outsider };
+    if (change === 'support guild') scope = { ...scope, guildId: other };
     if (change === 'membership') {
       await gateway().handle({ type: 'guild_removed', guildId: target });
       await gateway().handle({ type: 'guild_available', guildId: target, name: names.get(target)! });

@@ -608,8 +608,8 @@
     "verification": "Die Discord-Anwesenheit konnte nicht geprüft werden. Kein Austritt wurde angefordert.",
     "absent": "PICKET ist bereits abwesend oder der Server ist nicht mehr registriert.",
     "ambiguous": "Diese Server lassen sich nicht sicher unterscheiden. Ein Austritt ist nicht verfügbar.",
-    "denied": "Diese Aktion ist dem App-Eigentümer im konfigurierten Support-Kanal vorbehalten.",
-    "authorizationUnavailable": "Der Anwendungsinhaber und der Support-Kanal konnten nicht überprüft werden. Versuche es später erneut. Es wurde kein Serveraustritt angefordert.",
+    "denied": "Diese Aktion ist dem App-Eigentümer auf dem Support-Server vorbehalten.",
+    "authorizationUnavailable": "Der Anwendungsinhaber und der Support-Server konnten nicht überprüft werden. Versuche es später erneut. Es wurde kein Serveraustritt angefordert.",
     "expired": "Diese Bestätigung oder Sitzung ist abgelaufen oder wurde bereits verwendet. Öffne /picket-ops servers erneut.",
     "changed": "Der Server hat sich seit der Vorschau geändert. Aktualisiere die Details und bestätige erneut.",
     "invalid": "Gib einen Grund mit 10–500 Zeichen und genau QUITTER ein. Kein Austritt wurde angefordert.",
@@ -627,7 +627,7 @@
       "expired": "Die Bestätigung ist vor dem Senden abgelaufen.",
       "changed": "Der Server hat sich geändert. Aktualisiere die Details vor einem neuen Versuch.",
       "protected": "Der Support-Server ist geschützt.",
-      "denied": "Der Betreiber oder Support-Kanal ist nicht mehr autorisiert.",
+      "denied": "Der Betreiber oder Support-Server ist nicht mehr autorisiert.",
       "verification": "Die erforderlichen Discord-Prüfungen sind fehlgeschlagen. Kein Austritt wurde gesendet.",
       "present": "PICKET ist weiterhin anwesend. Die vorherige Anfrage wird nicht wiederholt."
     }

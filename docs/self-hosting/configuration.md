@@ -106,7 +106,8 @@ For backups, from `deploy/`:
 
 Run `migrate`, then `deploy-commands`, and deploy the updated bot. The CLI resolves the server containing
 `SUPPORT_GUILD_EVENTS_CHANNEL_ID` and registers **`/picket-ops servers` only in that server**, separately from
-public commands. Open it in the configured private channel. The ephemeral panel is independent of Stats.
+public commands. Open it in any channel of that server. The configured channel remains the destination for
+lifecycle notifications. The ephemeral panel is independent of Stats.
 
 Only the **Discord application owner**, or the **developer team owner** for a team-owned application, is authorized.
 Ownership comes from the bot API: no new environment variables or Gateway intents are needed. Discord command

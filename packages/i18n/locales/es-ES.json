@@ -608,8 +608,8 @@
     "verification": "No se pudo verificar la presencia en Discord. No se solicitó ninguna salida.",
     "absent": "PICKET ya está ausente o el servidor ya no está registrado.",
     "ambiguous": "No se pueden distinguir estos servidores con certeza. La salida no está disponible.",
-    "denied": "Esta acción está reservada al propietario de la aplicación en el canal de soporte configurado.",
-    "authorizationUnavailable": "No se pudieron verificar el propietario de la aplicación y el canal de soporte. Inténtalo de nuevo más tarde. No se ha solicitado abandonar ningún servidor.",
+    "denied": "Esta acción está reservada al propietario de la aplicación en el servidor de soporte.",
+    "authorizationUnavailable": "No se pudieron verificar el propietario de la aplicación y el servidor de soporte. Inténtalo de nuevo más tarde. No se ha solicitado abandonar ningún servidor.",
     "expired": "Esta confirmación o sesión ha caducado o ya se ha usado. Abre /picket-ops servers de nuevo.",
     "changed": "La situación del servidor cambió desde la vista previa. Actualiza su ficha y confirma de nuevo.",
     "invalid": "Introduce un motivo de 10 a 500 caracteres y escribe exactamente QUITTER. No se solicitó ninguna salida.",
@@ -627,7 +627,7 @@
       "expired": "La confirmación caducó antes del envío.",
       "changed": "La situación del servidor cambió. Actualiza su ficha antes de reintentar.",
       "protected": "El servidor de soporte está protegido.",
-      "denied": "El operador o el canal de soporte ya no están autorizados.",
+      "denied": "El operador o el servidor de soporte ya no están autorizados.",
       "verification": "Fallaron las comprobaciones necesarias de Discord. No se envió ninguna salida.",
       "present": "PICKET sigue presente. La solicitud anterior no se repetirá."
     }

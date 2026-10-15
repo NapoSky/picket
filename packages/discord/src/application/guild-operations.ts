@@ -2,6 +2,7 @@ import type { ChannelId, GuildId, UserId } from '@picket/kernel';
 
 export interface OperatorScope {
   readonly guildId: GuildId;
+  /** Configured notification channel used to resolve the support guild, not the invocation channel. */
   readonly channelId: ChannelId;
   readonly ownerId: UserId;
   readonly ownerName: string;

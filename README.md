@@ -27,7 +27,7 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 | **Multi-server** | Every server is isolated at the database level (row-level security) |
 | **Data management** | Retention period after the bot is removed, scheduled deletion on demand, nothing kept longer than needed |
 | **Languages** | English, French, German, Spanish, Brazilian Portuguese and Polish; add one by dropping a JSON file in [`packages/i18n/locales`](packages/i18n/locales) |
-| **Operations** | Zero-downtime rolling updates, several identical replicas, signed requests only, secrets kept out of the repository and the logs; private owner-only server departures from the configured support channel |
+| **Operations** | Zero-downtime rolling updates, several identical replicas, signed requests only, secrets kept out of the repository and the logs; private owner-only server departures from the support server |
 | **Voice statistics** | Opt-in role-filtered presence, 60-day history, own-data erasure and custom EN/FR dashboards with Discord OAuth and Team administration |
 | **War log** | One shared collector; one-line events in a regular text channel; up to three of five zones per server; subscription renewal for each war; recovery without replay |
 
@@ -65,7 +65,7 @@ The full guide is in the [documentation](https://docs.picket-foxhole.com). By us
 [Terms of Service](https://docs.picket-foxhole.com/legal/terms) and
 [Privacy Policy](https://docs.picket-foxhole.com/legal/privacy).
 
-Service operators can use `/picket-ops servers` in their configured private support channel to search servers,
+Service operators can use `/picket-ops servers` in any channel of their support server to search servers,
 review their configuration, and confirm an individual bot departure with a reason. This command is separate from
 tenant administrator permissions and Stats; see [operator setup](docs/self-hosting/configuration.md#private-service-administration).
 

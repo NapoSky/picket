@@ -608,8 +608,8 @@
     "verification": "Discord presence could not be verified. No departure was requested.",
     "absent": "PICKET is already absent, or the server is no longer registered.",
     "ambiguous": "These servers cannot be distinguished reliably. Departure is unavailable.",
-    "denied": "This action is restricted to the application owner in the configured support channel.",
-    "authorizationUnavailable": "The application owner and support channel could not be verified. Please try again later. No server departure was requested.",
+    "denied": "This action is restricted to the application owner in the support server.",
+    "authorizationUnavailable": "The application owner and support server could not be verified. Please try again later. No server departure was requested.",
     "expired": "This confirmation or session has expired or was already used. Open /picket-ops servers again.",
     "changed": "The server changed since the preview. Refresh its details and confirm again.",
     "invalid": "Enter a reason of 10–500 characters and type QUITTER exactly. No departure was requested.",
@@ -627,7 +627,7 @@
       "expired": "The confirmation expired before dispatch.",
       "changed": "The server changed. Refresh its details before trying again.",
       "protected": "The support server is protected.",
-      "denied": "The operator or support channel is no longer authorized.",
+      "denied": "The operator or support server is no longer authorized.",
       "verification": "The required Discord checks failed. No departure was sent.",
       "present": "PICKET is still present. The previous request will not be repeated."
     }

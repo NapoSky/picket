@@ -612,8 +612,8 @@
     "verification": "Nie można zweryfikować obecności na Discordzie. Nie zlecono opuszczenia.",
     "absent": "PICKET jest już nieobecny lub serwer nie jest już zarejestrowany.",
     "ambiguous": "Nie można jednoznacznie odróżnić tych serwerów. Opuszczenie jest niedostępne.",
-    "denied": "Ta akcja jest dostępna tylko dla właściciela aplikacji na skonfigurowanym kanale wsparcia.",
-    "authorizationUnavailable": "Nie udało się zweryfikować właściciela aplikacji i kanału wsparcia. Spróbuj ponownie później. Nie zlecono opuszczenia żadnego serwera.",
+    "denied": "Ta akcja jest dostępna tylko dla właściciela aplikacji na serwerze wsparcia.",
+    "authorizationUnavailable": "Nie udało się zweryfikować właściciela aplikacji i serwera wsparcia. Spróbuj ponownie później. Nie zlecono opuszczenia żadnego serwera.",
     "expired": "To potwierdzenie lub sesja wygasły albo zostały już użyte. Otwórz ponownie /picket-ops servers.",
     "changed": "Stan serwera zmienił się od podglądu. Odśwież szczegóły i potwierdź ponownie.",
     "invalid": "Podaj powód o długości 10–500 znaków i wpisz dokładnie QUITTER. Nie zlecono opuszczenia.",
@@ -631,7 +631,7 @@
       "expired": "Potwierdzenie wygasło przed wysłaniem.",
       "changed": "Stan serwera uległ zmianie. Odśwież szczegóły przed ponowieniem.",
       "protected": "Serwer wsparcia jest chroniony.",
-      "denied": "Operator lub kanał wsparcia nie ma już uprawnień.",
+      "denied": "Operator lub serwer wsparcia nie ma już uprawnień.",
       "verification": "Wymagane kontrole Discorda nie powiodły się. Nie wysłano żądania opuszczenia.",
       "present": "PICKET jest nadal obecny. Poprzednie żądanie nie zostanie powtórzone."
     }

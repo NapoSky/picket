@@ -15,6 +15,7 @@ export interface OpsSession {
   readonly actorId: UserId;
   readonly actorName: string;
   readonly supportGuildId: GuildId;
+  /** Configured notification channel used to resolve the support guild, not the invocation channel. */
   readonly channelId: ChannelId;
   readonly expiresAt: Date;
   readonly state: OpsState;
@@ -109,10 +110,6 @@ export class GuildOperatorService {
   async authorize(interaction: IncomingInteraction, fresh = false): Promise<OperatorScope | null> {
     if (!this.channelId) {
       this.logger.warn({}, 'operator access denied: support channel not configured');
-      return null;
-    }
-    if (interaction.channelId !== this.channelId) {
-      this.logger.warn({}, 'operator access denied: channel mismatch');
       return null;
     }
     let scope: OperatorScope;
