@@ -31,8 +31,14 @@ export function validateCatalogs(catalogs: Catalogs, validLocaleCodes: readonly 
     if (locale !== DEFAULT_LOCALE && !validLocaleCodes.includes(locale)) {
       problems.push(`${locale}: not a Discord locale code (file name)`);
     }
+    const pluralCategories = new Intl.PluralRules(validLocaleCodes.includes(locale) ? locale : DEFAULT_LOCALE)
+      .resolvedOptions().pluralCategories;
     for (const [key, text] of flatten(catalog)) {
-      const reference = source.get(key);
+      const plural = /^(.*)_(zero|one|two|few|many|other)$/.exec(key);
+      // Languages such as Polish need plural forms absent from the English source.
+      const pluralReference = plural && pluralCategories.includes(plural[2] as Intl.LDMLPluralRule)
+        && source.has(`${plural[1]}_one`) ? source.get(`${plural[1]}_other`) : undefined;
+      const reference = source.has(key) ? source.get(key) : pluralReference;
       if (reference === undefined) {
         problems.push(`${locale}: unknown key "${key}"`);
         continue;

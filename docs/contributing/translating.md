@@ -11,6 +11,7 @@ To add a language or improve a translation, submit a pull request with a **UTF-8
 | German | `de.json` |
 | Spanish | `es-ES.json` |
 | Brazilian Portuguese | `pt-BR.json` |
+| Polish | `pl.json` |
 
 To improve one of these languages, edit its existing file. These are the bot’s translations; the documentation is
 available in English and French.
@@ -19,7 +20,7 @@ available in English and French.
 
 1. Copy `packages/i18n/locales/en.json`, the English source catalog. To correct an existing translation, edit its file directly.
 2. Name the new file using the **Discord locale code**, for example `it.json` for Italian, which is not yet provided.
-3. Translate every text value, preserving the file’s structure and keys, including plural variants such as `_one` and `_other`.
+3. Translate every text value, preserving the file’s structure and source keys, including `_one` and `_other`. Add the plural forms required by the language (for example `_few` and `_many` for Polish), keeping the same variables.
 4. Submit the file in a pull request describing the language added or the corrections made.
 
 ## Rules to follow

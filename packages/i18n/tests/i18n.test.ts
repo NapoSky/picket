@@ -12,8 +12,8 @@ const discordLocales = Object.values(Locale) as string[];
 describe('shipped catalogs', () => {
   const catalogs = loadCatalogs();
 
-  it('ships English as the source, French, German, Spanish and Brazilian Portuguese', () => {
-    expect(Object.keys(catalogs)).toEqual(expect.arrayContaining(['en', 'fr', 'de', 'es-ES', 'pt-BR']));
+  it('ships English as the source, French, German, Spanish, Brazilian Portuguese and Polish', () => {
+    expect(Object.keys(catalogs)).toEqual(expect.arrayContaining(['en', 'fr', 'de', 'es-ES', 'pt-BR', 'pl']));
   });
 
   it('passes every CI check (known keys, placeholders, Discord limits, locale file names)', () => {
@@ -30,7 +30,9 @@ describe('shipped catalogs', () => {
       Object.entries(value as Record<string, unknown>).flatMap(([k, v]) =>
         typeof v === 'object' && v !== null ? flat(v, `${prefix}${k}.`) : [`${prefix}${k}`],
       );
-    expect(flat(catalogs[locale]).sort()).toEqual(flat(catalogs['en']).sort());
+    const sourceKeys = flat(catalogs['en']);
+    // Additional locale-specific plurals are checked by validateCatalogs above.
+    expect(flat(catalogs[locale]).filter((key) => sourceKeys.includes(key)).sort()).toEqual(sourceKeys.sort());
   });
 
   it.each([
@@ -44,6 +46,8 @@ describe('shipped catalogs', () => {
     ['pt-br', 'pt-BR', 'Salvo.'],
     ['pt', 'pt-BR', 'Salvo.'],
     ['pt-PT', 'pt-BR', 'Salvo.'],
+    ['pl', 'pl', 'Zapisano.'],
+    ['pl-PL', 'pl', 'Zapisano.'],
   ])('provides the %s user with the %s catalog', (candidate, locale, saved) => {
     const i18n = createI18n(catalogs);
     expect(i18n.resolve(candidate, 'fr')).toBe(locale);
@@ -70,6 +74,30 @@ describe('shipped catalogs', () => {
     expect(t('audit.pageCount', { count: 2 })).toBe('2 páginas');
     expect(t('timers.alert.text', { icon: '⏱️', name: 'Alpha', place: 'Blemish', time: '<t:1791370800:R>' }))
       .toBe('⏱️ **Alpha** (Blemish) expira <t:1791370800:R>.');
+  });
+
+  it.each([
+    [0, 'dozwolonych ról', 'stron'],
+    [1, 'dozwolona rola', 'strona'],
+    [2, 'dozwolone role', 'strony'],
+    [5, 'dozwolonych ról', 'stron'],
+    [12, 'dozwolonych ról', 'stron'],
+    [21, 'dozwolonych ról', 'stron'],
+    [22, 'dozwolone role', 'strony'],
+    [25, 'dozwolonych ról', 'stron'],
+    [112, 'dozwolonych ról', 'stron'],
+    [1.5, 'dozwolonej roli', 'strony'],
+  ])('renders Polish plurals for %s', (count, roles, pages) => {
+    const t = createI18n(catalogs).translator('pl').t;
+    expect(t('panel.roleCount', { count })).toBe(`${count} ${roles}`);
+    expect(t('audit.pageCount', { count })).toBe(`${count} ${pages}`);
+  });
+
+  it('preserves Polish alert interpolation and Discord timestamps', () => {
+    const t = createI18n(catalogs).translator('pl').t;
+    expect(t('timers.alert.text', { icon: '⏱️', name: 'Alpha', place: 'Blemish', time: '<t:1791370800:R>' }))
+      .toBe('⏱️ **Alpha** (Blemish) wygasa <t:1791370800:R>.');
+    expect(t('panel.deletionDate', { timestamp: 1791370800 })).toContain('<t:1791370800:F> (<t:1791370800:R>)');
   });
 
   it('discovers every file of the locales directory', () => {
@@ -100,6 +128,17 @@ describe('validateCatalogs', () => {
 
   it('rejects a file name that is not a Discord locale code', () => {
     expect(validateCatalogs({ en, klingon: {} }, ['en'])).toEqual(['klingon: not a Discord locale code (file name)']);
+  });
+
+  it('accepts locale-specific plural forms while validating their keys and placeholders', () => {
+    const en = { items_one: '{{count}} item', items_other: '{{count}} items', plain: 'x' };
+    const run = (pl: unknown) => validateCatalogs({ en, pl }, ['pl']);
+    expect(run({ items_few: '{{count}} elementy', items_many: '{{count}} elementów' })).toEqual([]);
+    expect(run({ items_few: 'elementy' })[0]).toMatch(/placeholders of "items_few"/);
+    expect(run({ items_many: '' })[0]).toMatch(/empty value/);
+    expect(run({ items_two: '{{count}} elementy' })).toEqual(['pl: unknown key "items_two"']);
+    expect(run({ nope_few: 'x' })).toEqual(['pl: unknown key "nope_few"']);
+    expect(run({ plain_many: 'x' })).toEqual(['pl: unknown key "plain_many"']);
   });
 });
 

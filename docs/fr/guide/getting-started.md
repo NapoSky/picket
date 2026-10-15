@@ -27,7 +27,7 @@ avant activation. Voir [Statistiques vocales](./stats) pour les premiers réglag
 
 ## Langues
 
-PICKET propose **l’anglais, le français, l’allemand, l’espagnol et le portugais du Brésil**. Conservez **Automatique**
+PICKET propose **l’anglais, le français, l’allemand, l’espagnol, le portugais du Brésil et le polonais**. Conservez **Automatique**
 pour suivre la langue Discord de chacun, ou choisissez une langue pour tout le monde dans `/picket settings` → **Langue**.
 
 Les noms de commandes restent en anglais ; leurs descriptions suivent la langue de votre Discord.

@@ -26,7 +26,7 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 | **Server settings** | Language, time zone, audit channel, per-feature switches |
 | **Multi-server** | Every server is isolated at the database level (row-level security) |
 | **Data management** | Retention period after the bot is removed, scheduled deletion on demand, nothing kept longer than needed |
-| **Languages** | English, French, German, Spanish and Brazilian Portuguese; add one by dropping a JSON file in [`packages/i18n/locales`](packages/i18n/locales) |
+| **Languages** | English, French, German, Spanish, Brazilian Portuguese and Polish; add one by dropping a JSON file in [`packages/i18n/locales`](packages/i18n/locales) |
 | **Operations** | Zero-downtime rolling updates, several identical replicas, signed requests only, secrets kept out of the repository and the logs |
 | **Voice statistics** | Opt-in role-filtered presence, 60-day history, own-data erasure and custom EN/FR dashboards with Discord OAuth and Team administration |
 | **War log** | One shared collector; one-line events in a regular text channel; up to three of five zones per server; subscription renewal for each war; recovery without replay |

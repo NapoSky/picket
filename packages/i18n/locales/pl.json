@@ -1,0 +1,545 @@
+{
+  "errors": {
+    "duplicate": "Ta interakcja została już przetworzona.",
+    "guildOnly": "Tej komendy można używać tylko na serwerze.",
+    "denied": "Nie masz dostępu do tej komendy (wymagany poziom: {{level}}).",
+    "unknownCommand": "Ta komenda nie jest już dostępna.",
+    "expired": "Ta interakcja nie jest już dostępna.",
+    "failure": "Coś poszło nie tak. Spróbuj ponownie później.",
+    "timeout": "Żądanie trwało zbyt długo. Spróbuj ponownie.",
+    "featureDisabled": "Ta funkcja jest wyłączona na tym serwerze. Oficer może ją włączyć w /picket settings.",
+    "suspended": "Usunięcie danych PICKET zaplanowano na {{date}}. Administrator serwera może je anulować w /picket settings → Dane."
+  },
+  "levels": {
+    "member": "członek",
+    "officer": "oficer",
+    "admin": "administrator",
+    "none": "brak"
+  },
+  "commands": {
+    "todolist": {
+      "description": "Interaktywne listy zadań",
+      "create": {
+        "description": "Opublikuj listę zadań na tym kanale"
+      }
+    },
+    "timers": {
+      "description": "Tablica liczników czasu w Foxhole",
+      "create": {
+        "description": "Utwórz tablicę liczników na tym kanale"
+      },
+      "add": {
+        "description": "Dodaj licznik do tablicy na tym kanale",
+        "options": {
+          "type": {
+            "description": "Co śledzi licznik"
+          },
+          "place": {
+            "description": "Miasto lub lokalizacja (wpisz nazwę; region pojawi się obok)"
+          },
+          "owner": {
+            "description": "Kto się tym zajmuje (domyślnie ty)"
+          }
+        }
+      },
+      "strike": {
+        "description": "Skreśl licznik z tablicy",
+        "options": {
+          "timer": {
+            "description": "Licznik do skreślenia"
+          }
+        }
+      },
+      "cleanup": {
+        "description": "Usuń skreślone liczniki z tablicy"
+      },
+      "repair": {
+        "description": "Opublikuj ponownie wiadomości tablicy na podstawie zapisanych liczników"
+      },
+      "settings": {
+        "description": "Otwórz prywatny panel ustawień tablicy na tym kanale"
+      }
+    },
+    "picket": {
+      "description": "Administracja i informacje o PICKET",
+      "status": {
+        "description": "Pokaż stan PICKET na tym serwerze"
+      },
+      "settings": {
+        "description": "Otwórz prywatny panel ustawień serwera"
+      }
+    },
+    "warlog": {
+      "description": "Dziennik wojenny",
+      "settings": {
+        "description": "Wybierz kanał i maksymalnie trzy strefy, a następnie potwierdź i włącz."
+      }
+    }
+  },
+  "discordPermissions": {
+    "viewChannel": "Wyświetlanie kanału",
+    "sendMessages": "Wysyłanie wiadomości",
+    "embedLinks": "Osadzanie linków"
+  },
+  "todolist": {
+    "title": "📋 Lista zadań",
+    "footer": "📋 {{page}}/{{total}}",
+    "modal": {
+      "title": "Nowa lista zadań",
+      "label": "Zadania (jedno w każdym wierszu)",
+      "placeholder": "__Przygotowania__\nA・Skrzynie (x2)\n🇧- Ciężarówki\nPozostały tekst pozostaje bez zmian"
+    },
+    "created": {
+      "one": "Lista zadań opublikowana.",
+      "many": "Lista zadań opublikowana. Liczba wiadomości: {{count}}."
+    },
+    "completed": "Lista zadań ukończona: jej wiadomość została usunięta.",
+    "completedPage": "Strona {{page}}/{{total}} ukończona: jej wiadomość została usunięta.",
+    "alreadyDone": "To zadanie zostało już ukończone.",
+    "errors": {
+      "empty": "Nie ma czego opublikować: tekst jest pusty.",
+      "inputTooLong": "Tekst jest zbyt długi (maksymalnie {{max}} znaków).",
+      "noItems": "Nie znaleziono zadań. Zacznij wiersz zadania od emoji litery (🇦- Skrzynie) lub wielkiej litery i ・ (A・Skrzynie).",
+      "tooManyItems": "Zbyt wiele zadań (maksymalnie {{max}}).",
+      "itemTooLong": "Wiersz {{line}}: zadanie jest zbyt długie (maksymalnie {{max}} znaków).",
+      "tooLongToRender": "Ta lista jest zbyt długa, aby ją wyświetlić. Skróć pozostały tekst.",
+      "yourText": "Twój tekst do skopiowania:",
+      "missingPermissions": "Nie mogę tu publikować. Brakujące uprawnienia na tym kanale: {{missing}}.",
+      "cannotPost": "Nie udało mi się opublikować wiadomości na tym kanale. Sprawdź moje uprawnienia i spróbuj ponownie.",
+      "cannotEdit": "Nie udało mi się zaktualizować tej listy. Sprawdź moje uprawnienia na tym kanale.",
+      "unreadable": "Tej listy nie można już odczytać. Usuń ją i utwórz nową.",
+      "busy": "Ta lista jest teraz zajęta. Spróbuj ponownie.",
+      "noChannel": "Na tym kanale nie można utworzyć listy zadań."
+    }
+  },
+  "timers": {
+    "board": {
+      "title": "⏱️ Liczniki i odnowienia",
+      "empty": "Nie ma jeszcze liczników. Dodaj pierwszy za pomocą /timers add.",
+      "updated": "🕓 Ostatnia aktualizacja",
+      "asset": "Zasób",
+      "code": "Kod",
+      "timer": "Licznik"
+    },
+    "types": {
+      "stockpile": "Zapas rezerwowy",
+      "facility": "Zakład",
+      "field": "Pole surowców",
+      "naval_ship": "Okręt",
+      "tank": "Czołg",
+      "train": "Pociąg"
+    },
+    "alert": {
+      "text": "{{icon}} **{{name}}** ({{place}}) wygasa {{time}}."
+    },
+    "modal": {
+      "title": "Nowy licznik: {{type}}",
+      "name": "Nazwa",
+      "namePlaceholder": "Krótka nazwa, maksymalnie 15 znaków",
+      "code": "Kod",
+      "codeStockpile": "6-cyfrowy kod zapasu rezerwowego",
+      "codeShort": "Od 3 do 6 liter lub cyfr (opcjonalnie)",
+      "duration": "Czas trwania",
+      "durationPlaceholder": "Godziny (50, 1.5) lub 2h30m, 1d 12h"
+    },
+    "created": "Tablica liczników utworzona. Liczniki dodane przez /timers add pojawią się tutaj.",
+    "added": "Licznik dodany: {{name}} ({{place}}), {{time}}.",
+    "reactivated": "Licznik wrócił na tablicę: {{name}} ({{place}}), {{time}}.",
+    "struck": "Licznik skreślony: {{name}}.",
+    "cleaned": {
+      "one": "Usunięto 1 skreślony licznik.",
+      "many": "Usunięto skreślone liczniki. Liczba: {{count}}."
+    },
+    "nothingToClean": "Nie ma czego usuwać: żaden licznik nie jest skreślony.",
+    "repaired": "Wiadomości tablicy zostały opublikowane ponownie.",
+    "restored": "Ten kanał miał już tablicę liczników: opublikowano ją ponownie wraz z licznikami.",
+    "errors": {
+      "noBoard": "Ten kanał nie ma tablicy liczników. Oficer może ją utworzyć za pomocą /timers create.",
+      "boardQuota": "Ten serwer ma już {{max}} tablic liczników.",
+      "missingPermissions": "Nie mogę tu publikować. Brakujące uprawnienia na tym kanale: {{missing}}.",
+      "noChannel": "Na tym kanale nie można utworzyć tablicy liczników.",
+      "quota": "Ta tablica ma już {{max}} aktywnych liczników. Skreśl część z nich lub poproś oficera o zwiększenie limitu.",
+      "duplicate": "Identyczny aktywny licznik jest już na tej tablicy. Użyj jego przycisku, aby go odnowić.",
+      "notFound": "Ten licznik już nie istnieje.",
+      "alreadyStruck": "Ten licznik jest już skreślony.",
+      "forbidden": "Na tej tablicy tylko właściciel licznika i oficerowie mogą go zmieniać.",
+      "boardDisabled": "Kanał tej tablicy już nie istnieje, więc tablica jest wyłączona. Utwórz nową za pomocą /timers create.",
+      "syncPending": "Zapisano, ale wiadomość tablicy nie została jeszcze zaktualizowana ({{reason}}). Ponowię próbę automatycznie.",
+      "unknownType": "Nieznany typ licznika.",
+      "unknownPlace": "Nieznane miejsce. Zacznij wpisywać nazwę miasta i wybierz jedną z propozycji.",
+      "unknownRegion": "Nieznany region. Wybierz jedną z propozycji.",
+      "unknownLocation": "Nieznana lokalizacja. Wybierz jedną z propozycji dla tego regionu.",
+      "nameEmpty": "Nazwa jest pusta.",
+      "nameTooLong": "Nazwa jest zbyt długa (maksymalnie {{max}} znaków).",
+      "codeRequired": "Zapas rezerwowy wymaga 6-cyfrowego kodu.",
+      "codeInvalid": "Nieprawidłowy kod. Kod zapasu rezerwowego ma 6 cyfr; pozostałe kody mają od 3 do 6 liter lub cyfr.",
+      "durationInvalid": "Nieprawidłowy czas trwania. Podaj godziny (50, 1.5) lub jednostki (2h30m, 1d 12h).",
+      "durationTooShort": "Czas trwania jest zbyt krótki (minimum {{min}}).",
+      "durationTooLong": "Czas trwania jest zbyt długi (maksimum {{max}})."
+    },
+    "settings": {
+      "on": "włączone",
+      "off": "wyłączone",
+      "none": "brak",
+      "never": "nigdy",
+      "silent": "ciche",
+      "notifying": "z powiadomieniem push",
+      "changesEveryone": "każdy członek",
+      "changesRestricted": "tylko właściciel i oficerowie",
+      "purgeAfter": "po {{hours}} godz.",
+      "syncOk": "aktualna",
+      "syncFailed": "oczekuje ({{reason}})",
+      "updated": "Ustawienia tablicy zaktualizowane.",
+      "unchanged": "Nie ma nic do zmiany.",
+      "invalidThresholds": "Nieprawidłowe progi. Przykład: 6h, 2h, 30m (maksymalnie {{max}}, każdy od {{min}} minut do 7 dni).",
+      "tooManyRoles": "Maksymalna liczba ról do powiadomienia: {{max}}.",
+      "invalidRole": "Nieprawidłowa rola.",
+      "invalidPurge": "Automatyczne usuwanie musi wynosić od 0 (nigdy) do {{max}} godzin."
+    },
+    "panel": {
+      "title": "Ustawienia tablicy",
+      "active": "aktywne liczniki",
+      "help": "Ten prywatny panel konfiguruje tylko tablicę na tym kanale. Każda zmiana działa natychmiast. Limit wynosi 50 aktywnych liczników.",
+      "alerts": "Alerty",
+      "manage": "Zarządzanie tablicą",
+      "configure": "Konfiguruj",
+      "edit": "Edytuj",
+      "alertsHelp": "Wybierz, kiedy ostrzegać grupę i które role powiadamiać. Te ustawienia zostają zachowane po wyłączeniu alertów.",
+      "thresholds": "Kiedy wysyłać alert?",
+      "thresholdInput": "Czas przed upływem terminu",
+      "notifications": "Powiadomienia",
+      "notificationsHelp": "Tryb cichy wyłącza powiadomienia push, również dla oznaczonych ról.",
+      "notify": "Włącz powiadomienia",
+      "makeSilent": "Włącz tryb cichy",
+      "roles": "Role do powiadomienia",
+      "rolesHelp": "Dodawaj lub usuwaj role pojedynczo (maksymalnie {{max}}). Rola musi pozwalać na wzmianki lub PICKET musi mieć uprawnienie do wspominania wszystkich ról.",
+      "clearRoles": "Usuń wszystkie role",
+      "rolesUnavailable": "Nie można teraz sprawdzić ról. Spróbuj ponownie.",
+      "changes": "Kto może skreślać i odnawiać?",
+      "changesHelp": "Oficerowie i administratorzy zawsze zachowują te uprawnienia.",
+      "allowEveryone": "Zezwól wszystkim członkom",
+      "ownersOnly": "Ogranicz do właścicieli",
+      "purge": "Automatyczne usuwanie",
+      "purgeSummary": "Automatyczne usuwanie: {{purge}}",
+      "purgeHelp": "Trwale usuwa skreślone lub wygasłe liczniki po wybranym czasie. 0 wyłącza to usuwanie.",
+      "purgeInput": "Opóźnienie w godzinach (0 = nigdy)",
+      "purgeConfirm": "Usunąć skreślone lub wygasłe liczniki po {{hours}} godz.? Liczniki, które już przekroczyły ten czas, zostaną usunięte po zastosowaniu ustawienia. Usunięcie jest trwałe.",
+      "war": "Nowa wojna — Wkrótce",
+      "warHelp": "Resetuj tę tablicę przy każdej nowej wojnie. Liczniki utworzone po rozpoczęciu wojny zostają zachowane.",
+      "disableTitle": "Wyłączyć alerty?",
+      "disableHelp": "PICKET przestanie wysyłać nowe alerty dla tej tablicy. Liczniki będą nadal śledzone, a istniejące wiadomości z alertami nadal można potwierdzać.",
+      "everyoneHelp": "Dodać rolę @everyone do ról do powiadomienia? Obejmuje ona wszystkich członków serwera.",
+      "syncPending": "Aktualizacja widoku oczekuje. Twoje dane są zapisane; PICKET ponawia próbę automatycznie.",
+      "expired": "Ten panel wygasł lub jego tablica się zmieniła. Uruchom ponownie /timers settings na kanale tablicy.",
+      "legacy": "Argumenty komendy zostały zastąpione tym panelem. Nie zmieniono ustawień: wybierz działanie poniżej."
+    }
+  },
+  "status": {
+    "body": "PICKET działa.\nJęzyk: {{locale}} - Strefa czasowa: {{timezone}}\nWłączone funkcje: {{features}}\nKanał audytu: {{audit}}",
+    "auditConfigured": "skonfigurowany",
+    "auditMissing": "nieskonfigurowany",
+    "languageAuto": "automatyczny"
+  },
+  "features": {
+    "timers": "Liczniki",
+    "todolists": "Listy zadań",
+    "warlog": "Dziennik wojenny",
+    "stats": "Statystyki głosowe"
+  },
+  "settings": {
+    "invalidOption": "Nieprawidłowa wartość.",
+    "rejected": {
+      "unsupportedLanguage": "Ten język nie jest dostępny.",
+      "invalidTimezone": "Nieznana strefa czasowa. Użyj nazwy IANA, np. Europe/Paris, America/New_York lub UTC."
+    }
+  },
+  "permissions": {
+    "show": {
+      "level": "Twój poziom dostępu: {{level}}",
+      "officers": "Role oficerów: {{roles}}",
+      "members": "Role członków: {{roles}}",
+      "noOfficers": "brak (tylko administratorzy serwera)",
+      "noMembers": "brak",
+      "warning": "Uwaga: {{text}}"
+    },
+    "warnings": {
+      "no_officer_role": "Nie skonfigurowano roli oficera: tylko administratorzy serwera mogą używać komend oficerskich.",
+      "member_open_to_everyone": "Każdy na serwerze może używać komend dla członków."
+    },
+    "set": {
+      "everyoneNotOfficer": "@everyone nie może być rolą oficera."
+    }
+  },
+  "data": {
+    "export": "Eksportuj dane",
+    "exportHelp": "Pobierz plik JSON z ustawieniami serwera, uprawnieniami, wpisami audytu, tablicami, licznikami i logami aplikacji oraz ustawieniami Stats, preferencjami śledzenia i podsumowaniami członków z 60 dni. Oczekujące dane głosowe są zliczane dla każdego członka; surowe zdarzenia głosowe i pojedyncze segmenty nie są uwzględniane. Wpisy audytu, logi aplikacji i historia liczników są przechowywane przez 30 dni. Listy zadań pozostają na Discordzie.",
+    "exportReady": "📥 Oto dane twojego serwera. Ten plik jest widoczny tylko dla ciebie. Zawiera identyfikatory Discord: zachowaj go dla siebie. Nie zmieniono ustawień.",
+    "exportTooLarge": "Pełny eksport przekracza limit przesyłania {{limitMb}} MB. Nie wysłano częściowego pliku. Skontaktuj się z operatorem PICKET, aby uzyskać swoje dane.",
+    "cancelled": "Zaplanowane usunięcie zostało anulowane. PICKET znów działa.",
+    "nothingScheduled": "Nie zaplanowano usunięcia danych dla tego serwera."
+  },
+  "panel": {
+    "title": "PICKET · Ustawienia serwera",
+    "home": "Przegląd",
+    "homeHelp": "Wybierz język i moduły dla swojego serwera. Każda zmiana działa natychmiast.",
+    "permissions": "Uprawnienia",
+    "advanced": "Zaawansowane",
+    "data": "Dane",
+    "refresh": "Odśwież",
+    "back": "Wstecz",
+    "next": "Dalej",
+    "previous": "Poprzednia",
+    "page": "Strona {{page}} / {{total}}",
+    "saved": "Zapisano.",
+    "unchanged": "Nie ma nic do zmiany.",
+    "expired": "Ten panel wygasł. Otwórz ponownie /picket settings.",
+    "owner": "Ten panel należy do innego użytkownika. Otwórz własny panel przez /picket settings.",
+    "language": "Język",
+    "auto": "Automatyczny — zgodny z językiem Discord każdego użytkownika",
+    "chooseLanguage": "Wybierz język",
+    "languageHelp": "Tryb **automatyczny** używa języka Discord danej osoby, następnie języka serwera, a na końcu angielskiego. Wybierz **stały język**, aby PICKET używał tego samego języka dla wszystkich.",
+    "timersHelp": "Śledź terminy i otrzymuj alerty ze swoich tablic.",
+    "todolistsHelp": "Udostępniaj listy zadań do odhaczania na Discordzie.",
+    "enabled": "Włączone",
+    "disabled": "Wyłączone",
+    "enable": "Włącz",
+    "disable": "Wyłącz",
+    "disableTitle": "Wyłączyć {{feature}}?",
+    "disableHelp": "Interakcje i przetwarzanie w tle dla tego modułu zostaną zatrzymane.\n\n**Istniejące dane zostają zachowane.**",
+    "confirm": "Potwierdź",
+    "cancel": "Anuluj",
+    "access": "Twój poziom dostępu: **{{level}}**",
+    "soon": "Dziennik wojenny · Wkrótce",
+    "reserved": "Strefa czasowa jest zapisana na potrzeby przyszłych funkcji i obecnie nie wpływa na działanie.",
+    "timezone": "Strefa czasowa (IANA)",
+    "changeTimezone": "Zmień strefę czasową",
+    "audit": "**Kanał audytu**: {{channel}}",
+    "chooseChannel": "Wybierz kanał audytu",
+    "clearChannel": "Usuń kanał",
+    "auditHelp": "Publikuje zmiany konfiguracji, tworzenie list zadań, tworzenie i usuwanie liczników oraz potwierdzenia alertów. Treść list zadań i odnowienia liczników są pomijane.",
+    "member": "Kto może używać PICKET?",
+    "officer": "Kto może konfigurować PICKET?",
+    "addRole": "Dodaj rolę",
+    "removeRole": "Usuń skonfigurowaną rolę",
+    "rolesEmpty": "Brak skonfigurowanych ról.",
+    "roleCount_one": "{{count}} dozwolona rola",
+    "roleCount_few": "{{count}} dozwolone role",
+    "roleCount_many": "{{count}} dozwolonych ról",
+    "roleCount_other": "{{count}} dozwolonej roli",
+    "adminImplicit": "Administratorzy serwera zawsze mają dostęp.",
+    "readOnly": "Tylko administratorzy mogą zmieniać te uprawnienia.",
+    "everyone": "Dostęp dla @everyone",
+    "restrict": "Odbierz dostęp @everyone",
+    "restrictHelp": "Dodaj rolę członka przed usunięciem @everyone, jeśli członkowie mają zachować dostęp.",
+    "everyoneTitle": "Pozwolić wszystkim używać PICKET?",
+    "everyoneHelp": "Każdy członek tego serwera będzie mógł używać komend dla członków. Dostęp oficerski pozostaje ograniczony.",
+    "deletionHelp": "Usunięcie **natychmiast zawiesza PICKET**. Po skonfigurowanym okresie przechowywania konfiguracja serwera, role dostępu, liczniki, historia i wpisy audytu zostaną **trwale usunięte**.\n\nWiadomości Discord, w tym listy zadań, **nie są automatycznie usuwane**.",
+    "deletionDate": "**Data usunięcia**: <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
+    "schedule": "Zaplanuj usunięcie",
+    "deleteTitle": "Potwierdzić trwałe usunięcie danych?",
+    "deleteConfirm": "Potwierdź usunięcie",
+    "suspendedTitle": "PICKET jest wstrzymany",
+    "suspended": "PICKET jest zawieszony. Usunięcie danych zaplanowano na <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
+    "recovery": "Tylko administrator serwera może anulować usunięcie. Inne ustawienia są niedostępne podczas zawieszenia.",
+    "cancelDeletion": "Anuluj usunięcie",
+    "legacy": "Komendy zostały przeniesione do tego panelu. Stare argumenty komend nie zostały zastosowane.",
+    "statusReserved": "Strefa czasowa: tylko konfiguracja na przyszłość.",
+    "roleLabel": "Rola {{id}}",
+    "warlogHelp": "Otrzymuj wydarzenia wojenne ze swoich stref. Włączenie otwiera ustawienia kanału i stref."
+  },
+  "audit": {
+    "warlogChanged": "Ustawienia dziennika wojennego zmienione",
+    "warlogEnabled": "Dziennik wojenny włączony",
+    "warlogDisabled": "Dziennik wojenny wyłączony",
+    "warlogRenew": "Dziennik wojenny wstrzymany · nowa wojna",
+    "warlogBlocked": "Dziennik wojenny wstrzymany · kanał niedostępny",
+    "warNumber": "Wojna {{war}}",
+    "warUnconfirmed": "Niepotwierdzona",
+    "fields": {
+      "language": "Język",
+      "timezone": "Strefa czasowa",
+      "auditChannel": "Kanał audytu",
+      "channel": "Kanał",
+      "zones": "Strefy",
+      "status": "Stan",
+      "confirmedWar": "Potwierdzona wojna",
+      "perspective": "Frakcja odniesienia"
+    },
+    "configuration": "Konfiguracja serwera zmieniona",
+    "language": "Język zmieniony",
+    "timezone": "Strefa czasowa zmieniona",
+    "channel": "Kanał audytu zmieniony",
+    "feature": "Moduły zmienione",
+    "permissions": "Uprawnienia zmienione",
+    "roleDeleted": "Usunięta rola wykreślona z uprawnień",
+    "suspended": "Serwer zawieszony · usunięcie zaplanowane",
+    "resumed": "Usunięcie danych serwera anulowane",
+    "departed": "Bot usunięty z serwera",
+    "returned": "Bot wrócił na serwer",
+    "test": "Test kanału audytu",
+    "timerCreated": "Licznik utworzony",
+    "timerReactivated": "Licznik przywrócony",
+    "timerStruck": "Licznik skreślony",
+    "timerCleanup": "Skreślone liczniki usunięte",
+    "timerReset": "Liczniki usunięte · reset wojenny",
+    "alertAcknowledged": "Alert potwierdzony",
+    "todolistCreated": "Lista zadań utworzona",
+    "actor": "Przez {{actor}}",
+    "system": "PICKET (działanie automatyczne)",
+    "modules": "Moduły",
+    "timer": "Licznik",
+    "location": "Lokalizacja",
+    "count": "Usunięte liczniki",
+    "threshold": "Próg alertu",
+    "source": "Kanał źródłowy",
+    "pages": "Strony",
+    "messages": "Otwarte wiadomości",
+    "paused": "⚠️ Publikowanie audytu jest wstrzymane: bot nie może używać skonfigurowanego kanału. Oficer może go przetestować i wznowić publikowanie w Ustawienia → Zaawansowane.",
+    "testButton": "Testuj / wznów audyt",
+    "queued": "Wiadomość testowa czeka na wysłanie do kanału audytu. Publikowanie wznowiono.",
+    "blocked": "Bot nie może używać tego kanału. Sprawdź, czy należy on do tego serwera i czy PICKET ma uprawnienia do wyświetlania kanału, wysyłania wiadomości i osadzania linków.",
+    "unavailable": "Discord jest chwilowo niedostępny. Spróbuj ponownie.",
+    "noChannel": "Najpierw wybierz kanał audytu.",
+    "added": "Dodano",
+    "removed": "Usunięto",
+    "suspension": "Zawieszony od",
+    "memberAccess": "Dostęp członków",
+    "officerAccess": "Dostęp oficerów",
+    "open": "Otwarty",
+    "pageCount_one": "{{count}} strona",
+    "pageCount_few": "{{count}} strony",
+    "pageCount_many": "{{count}} stron",
+    "pageCount_other": "{{count}} strony"
+  },
+  "warlog": {
+    "title": "Dziennik wojenny",
+    "help": "Wybierz kanał i maksymalnie trzy strefy, a następnie potwierdź i włącz.",
+    "channel": "Kanał",
+    "chooseChannel": "Wybierz zwykły kanał tekstowy",
+    "chooseZones": "Strefy: {{selected}}/3 — kliknij, aby wybrać lub usunąć.",
+    "confirm": "Potwierdź i włącz",
+    "renewHelp": "Potwierdzaj swoje strefy przy każdej nowej wojnie. Wydarzenia z okresów wyłączenia nie są odtwarzane.",
+    "renew": "Rozpoczęła się wojna {{war}}. Potwierdź swoje strefy w /warlog settings, aby wznowić dziennik wojenny.",
+    "ended": "Wojna {{war}} zakończona. Zwycięzca: {{faction}}.",
+    "deliveryBlocked": "Publikowanie jest wstrzymane, ponieważ kanał jest niedostępny. Wybierz prawidłowy kanał i włącz ponownie.",
+    "settingsHint": "Skonfiguruj dziennik wojenny za pomocą /warlog settings.",
+    "results": {
+      "saved": "Zapisano.",
+      "unchanged": "Bez zmian.",
+      "stale_war": "Wojna się zmieniła. Sprawdź swoje strefy i potwierdź ponownie.",
+      "not_ready": "Bieżąca wojna nie jest jeszcze dostępna. Spróbuj włączyć ponownie później.",
+      "invalid": "Wybierz prawidłowy kanał i od jednej do trzech stref.",
+      "suspended": "Ten serwer jest zawieszony.",
+      "channel_blocked": "Użyj zwykłego kanału tekstowego, na którym PICKET może wyświetlać kanał, wysyłać wiadomości i osadzać linki.",
+      "channel_unavailable": "Discord nie mógł zweryfikować tego kanału. Spróbuj ponownie później."
+    },
+    "zones": {
+      "west_islands": "Zachodnie wyspy",
+      "west_coast": "Zachodnie wybrzeże",
+      "center": "Centrum",
+      "east_coast": "Wschodnie wybrzeże",
+      "east_islands": "Wschodnie wyspy"
+    },
+    "factions": {
+      "WARDENS": "Wardens",
+      "COLONIALS": "Colonials",
+      "NONE": "Neutralni"
+    },
+    "events": {
+      "appeared": "{{faction}}: pojawił się obiekt {{structure}} w {{location}}",
+      "disappeared": "{{faction}}: zniknął obiekt {{structure}} w {{location}}",
+      "scorched": "{{faction}}: obiekt {{structure}} w {{location}} został spalony",
+      "no_longer_scorched": "{{faction}}: obiekt {{structure}} w {{location}} nie jest już spalony",
+      "didnt_build": "{{faction}}: nie ukończono budowy obiektu {{structure}} w {{location}}",
+      "lost": "{{faction}}: utracono obiekt {{structure}} w {{location}}",
+      "building": "{{faction}}: trwa budowa obiektu {{structure}} w {{location}}",
+      "upgrading": "{{faction}}: trwa ulepszanie obiektu {{structure}} w {{location}}",
+      "claimed": "{{faction}}: przejęto obiekt {{structure}} w {{location}}",
+      "couldnt_upgrade": "{{faction}}: nie udało się ulepszyć obiektu {{structure}} w {{location}}",
+      "upgraded": "{{faction}}: ulepszono obiekt {{structure}} w {{location}}",
+      "built": "{{faction}}: zbudowano obiekt {{structure}} w {{location}}",
+      "launch_detected": "{{faction}}: utworzono stanowisko startowe w {{location}}",
+      "launch_destroyed": "{{faction}}: utracono stanowisko startowe w {{location}}",
+      "launch_armed": "{{faction}}: uzbrojono stanowisko startowe w {{location}}",
+      "launch_disarmed": "{{faction}}: rozbrojono stanowisko startowe w {{location}}",
+      "rocket_targeting": "{{faction}}: rakieta wycelowana w {{location}}",
+      "rocket_hit": "Rakieta wystrzelona przez {{faction}} trafiła w {{location}}",
+      "rocket_no_target": "{{faction}}: rakieta nie jest już wycelowana w {{location}}",
+      "rocket_forgotten": "{{faction}}: znacznik uderzenia zniknął w {{location}}",
+      "sc_built": "{{faction}}: zbudowano obiekt {{structure}} w {{location}}",
+      "sc_destroyed": "{{faction}}: utracono obiekt {{structure}} w {{location}}",
+      "ic_built": "{{faction}}: zbudowano obiekt {{structure}} w {{location}}",
+      "ic_destroyed": "{{faction}}: utracono obiekt {{structure}} w {{location}}",
+      "ws_built": "{{faction}}: zbudowano obiekt {{structure}} w {{location}}",
+      "ws_destroyed": "{{faction}}: utracono obiekt {{structure}} w {{location}}",
+      "sc_dried": "{{faction}}: beton obiektu {{structure}} w {{location}} mógł już stwardnieć",
+      "ic_dried": "{{faction}}: beton obiektu {{structure}} w {{location}} mógł już stwardnieć",
+      "ws_dried": "{{faction}}: beton obiektu {{structure}} w {{location}} mógł już stwardnieć",
+      "war_ended": "Wojna {{war}} zakończona. Zwycięzca: {{faction}}."
+    },
+    "perspectiveHelp": "Frakcja odniesienia: kolory alertów. Ten wybór jest zachowywany między wojnami.",
+    "neutralPerspective": "Neutralna",
+    "region": "Region",
+    "location": "Lokalizacja",
+    "embedFooter": "Wojna {{war}} · {{relation}}",
+    "relations": {
+      "friendly": "Sojusznicy",
+      "hostile": "Wrogowie",
+      "neutral": "Neutralni"
+    },
+    "embedTitles": {
+      "sc_built": "Działo szturmowe zbudowane",
+      "sc_destroyed": "Działo szturmowe zniszczone",
+      "launch_detected": "Stanowisko startowe wykryte",
+      "launch_destroyed": "Stanowisko startowe zniszczone",
+      "launch_armed": "Stanowisko startowe uzbrojone",
+      "launch_disarmed": "Stanowisko startowe rozbrojone",
+      "rocket_targeting": "Cel nuklearny wykryty",
+      "rocket_hit": "Uderzenie nuklearne",
+      "rocket_no_target": "Cel nuklearny usunięty",
+      "rocket_forgotten": "Znacznik uderzenia usunięty",
+      "scorched": "Obiekt spalony",
+      "war_ended": "Wojna zakończona"
+    },
+    "zoneContents": "Zobacz regiony w każdej strefie",
+    "backToSettings": "Wróć do ustawień"
+  },
+  "stats": {
+    "title": "Statystyki głosowe",
+    "help": "Śledź obecność na kanałach głosowych spełniającą kryteria. Skonfiguruj wspólne role członków przed włączeniem.",
+    "roles": "Role członków do śledzenia",
+    "sharedRoles": "Te role są wspólne z /picket settings. Ich zmiana wpływa również na dostęp członków do PICKET.",
+    "invalidRoles": "Nie można włączyć statystyk bez ról członków ani z @everyone. Poproś administratora o wybranie konkretnych ról.",
+    "chooseRoles": "Wybierz role członków (zastępuje obecną listę)",
+    "adminRoles": "Tylko administrator serwera może zmieniać wspólne role członków.",
+    "exclusions": "Wykluczone kanały",
+    "none": "Brak",
+    "afk": "Boty i kanał AFK serwera są zawsze wykluczone.",
+    "chooseChannels": "Wybierz wykluczone kanały głosowe",
+    "clearChannels": "Usuń wykluczenia",
+    "dashboard": "Otwórz panel statystyk",
+    "noDashboard": "Panel statystyk nie jest skonfigurowany dla tej instancji. Skontaktuj się z jej operatorem.",
+    "retention": "Cała historia statystyk jest przechowywana przez 60 dni.",
+    "privacyTitle": "Twoje dane głosowe",
+    "privacyHelp": "Zarządzaj śledzeniem swojej aktywności na tym serwerze. Usunięcie danych usuwa twój zapisany wkład.",
+    "optedOut": "Śledzenie twojej przyszłej aktywności jest wyłączone.",
+    "tracked": "Śledzenie odbywa się według ról członków i filtrów kanałów.",
+    "eraseHelp": "Trwale usunąć twoje statystyki i oczekujące wpisy na tym serwerze? Tej operacji nie można cofnąć.",
+    "erase": "Usuń moje statystyki",
+    "erased": "Twoje statystyki zostały usunięte.",
+    "optIn": "Zezwól na przyszłe śledzenie",
+    "optOut": "Wyłącz śledzenie mojej aktywności",
+    "exportTooLarge": "Zbyt wiele osób dla tego eksportu. Skróć okres lub użyj filtrów panelu statystyk.",
+    "exportReady": "Eksport twoich statystyk głosowych jest gotowy.",
+    "commands": {
+      "root": "Statystyki głosowe i prywatność",
+      "settings": "Konfiguruj statystyki głosowe",
+      "link": "Otwórz swój panel statystyk",
+      "privacy": "Zarządzaj swoimi danymi głosowymi",
+      "status": "Pokaż stan zbierania danych głosowych",
+      "export": "Eksportuj statystyki głosowe serwera",
+      "days": "Liczba dni, maksymalnie 60",
+      "format": "Format pliku eksportu"
+    }
+  }
+}
