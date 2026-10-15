@@ -49,6 +49,8 @@ import {
   PurgeInactiveGuilds,
   ReconcileGuilds,
   RequestGuildDeletion,
+  ExecuteRequestedDepartures,
+  PostgresRequestedDepartures,
   ResolveAccess,
   ShowPermissions,
   UpdateGuildSettings,
@@ -173,7 +175,8 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
     settings: new GetGuildSettings(settings), update: new UpdateGuildSettings(settings, options.i18n.locales),
     permissions: showPermissions, updatePermissions: new UpdatePermissions(permissions), access: new ResolveAccess(permissions),
     suspension: new GetSuspension(lifecycle, options.guildRetentionDays),
-    request: new RequestGuildDeletion(lifecycle, options.clock, options.guildRetentionDays), cancel: new CancelGuildDeletion(lifecycle),
+    request: new RequestGuildDeletion(lifecycle, options.clock, options.guildRetentionDays, buildRequestedDepartures(db, options, logger)), cancel: new CancelGuildDeletion(lifecycle),
+    ...(options.discord?.replies ? { replies: options.discord.replies } : {}),
     exportData: new ExportGuildData(new PostgresGuildDataExportRepository(db, options.flushGuildLogs,
       options.stats?.buffer.exportGuild ? { pendingVoice: (guildId, maxBytes) => options.stats!.buffer.exportGuild!(guildId, maxBytes) } : {}), options.clock),
     clock: options.clock, i18n: options.i18n,
@@ -259,6 +262,11 @@ export function buildOperatorService(db: Db, options: CompositionOptions, logger
   }, channel, options.locks ?? new PostgresKeyedLock(db), options.clock, options.guildRetentionDays, logger);
 }
 
+export function buildRequestedDepartures(db: Db, options: CompositionOptions, logger: Logger = noopLogger): ExecuteRequestedDepartures {
+  return new ExecuteRequestedDepartures(new PostgresRequestedDepartures(db, options.supportGuildEventsChannelId ?? null, options.guildRetentionDays),
+    options.discord?.operations ?? { guild: unavailable, leave: unavailable }, options.locks ?? new PostgresKeyedLock(db), options.clock, logger);
+}
+
 export function buildOperatorRegistry(db: Db, options: CompositionOptions): CommandRegistry {
   const ops = createOperationsPanel(buildOperatorService(db, options), options.i18n, options.clock);
   return new CommandRegistry([OPS_ROOT], [ops.command], options.i18n);
@@ -335,6 +343,7 @@ export function buildJobRunner(
       (options.discord ?? offlineDiscordPorts).messaging, options.clock, logger)
     : null;
   const operators = buildOperatorService(db, options, logger);
+  const departures = buildRequestedDepartures(db, options, logger);
   return new LeaderElector({
     store: new PostgresLeaseStore(db),
     name: 'job-runner:timers',
@@ -347,6 +356,7 @@ export function buildJobRunner(
     ...(options.metrics ? { metrics: options.metrics, component: 'job-runner' as const } : {}),
     onAcquired: async () => {
       const stopTimers = startLeasedLoop({ tick: () => sweep.tick(), intervalMs: SWEEP_INTERVAL_MS, logger, component: 'timers', ...(options.metrics ? { metrics: options.metrics } : {}) });
+      const stopDepartures = startLeasedLoop({ tick: () => departures.recover(), intervalMs: 15_000, logger, component: 'retention', ...(options.metrics ? { metrics: options.metrics } : {}) });
       const stopRetention = startLeasedLoop({ tick: () => retention.execute(), intervalMs: RETENTION_CHECK_INTERVAL_MS, logger, component: 'retention', ...(options.metrics ? { metrics: options.metrics } : {}) });
       const stopAudit = startLeasedLoop({ tick: () => audit.tick(), intervalMs: AUDIT_INTERVAL_MS, logger, component: 'audit', ...(options.metrics ? { metrics: options.metrics } : {}) });
       const stopSupport = support ? startLeasedLoop({ tick: () => support.tick(), intervalMs: 5_000, logger }) : async () => undefined;
@@ -357,7 +367,7 @@ export function buildJobRunner(
       const stopRefresh = options.stats?.dashboardUrl
         ? startLeasedLoop({ tick: () => refresh.execute(), intervalMs:60_000, logger, component: 'stats-refresh', ...(options.metrics ? { metrics: options.metrics } : {}) })
         : async () => undefined;
-      return async () => { await Promise.all([stopTimers(), stopRetention(), stopAudit(), stopSupport(), stopOperators(),stopStats(),stopRefresh()]); };
+      return async () => { await Promise.all([stopTimers(), stopDepartures(), stopRetention(), stopAudit(), stopSupport(), stopOperators(),stopStats(),stopRefresh()]); };
     },
   });
 }

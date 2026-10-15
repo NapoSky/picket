@@ -52,7 +52,7 @@ function setup(i18n = testI18n, auditControl?: AuditControl, withStats = false) 
   if (withStats) settings = { ...settings, features: { ...settings.features, stats: true } };
   const panel = createSettingsPanel({ settings: new GetGuildSettings(reader), update: new UpdateGuildSettings(store, i18n.locales), permissions: show,
     updatePermissions: new UpdatePermissions(permissions), access: new ResolveAccess(permissions), suspension,
-    request: new RequestGuildDeletion(lifecycle, clock, 30), cancel: new CancelGuildDeletion(lifecycle), clock, i18n, warlog, ...(withStats ? { stats } : {}),
+    request: new RequestGuildDeletion(lifecycle, clock, 30, { execute: async (_guild, beforeDispatch) => { await beforeDispatch?.(); } }), cancel: new CancelGuildDeletion(lifecycle), clock, i18n, warlog, ...(withStats ? { stats } : {}),
     exportData: new ExportGuildData({ read: async () => ({ guild_settings: [settings], guild_permission_roles: [config] }) }, clock), ...(auditControl ? { audit: auditControl } : {}) });
   const status = statusCommand(new GetGuildStatus(reader), show);
   const registry = new CommandRegistry([PICKET_ROOT], [status, panel.command], i18n, [...panel.aliases, { ...status, path: ['picket', 'permissions', 'show'] }]);
@@ -158,7 +158,8 @@ describe('private server settings panel', () => {
     const env = setup();
     const data = await env.click(control(await env.open(), 'view', 'data'));
     const confirmation = await env.click(control(data, 'view', 'delete'));
-    const suspended = await env.click(control(confirmation, 'delete'));
+    await env.click(control(confirmation, 'delete'));
+    const suspended = await env.open();
     const before = env.read().inactive;
     expect((await env.click(control(suspended, 'export')))?.kind).toBe('file');
     expect(env.read().inactive).toBe(before);
@@ -253,7 +254,9 @@ describe('private server settings panel', () => {
     view(await env.click(control(overview, 'disable', 'timers')));
     const data = await env.click(control(overview, 'view', 'data'));
     const deletion = await env.click(control(data, 'view', 'delete'));
-    view(await env.click(control(deletion, 'delete')));
+    const receipt = await env.click(control(deletion, 'delete'));
+    expect(receipt?.kind).toBe('message');
+    toWireResponse(receipt!);
     const recovery = await env.open();
     expect(text(recovery)).toContain(testI18n.translator(locale).t('panel.suspendedTitle'));
     view(await env.click(control(recovery, 'cancel')));
@@ -325,7 +328,7 @@ describe('private server settings panel', () => {
   it('previews deletion without mutation, suspends after confirmation, and recovers from a new panel', async () => {
     const env = setup(); const home = await env.open(); const data = await env.click(control(home, 'view', 'data')); const confirm = await env.click(control(data, 'view', 'delete'));
     expect(env.read().inactive).toBeNull(); expect(text(confirm)).toContain('not automatically deleted');
-    const suspended = await env.click(control(confirm, 'delete')); expect(env.read().inactive).not.toBeNull(); expect(text(suspended)).toContain('suspended');
+    const suspended = await env.click(control(confirm, 'delete')); expect(env.read().inactive).not.toBeNull(); expect(text(suspended)).toContain('PICKET will leave');
     await env.click(control(home, 'disable', 'timers')); expect(env.read().settings.features.timers).toBe(true);
     env.advance(16 * 60 * 1000);
     const recovery = await env.open(); expect(text(recovery)).toContain('suspended');
@@ -355,9 +358,10 @@ describe('private server settings panel', () => {
     env.setConfig({ officer: [roleId], member: [guildId as string as RoleId] });
     const caller = { memberRoleIds: [roleId], memberPermissions: 0n };
     expect(text(await env.click(control(confirm, 'delete'), caller))).toContain('required level: admin'); expect(env.read().inactive).toBeNull();
-    const suspended = await env.click(control(confirm, 'delete'));
+    await env.click(control(confirm, 'delete'));
+    const suspended = await env.open();
     expect(text(await env.click(control(suspended, 'cancel'), caller))).toContain('required level: admin');
-    const readOnly = await env.open(caller); expect(text(readOnly)).toContain('Only a server administrator'); expect(text(readOnly)).not.toContain('psback');
+    const readOnly = await env.open(caller); expect(text(readOnly)).toContain('invite PICKET back'); expect(text(readOnly)).not.toContain('psback');
   });
 
   it('delivers rich updates using the current component token without a follow-up', async () => {

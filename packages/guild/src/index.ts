@@ -8,6 +8,8 @@ export * from './application/guild-operations';
 export * from './infrastructure/postgres-guild-operations';
 export * from './application/guild-lifecycle-repository';
 export * from './application/guild-lifecycle-use-cases';
+export * from './application/requested-departures';
+export * from './infrastructure/postgres-requested-departures';
 export * from './application/guild-settings-repository';
 export * from './application/permission-repository';
 export * from './application/permissions-use-cases';

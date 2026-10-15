@@ -25,7 +25,7 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 | **Permissions** | Three levels (`member`, `officer`, `admin`), roles configurable per server, audit log of every change |
 | **Server settings** | Language, time zone, audit channel, per-feature switches |
 | **Multi-server** | Every server is isolated at the database level (row-level security) |
-| **Data management** | Retention period after the bot is removed, scheduled deletion on demand, nothing kept longer than needed |
+| **Data management** | Administrator removal makes the bot leave and schedules data erasure; retention also applies after an external removal |
 | **Languages** | English, French, German, Spanish, Brazilian Portuguese and Polish; add one by dropping a JSON file in [`packages/i18n/locales`](packages/i18n/locales) |
 | **Operations** | Zero-downtime rolling updates, several identical replicas, signed requests only, secrets kept out of the repository and the logs; private owner-only server departures from the support server |
 | **Voice statistics** | Opt-in role-filtered presence, 60-day history, own-data erasure and custom EN/FR dashboards with Discord OAuth and Team administration |

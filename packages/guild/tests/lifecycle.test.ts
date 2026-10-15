@@ -104,13 +104,13 @@ describe('shardOf', () => {
 describe('RequestGuildDeletion / CancelGuildDeletion / GetSuspension', () => {
   it('schedules a deletion, keeps the original date on repeat, and exposes the suspension', async () => {
     const repository = new FakeLifecycleRepository();
-    const request = new RequestGuildDeletion(repository, fixedClock('2026-10-05T12:00:00Z'), 30);
+    const request = new RequestGuildDeletion(repository, fixedClock('2026-10-05T12:00:00Z'), 30, { execute: async (_guild, beforeDispatch) => { await beforeDispatch?.(); } });
 
     expect(await request.execute(guild, actor)).toEqual({
       alreadyScheduled: false,
       purgeAt: new Date('2026-11-04T12:00:00Z'),
     });
-    const later = new RequestGuildDeletion(repository, fixedClock('2026-10-20T12:00:00Z'), 30);
+    const later = new RequestGuildDeletion(repository, fixedClock('2026-10-20T12:00:00Z'), 30, { execute: async (_guild, beforeDispatch) => { await beforeDispatch?.(); } });
     expect(await later.execute(guild, 'system')).toEqual({
       alreadyScheduled: true,
       purgeAt: new Date('2026-11-04T12:00:00Z'),
@@ -120,14 +120,14 @@ describe('RequestGuildDeletion / CancelGuildDeletion / GetSuspension', () => {
 
   it('previews the purge date without scheduling anything', async () => {
     const repository = new FakeLifecycleRepository();
-    const request = new RequestGuildDeletion(repository, fixedClock('2026-10-05T12:00:00Z'), 7);
+    const request = new RequestGuildDeletion(repository, fixedClock('2026-10-05T12:00:00Z'), 7, { execute: async (_guild, beforeDispatch) => { await beforeDispatch?.(); } });
     expect(request.previewPurgeAt()).toEqual(new Date('2026-10-12T12:00:00Z'));
     expect(repository.inactive.size).toBe(0);
   });
 
   it('cancels a pending deletion once, and reports when there is nothing to cancel', async () => {
     const repository = new FakeLifecycleRepository();
-    await new RequestGuildDeletion(repository, fixedClock('2026-10-05T12:00:00Z'), 30).execute(guild, actor);
+    await new RequestGuildDeletion(repository, fixedClock('2026-10-05T12:00:00Z'), 30, { execute: async (_guild, beforeDispatch) => { await beforeDispatch?.(); } }).execute(guild, actor);
     const cancel = new CancelGuildDeletion(repository);
 
     expect(await cancel.execute(guild, actor)).toBe(true);
@@ -160,7 +160,7 @@ describe('Gateway-driven lifecycle', () => {
 
   it('never cancels a deletion requested by an administrator when the guild shows up again', async () => {
     const repository = new FakeLifecycleRepository();
-    await new RequestGuildDeletion(repository, clock, 30).execute(guild, actor);
+    await new RequestGuildDeletion(repository, clock, 30, { execute: async (_guild, beforeDispatch) => { await beforeDispatch?.(); } }).execute(guild, actor);
 
     // Discord sends a creation event for every guild on each connection.
     await new HandleGuildAvailable(repository).execute(guild);
@@ -225,7 +225,7 @@ describe('ReconcileGuilds', () => {
 
   it('does not touch a guild already suspended', async () => {
     const repository = new FakeLifecycleRepository();
-    await new RequestGuildDeletion(repository, clock, 30).execute(guild, actor);
+    await new RequestGuildDeletion(repository, clock, 30, { execute: async (_guild, beforeDispatch) => { await beforeDispatch?.(); } }).execute(guild, actor);
     expect(await setup(repository).execute({ shardId: 0, shardCount: 1, presentGuildIds: [] })).toEqual([]);
     expect(repository.inactive.get(guild)?.reason).toBe('requested');
   });

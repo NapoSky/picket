@@ -76,6 +76,7 @@ export type MessageKey =
   | 'commands.warlog.description'
   | 'commands.warlog.settings.description'
   | 'data.cancelled'
+  | 'data.departureRequested'
   | 'data.export'
   | 'data.exportHelp'
   | 'data.exportReady'

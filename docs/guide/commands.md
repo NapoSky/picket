@@ -38,8 +38,8 @@ Every effective settings or permission change is audited in the database with it
 
 ## Deletion and recovery
 
-In **Data**, preview and confirm deletion. PICKET immediately suspends its features. After the operator-configured retention period (30 days by default), configuration, access roles, timers, history and audit records are permanently erased. Discord messages, including todolists, are not automatically deleted.
+In **Data**, preview and confirm removal. PICKET leaves the server and immediately schedules data deletion. After the operator-configured retention period (30 days by default), configuration, access roles, timers, history and audit records are permanently erased. Discord messages, including todolists, are not automatically deleted.
 
-During suspension, `/picket settings` remains available: it displays the date and lets an administrator cancel deletion. Other settings are unavailable. Running this command again allows recovery even after a panel expires. See [Privacy](../legal/privacy).
+To cancel deletion before the deadline, invite PICKET back, then open `/picket settings` → **Data** as a server administrator and cancel the scheduled deletion. Reinvitation alone does not cancel an explicit deletion request. See [Privacy](../legal/privacy).
 
 The old settings, permissions and data subcommands are replaced by this panel. During transition, an old command opens the corresponding screen **without applying its arguments**.

@@ -100,7 +100,8 @@ describe('Gateway events -> guild lifecycle and permissions (integration)', () =
     const home = await panel(guildId);
     const data = await panel(guildId, button(home, 'view', 'data'));
     const confirmation = await panel(guildId, button(data, 'view', 'delete'));
-    await panel(guildId, button(confirmation, 'delete'));
+    const result = await interact(guildId, [], '8', button(confirmation, 'delete'));
+    expect(JSON.stringify(result.delivered)).toContain('PICKET will leave');
   }
 
   const registry = (guildId: string) =>

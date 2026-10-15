@@ -8,7 +8,7 @@
     "failure": "Etwas ist schiefgelaufen. Bitte versuche es später erneut.",
     "timeout": "Die Anfrage hat zu lange gedauert. Bitte versuche es erneut.",
     "featureDisabled": "Diese Funktion ist auf diesem Server deaktiviert. Ein Offizier kann sie in /picket settings aktivieren.",
-    "suspended": "Die PICKET-Daten werden am {{date}} gelöscht. Ein Serveradministrator kann dies in /picket settings → Daten abbrechen."
+    "suspended": "Die PICKET-Daten werden am {{date}} gelöscht. Lade PICKET vorher erneut ein und brich die Löschung als Serveradministrator unter /picket settings → Daten ab."
   },
   "levels": {
     "member": "Mitglied",
@@ -271,6 +271,7 @@
     }
   },
   "data": {
+    "departureRequested": "Deine Anfrage wurde gespeichert: PICKET verlässt diesen Server. Die Daten werden am <t:{{timestamp}}:F> (<t:{{timestamp}}:R>) gelöscht. Discord-Nachrichten werden nicht gelöscht.",
     "export": "Daten exportieren",
     "exportHelp": "Lade Servereinstellungen, Berechtigungen, Protokolle, Boards und Timer sowie Stats-Einstellungen, Datenschutzpräferenzen und Mitgliederzusammenfassungen über 60 Tage als JSON herunter. Ausstehende Sprachdaten werden je Mitglied gezählt; rohe Sprachereignisse und einzelne Segmente sind nicht enthalten. Protokolle und Timerverlauf werden 30 Tage aufbewahrt. Aufgabenlisten bleiben in Discord.",
     "exportReady": "📥 Hier sind die Daten deines Servers. Diese Datei ist nur für dich sichtbar. Sie enthält Discord-Kennungen: Bewahre sie vertraulich auf. Es wurden keine Einstellungen geändert.",
@@ -333,14 +334,14 @@
     "restrictHelp": "Füge eine Mitgliedsrolle hinzu, bevor du @everyone entfernst, wenn Mitglieder weiterhin Zugriff haben sollen.",
     "everyoneTitle": "Allen die Nutzung von PICKET erlauben?",
     "everyoneHelp": "Alle Mitglieder dieses Servers können Mitgliedsbefehle verwenden. Der Offizierszugriff bleibt beschränkt.",
-    "deletionHelp": "Die Löschung **setzt PICKET sofort aus**. Nach der konfigurierten Aufbewahrungsfrist werden Serverkonfiguration, Zugriffsrollen, Timer, Verlauf und Audit-Einträge **endgültig gelöscht**.\n\nDiscord-Nachrichten, einschließlich Aufgabenlisten, werden **nicht automatisch gelöscht**.",
+    "deletionHelp": "Die Bestätigung **lässt PICKET diesen Server verlassen** und plant sofort die Datenlöschung. Nach der eingestellten Aufbewahrungsfrist werden Servereinstellungen, Zugriffsrollen, Timer, Verlauf und Audit-Protokolle **dauerhaft gelöscht**.\n\nDiscord-Nachrichten, einschließlich Aufgabenlisten, werden **nicht automatisch gelöscht**.",
     "deletionDate": "**Löschdatum**: <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
-    "schedule": "Löschung planen",
-    "deleteTitle": "Endgültige Datenlöschung bestätigen?",
-    "deleteConfirm": "Löschung bestätigen",
+    "schedule": "PICKET und Daten entfernen",
+    "deleteTitle": "PICKET entfernen und die endgültige Datenlöschung planen?",
+    "deleteConfirm": "Entfernen bestätigen",
     "suspendedTitle": "PICKET ist pausiert",
     "suspended": "PICKET ist ausgesetzt. Die Datenlöschung ist für <t:{{timestamp}}:F> (<t:{{timestamp}}:R>) geplant.",
-    "recovery": "Nur ein Serveradministrator kann die Löschung abbrechen. Andere Einstellungen sind während der Aussetzung nicht verfügbar.",
+    "recovery": "Um die Datenlöschung abzubrechen, lade PICKET vor Ablauf der Frist erneut ein und öffne als Serveradministrator /picket settings → Daten. Andere Einstellungen bleiben bis zum Abbruch gesperrt.",
     "cancelDeletion": "Löschung abbrechen",
     "legacy": "Befehle wurden in dieses Fenster verschoben. Alte Befehlsargumente wurden nicht angewendet.",
     "statusReserved": "Zeitzone: nur Vorkonfiguration.",

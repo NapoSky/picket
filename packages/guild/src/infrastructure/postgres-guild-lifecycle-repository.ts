@@ -1,5 +1,5 @@
 import { GuildId as GuildIdFactory, type GuildId } from '@picket/kernel';
-import { purgeGuildData, withTenant, type Db, type Tx } from '@picket/persistence';
+import { purgeGuildData, sql, withTenant, type Db, type Tx } from '@picket/persistence';
 import type { DeactivationResult, GuildLifecycleRepository } from '../application/guild-lifecycle-repository';
 import type { AuditActor } from '../application/permission-repository';
 import type { DeactivationReason } from '../domain/lifecycle';
@@ -69,15 +69,21 @@ export class PostgresGuildLifecycleRepository implements GuildLifecycleRepositor
 
     if (updated?.inactive_since) {
       await audit(trx, guildId, actor, action, state(null, null), state(updated.inactive_since, reason));
-      return { changed: true, inactiveSince: updated.inactive_since };
     }
 
     const current = await trx
       .selectFrom('guild_registry')
-      .select('inactive_since')
+      .select(['inactive_since', 'inactive_reason'])
       .where('guild_id', '=', guildId)
       .executeTakeFirstOrThrow();
-    return { changed: false, inactiveSince: current.inactive_since ?? now };
+    if (reason === 'requested' && current.inactive_reason === 'requested') {
+      // The deletion schedule and departure intent must commit together.
+      await sql`INSERT INTO guild_departure_requests(guild_id, registered_at, expected_revision, requested_at)
+        SELECT r.guild_id, r.registered_at, COALESCE(p.revision, 0), r.inactive_since
+        FROM guild_registry r LEFT JOIN guild_support_presence p USING(guild_id)
+        WHERE r.guild_id=${guildId} ON CONFLICT(guild_id) DO NOTHING`.execute(trx);
+    }
+    return { changed: !!updated?.inactive_since, inactiveSince: current.inactive_since ?? now };
   }
 
   reactivate(guildId: GuildId, actor: AuditActor, action: string, onlyReason?: DeactivationReason): Promise<boolean> {
@@ -96,6 +102,7 @@ export class PostgresGuildLifecycleRepository implements GuildLifecycleRepositor
         .set({ inactive_since: null, inactive_reason: null })
         .where('guild_id', '=', guildId)
         .execute();
+      await sql`DELETE FROM guild_departure_requests WHERE guild_id=${guildId}`.execute(trx);
       await audit(
         trx,
         guildId,

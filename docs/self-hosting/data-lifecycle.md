@@ -93,8 +93,9 @@ An outage may delay physical cleanup; Stats reads continue to enforce the 60-day
 Removing the bot marks the guild inactive and retains its data for **`GUILD_RETENTION_DAYS`** (30 days by default).
 Returning the bot before purge reactivates data when deactivation was caused by removal.
 
-A confirmed deletion request also suspends the guild and announces its deadline. It needs **explicit cancellation**
-by an administrator before that deadline: reconnecting Gateway or returning the bot does not cancel the request.
+A confirmed administrator removal makes PICKET leave the server and immediately schedules erasure with the
+announced deadline. To cancel before that deadline, invite PICKET back and **explicitly cancel deletion** in
+`/picket settings` → Data as a server administrator. Reconnecting Gateway or returning the bot alone does not cancel the request.
 
 At the deadline, purge first erases the guild's disk events and markers, then all SQL rows carrying its `guild_id`,
 including registry and audits. Disk failure retains the registry for retry. Shared public Foxhole data follows its

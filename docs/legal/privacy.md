@@ -86,8 +86,8 @@ on the safeguards those providers publish, such as the European Commission's sta
 
 - **The bot is removed from a server**: the data is kept during the retention period (30 days), so that re-adding the
   bot restores everything, then it is erased.
-- **An administrator confirms deletion in `/picket settings` → Data**: the server is suspended and its data is erased on the announced date,
-  unless an administrator cancels it in the same panel before that date.
+- **An administrator confirms removal in `/picket settings` → Data**: PICKET leaves the server and its data is scheduled for erasure on the announced date.
+  To cancel before that date, invite PICKET back and cancel deletion in that panel as a server administrator.
 - Erasure removes everything linked to the server, including its audit log. It cannot be undone. Backups made before the
   erasure disappear within 30 days.
 

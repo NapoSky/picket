@@ -30,7 +30,7 @@ export const GUILD_EXPORT_TABLES = {
 
 const BATCH_SIZE = 100;
 /** Internal voice facts feed member summaries; they are never shipped as rows. */
-export const GUILD_EXPORT_INTERNAL_TABLES = ['stats_users', 'stats_channels', 'stats_voice_events', 'stats_voice_segments', 'stats_voice_presence'] as const;
+export const GUILD_EXPORT_INTERNAL_TABLES = ['stats_users', 'stats_channels', 'stats_voice_events', 'stats_voice_segments', 'stats_voice_presence', 'guild_departure_requests'] as const;
 const statsCutoff = sql`CURRENT_TIMESTAMP - INTERVAL '60 days'`;
 
 export interface GuildExportOptions {

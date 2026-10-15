@@ -8,7 +8,7 @@
     "failure": "Se ha producido un error. Inténtalo de nuevo más tarde.",
     "timeout": "La solicitud ha tardado demasiado. Inténtalo de nuevo.",
     "featureDisabled": "Esta función está desactivada en este servidor. Un oficial puede activarla en /picket settings.",
-    "suspended": "La eliminación de los datos de PICKET está programada para {{date}}. Un administrador del servidor puede cancelarla en /picket settings → Datos."
+    "suspended": "Los datos de PICKET se eliminarán el {{date}}. Para cancelar, vuelve a invitar a PICKET antes de esa fecha y usa /picket settings → Datos como administrador del servidor."
   },
   "levels": {
     "member": "miembro",
@@ -271,6 +271,7 @@
     }
   },
   "data": {
+    "departureRequested": "Tu solicitud se ha guardado: PICKET abandonará este servidor y los datos se eliminarán el <t:{{timestamp}}:F> (<t:{{timestamp}}:R>). Los mensajes de Discord no se eliminan.",
     "export": "Exportar datos",
     "exportHelp": "Descarga un JSON con los ajustes, permisos, registros, tableros y temporizadores del servidor, además de ajustes de estadísticas, preferencias de seguimiento y resúmenes por miembro de 60 días. Los datos de voz pendientes se cuentan por miembro; no se incluyen eventos de voz sin procesar ni segmentos individuales. Los registros y el historial de temporizadores se conservan 30 días. Las listas de tareas permanecen en Discord.",
     "exportReady": "📥 Aquí tienes los datos de tu servidor. Este archivo solo es visible para ti. Incluye identificadores de Discord: mantenlo privado. No se ha cambiado ningún ajuste.",
@@ -333,14 +334,14 @@
     "restrictHelp": "Añade un rol de miembro antes de quitar @everyone si los miembros deben conservar el acceso.",
     "everyoneTitle": "¿Permitir que todos usen PICKET?",
     "everyoneHelp": "Todos los miembros de este servidor podrán usar los comandos de miembro. El acceso de oficial seguirá restringido.",
-    "deletionHelp": "La eliminación **suspende PICKET de inmediato**. Tras el periodo de retención configurado, los ajustes del servidor, los roles de acceso, los temporizadores, el historial y los registros de auditoría se **borrarán permanentemente**.\n\nLos mensajes de Discord, incluidas las listas de tareas, **no se eliminan automáticamente**.",
+    "deletionHelp": "Confirmar **hace que PICKET abandone este servidor** y programa inmediatamente la eliminación de datos. Tras el periodo de conservación configurado, la configuración, los roles de acceso, los temporizadores, el historial y los registros de auditoría se **borran permanentemente**.\n\nLos mensajes de Discord, incluidas las listas de tareas, **no se eliminan automáticamente**.",
     "deletionDate": "**Fecha de eliminación**: <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
-    "schedule": "Programar eliminación",
-    "deleteTitle": "¿Confirmar la eliminación permanente?",
-    "deleteConfirm": "Confirmar eliminación",
+    "schedule": "Retirar PICKET y sus datos",
+    "deleteTitle": "¿Retirar PICKET y programar la eliminación permanente de datos?",
+    "deleteConfirm": "Confirmar retirada",
     "suspendedTitle": "PICKET está en pausa",
     "suspended": "PICKET está suspendido. La eliminación de datos está programada para <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
-    "recovery": "Solo un administrador del servidor puede cancelar la eliminación. Los demás ajustes no están disponibles durante la suspensión.",
+    "recovery": "Para cancelar la eliminación, vuelve a invitar a PICKET antes del plazo y abre /picket settings → Datos como administrador del servidor. Los demás ajustes seguirán bloqueados hasta cancelar.",
     "cancelDeletion": "Cancelar eliminación",
     "legacy": "Los comandos se han trasladado a este panel. No se ha aplicado ningún argumento de los comandos antiguos.",
     "statusReserved": "Zona horaria: solo preconfiguración.",

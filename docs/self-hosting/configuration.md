@@ -104,6 +104,11 @@ For backups, from `deploy/`:
 
 ## Private service administration
 
+An administrator's confirmed removal in `/picket settings` → Data makes PICKET leave that server and schedules
+data erasure immediately, using `GUILD_RETENTION_DAYS`. Migration 018 also queues existing explicit deletion
+requests. The job-runner resumes unfinished departures; a dispatched request is never blindly repeated after
+an uncertain response, protecting later installations. No support-channel configuration is required for this flow.
+
 Run `migrate`, then `deploy-commands`, and deploy the updated bot. The CLI resolves the server containing
 `SUPPORT_GUILD_EVENTS_CHANNEL_ID` and registers **`/picket-ops servers` only in that server**, separately from
 public commands. Open it in any channel of that server. The configured channel remains the destination for

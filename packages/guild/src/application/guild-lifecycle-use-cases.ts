@@ -2,6 +2,7 @@ import type { Clock, GuildId, Logger } from '@picket/kernel';
 import { purgeCutoff, purgeDate } from '../domain/lifecycle';
 import type { GuildLifecycleRepository } from './guild-lifecycle-repository';
 import type { AuditActor } from './permission-repository';
+import type { GuildDepartureExecutor } from './requested-departures';
 
 /** Permanent deletion date if the guild is suspended, otherwise `null`. */
 export class GetSuspension {
@@ -24,21 +25,29 @@ export interface DeletionScheduled {
   readonly purgeAt: Date;
 }
 
-/** Deletion request (command) or bot departure (`guildDelete` event): same path and audit. */
+/** Administrator confirmation schedules data erasure and makes the bot leave the server. */
 export class RequestGuildDeletion {
   readonly #repository: GuildLifecycleRepository;
   readonly #clock: Clock;
   readonly #retentionDays: number;
 
-  constructor(repository: GuildLifecycleRepository, clock: Clock, retentionDays: number) {
+  constructor(repository: GuildLifecycleRepository, clock: Clock, retentionDays: number,
+    private readonly departures: GuildDepartureExecutor) {
     this.#repository = repository;
     this.#clock = clock;
     this.#retentionDays = retentionDays;
   }
 
-  async execute(guildId: GuildId, actor: AuditActor, action = 'guild.deletion_requested'): Promise<DeletionScheduled> {
-    const result = await this.#repository.markInactive(guildId, actor, action, this.#clock.now(), 'requested');
-    return { alreadyScheduled: !result.changed, purgeAt: purgeDate(result.inactiveSince, this.#retentionDays) };
+  async execute(guildId: GuildId, actor: AuditActor, action = 'guild.deletion_requested',
+    onScheduled?: (scheduled: DeletionScheduled) => Promise<void>): Promise<DeletionScheduled> {
+    let scheduled!: DeletionScheduled;
+    await this.departures.execute(guildId, async () => {
+      const result = await this.#repository.markInactive(guildId, actor, action, this.#clock.now(), 'requested');
+      scheduled = { alreadyScheduled: !result.changed, purgeAt: purgeDate(result.inactiveSince, this.#retentionDays) };
+      // The job-runner holds the same lock: it cannot leave before this acknowledgement.
+      await onScheduled?.(scheduled).catch(() => undefined);
+    });
+    return scheduled;
   }
 
   /** Deletion date if requested now (for the warning before confirmation). */

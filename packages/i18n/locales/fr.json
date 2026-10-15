@@ -8,7 +8,7 @@
     "failure": "Une erreur est survenue. Veuillez réessayer plus tard.",
     "timeout": "La requête a pris trop de temps. Veuillez réessayer.",
     "featureDisabled": "Cette fonctionnalité est désactivée. Un officier peut l’activer dans /picket settings.",
-    "suspended": "La suppression des données PICKET est prévue le {{date}}. Un administrateur peut l’annuler dans /picket settings → Données."
+    "suspended": "La suppression des données PICKET est prévue le {{date}}. Pour l’annuler, réinvite PICKET avant cette date, puis utilise /picket settings → Données en tant qu’administrateur du serveur."
   },
   "levels": {
     "member": "membre",
@@ -271,6 +271,7 @@
     }
   },
   "data": {
+    "departureRequested": "Ta demande est enregistrée : PICKET va quitter ce serveur et la suppression des données est programmée le <t:{{timestamp}}:F> (<t:{{timestamp}}:R>). Les messages Discord ne sont pas supprimés.",
     "export": "Exporter les données",
     "exportHelp": "Télécharge un fichier JSON des réglages, permissions, journaux, tableaux et timers du serveur, ainsi que des réglages Stats, préférences de suivi et synthèses par membre sur 60 jours. Les données vocales en attente sont comptées par membre ; les événements bruts et segments individuels ne sont pas inclus. Les journaux et historiques de timers sont conservés 30 jours. Les todolists restent dans Discord.",
     "exportReady": "📥 Voici les données de ton serveur. Ce fichier est visible uniquement par toi. Il contient notamment des identifiants Discord : garde-le privé. Aucun réglage n’a été modifié.",
@@ -333,14 +334,14 @@
     "restrictHelp": "Ajoute d’abord un rôle membre si des membres doivent conserver l’accès après le retrait de @everyone.",
     "everyoneTitle": "Autoriser tout le monde à utiliser PICKET ?",
     "everyoneHelp": "Tous les membres du serveur pourront utiliser les commandes membres. L’accès officier restera restreint.",
-    "deletionHelp": "La suppression **suspend PICKET immédiatement**. Après le délai de conservation configuré, la configuration du serveur, les rôles d’accès, timers, historiques et journaux d’audit sont **effacés définitivement**.\n\nLes messages Discord, dont les todolists, **ne sont pas supprimés automatiquement**.",
+    "deletionHelp": "La confirmation **fait quitter ce serveur à PICKET** et programme immédiatement la suppression des données. Après le délai de conservation configuré, la configuration du serveur, les rôles d’accès, timers, historiques et journaux d’audit sont **effacés définitivement**.\n\nLes messages Discord, dont les todolists, **ne sont pas supprimés automatiquement**.",
     "deletionDate": "**Date de suppression** : <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
-    "schedule": "Programmer la suppression",
-    "deleteTitle": "Confirmer la suppression définitive des données ?",
-    "deleteConfirm": "Confirmer la suppression",
+    "schedule": "Retirer PICKET et les données",
+    "deleteTitle": "Retirer PICKET et programmer la suppression définitive des données ?",
+    "deleteConfirm": "Confirmer le retrait",
     "suspendedTitle": "PICKET est en pause",
     "suspended": "PICKET est suspendu. La suppression des données est prévue le <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
-    "recovery": "Seul un administrateur du serveur peut annuler la suppression. Les autres réglages sont indisponibles pendant la suspension.",
+    "recovery": "Pour annuler la suppression, réinvite PICKET avant l’échéance, puis ouvre /picket settings → Données en tant qu’administrateur du serveur. Les autres réglages restent indisponibles jusqu’à l’annulation.",
     "cancelDeletion": "Annuler la suppression",
     "legacy": "Les commandes ont été regroupées dans ce panneau. Les anciens arguments n’ont appliqué aucune modification.",
     "statusReserved": "Fuseau horaire : préconfiguration uniquement.",

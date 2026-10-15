@@ -104,6 +104,11 @@ Depuis `deploy/`, pour les sauvegardes :
 
 ## Administration privée du service
 
+Le retrait confirmé par un administrateur dans `/picket settings` → Données fait quitter le serveur à PICKET et
+programme immédiatement l’effacement selon `GUILD_RETENTION_DAYS`. La migration 018 reprend aussi les demandes
+explicites de suppression existantes. Le job-runner reprend les départs inachevés ; un envoi au résultat incertain
+n’est jamais répété aveuglément, afin de protéger les réinstallations ultérieures. Ce parcours ne dépend pas du salon support.
+
 Exécutez `migrate`, puis `deploy-commands`, et déployez le bot mis à jour. La CLI déduit le serveur contenant
 `SUPPORT_GUILD_EVENTS_CHANNEL_ID` et y enregistre **`/picket-ops servers` uniquement**, séparément des commandes
 publiques. Ouvrez-la dans n’importe quel salon de ce serveur. Le salon configuré reste la destination des

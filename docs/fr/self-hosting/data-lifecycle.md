@@ -97,9 +97,10 @@ propres déclencheurs. Une panne peut retarder le nettoyage physique ; les lectu
 Après le retrait du bot, la guilde devient inactive et ses données restent pendant **`GUILD_RETENTION_DAYS`**
 (30 jours par défaut). Le retour du bot avant la purge réactive les données lorsqu'il s'agissait d'un retrait.
 
-Une suppression confirmée dans le panneau suspend aussi la guilde et annonce l'échéance. Elle nécessite une
-**annulation explicite** par un administrateur avant cette date : une reconnexion Gateway ou le retour du bot
-n'annule pas cette demande.
+Un retrait confirmé par un administrateur fait quitter le serveur à PICKET et programme immédiatement la suppression
+à l’échéance annoncée. Pour l’annuler avant cette échéance, réinvitez PICKET, puis **annulez explicitement la suppression**
+dans `/picket settings` → Données en tant qu’administrateur du serveur. Une reconnexion Gateway ou le retour du bot
+ne suffit pas à annuler cette demande.
 
 À échéance, la purge efface d'abord les événements disque et marqueurs de la guilde, puis toutes les lignes SQL
 portant son `guild_id`, registre et audits compris. Un échec disque conserve le registre pour permettre une nouvelle

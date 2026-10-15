@@ -227,7 +227,8 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
     const data = await click(home, 'view', 'data', options);
     expect(JSON.stringify(await click(data, 'export', '0', { ...options, permissions: '0' }))).toContain('required level: admin');
     const confirmation = await click(data, 'view', 'delete', options);
-    const recovery = await click(confirmation, 'delete', '0', options);
+    await click(confirmation, 'delete', '0', options);
+    const recovery = await say(options);
     const exported = await click(recovery, 'export', '0', options);
     if (typeof exported !== 'object' || !('file' in exported)) throw new Error('Expected a private download');
     const contents = JSON.parse(new TextDecoder().decode(exported.file.bytes));

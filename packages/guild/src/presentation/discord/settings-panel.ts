@@ -2,7 +2,7 @@ import {
   ACCESS_RANK, encodeCustomId, ephemeral,
   type CommandContext, type CommandEntry, type ComponentContext, type ComponentFamily,
   type PanelButton, type PanelContent, type PanelView, type Reply,
-  type GuildRoles,
+  type GuildRoles, type InteractionReplies,
 } from '@picket/discord';
 import type { I18n, MessageKey } from '@picket/i18n';
 import { ChannelId, RoleId, type Clock, type GuildId, type UserId } from '@picket/kernel';
@@ -43,6 +43,7 @@ export interface SettingsPanelDependencies {
   readonly access: ResolveAccess;
   readonly suspension: GetSuspension;
   readonly request: RequestGuildDeletion;
+  readonly replies?: InteractionReplies;
   readonly cancel: CancelGuildDeletion;
   readonly exportData: ExportGuildData;
   readonly clock: Clock;
@@ -301,8 +302,16 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
             return render(context, target, '0', result.kind === 'rejected' ? 'permissions.set.everyoneNotOfficer' : result.kind === 'unchanged' ? 'panel.unchanged' : 'panel.saved');
           }
           if (namespace === 'psdata' && action === 'delete' && context.interaction.componentKind === 'button') {
-            await deps.request.execute(context.guildId, context.interaction.userId);
-            return render(context, 'data', '0', 'panel.saved');
+            let announced = false;
+            const result = await deps.request.execute(context.guildId, context.interaction.userId, 'guild.deletion_requested', async scheduled => {
+              if (!deps.replies) return;
+              await deps.replies.editOriginal({ applicationId: context.interaction.applicationId, token: context.interaction.token }, {
+                components: [{ kind: 'text', text: context.t('data.departureRequested', { timestamp: Math.floor(scheduled.purgeAt.getTime() / 1000) }) }],
+                accentColor: PAGE_COLORS.delete,
+              });
+              announced = true;
+            });
+            return announced ? null : ephemeral(context.t('data.departureRequested', { timestamp: Math.floor(result.purgeAt.getTime() / 1000) }));
           }
           if (namespace === 'psback' && action === 'cancel' && context.interaction.componentKind === 'button') {
             const changed = await deps.cancel.execute(context.guildId, context.interaction.userId);

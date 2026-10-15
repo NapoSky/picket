@@ -8,7 +8,7 @@
     "failure": "Coś poszło nie tak. Spróbuj ponownie później.",
     "timeout": "Żądanie trwało zbyt długo. Spróbuj ponownie.",
     "featureDisabled": "Ta funkcja jest wyłączona na tym serwerze. Oficer może ją włączyć w /picket settings.",
-    "suspended": "Usunięcie danych PICKET zaplanowano na {{date}}. Administrator serwera może je anulować w /picket settings → Dane."
+    "suspended": "Dane PICKET zostaną usunięte {{date}}. Aby anulować, zaproś PICKET ponownie przed tą datą i użyj /picket settings → Dane jako administrator serwera."
   },
   "levels": {
     "member": "członek",
@@ -271,6 +271,7 @@
     }
   },
   "data": {
+    "departureRequested": "Twoje żądanie zostało zapisane: PICKET opuści ten serwer, a dane zostaną usunięte <t:{{timestamp}}:F> (<t:{{timestamp}}:R>). Wiadomości Discord nie są usuwane.",
     "export": "Eksportuj dane",
     "exportHelp": "Pobierz plik JSON z ustawieniami serwera, uprawnieniami, wpisami audytu, tablicami, licznikami i logami aplikacji oraz ustawieniami Stats, preferencjami śledzenia i podsumowaniami członków z 60 dni. Oczekujące dane głosowe są zliczane dla każdego członka; surowe zdarzenia głosowe i pojedyncze segmenty nie są uwzględniane. Wpisy audytu, logi aplikacji i historia liczników są przechowywane przez 30 dni. Listy zadań pozostają na Discordzie.",
     "exportReady": "📥 Oto dane twojego serwera. Ten plik jest widoczny tylko dla ciebie. Zawiera identyfikatory Discord: zachowaj go dla siebie. Nie zmieniono ustawień.",
@@ -335,14 +336,14 @@
     "restrictHelp": "Dodaj rolę członka przed usunięciem @everyone, jeśli członkowie mają zachować dostęp.",
     "everyoneTitle": "Pozwolić wszystkim używać PICKET?",
     "everyoneHelp": "Każdy członek tego serwera będzie mógł używać komend dla członków. Dostęp oficerski pozostaje ograniczony.",
-    "deletionHelp": "Usunięcie **natychmiast zawiesza PICKET**. Po skonfigurowanym okresie przechowywania konfiguracja serwera, role dostępu, liczniki, historia i wpisy audytu zostaną **trwale usunięte**.\n\nWiadomości Discord, w tym listy zadań, **nie są automatycznie usuwane**.",
+    "deletionHelp": "Potwierdzenie **powoduje opuszczenie tego serwera przez PICKET** i natychmiast planuje usunięcie danych. Po ustawionym okresie przechowywania ustawienia serwera, role dostępu, timery, historia i dzienniki audytu zostaną **trwale usunięte**.\n\nWiadomości Discord, w tym listy zadań, **nie są usuwane automatycznie**.",
     "deletionDate": "**Data usunięcia**: <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
-    "schedule": "Zaplanuj usunięcie",
-    "deleteTitle": "Potwierdzić trwałe usunięcie danych?",
+    "schedule": "Usuń PICKET i jego dane",
+    "deleteTitle": "Usunąć PICKET i zaplanować trwałe usunięcie danych?",
     "deleteConfirm": "Potwierdź usunięcie",
     "suspendedTitle": "PICKET jest wstrzymany",
     "suspended": "PICKET jest zawieszony. Usunięcie danych zaplanowano na <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).",
-    "recovery": "Tylko administrator serwera może anulować usunięcie. Inne ustawienia są niedostępne podczas zawieszenia.",
+    "recovery": "Aby anulować usunięcie danych, zaproś PICKET ponownie przed terminem, a następnie otwórz /picket settings → Dane jako administrator serwera. Pozostałe ustawienia pozostaną niedostępne do anulowania.",
     "cancelDeletion": "Anuluj usunięcie",
     "legacy": "Komendy zostały przeniesione do tego panelu. Stare argumenty komend nie zostały zastosowane.",
     "statusReserved": "Strefa czasowa: tylko konfiguracja na przyszłość.",
