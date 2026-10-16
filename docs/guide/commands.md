@@ -1,11 +1,12 @@
 # Commands
 
-Commands start with `/picket`, `/todolist`, `/timers`, `/warlog` or `/stats`, work inside a server and reply privately. Created lists and boards are public messages.
+Commands start with `/picket`, `/todolist`, `/timers`, `/warlog`, `/stats` or `/voice`, work inside a server and reply privately. Created lists and boards are public messages.
 
 | Command | Level | What it does |
 | --- | --- | --- |
 | `/picket status` | member | Shows settings, available modules, configured access roles and your access level. |
-| `/picket voice` | member | Build a private queue of templates and quantities, then deploy temporary voice channels. See [Temporary voice channels](./voice). |
+| `/voice create` | member | Build a private queue of templates and quantities, then deploy temporary voice channels. See [Temporary voice channels](./voice). |
+| `/voice settings` | officer | Manage voice templates, deployment limits and open channels. Includes a button to return to PICKET settings. |
 | `/picket settings` | officer | Opens the private settings panel with no arguments. Only administrators can edit permissions and manage data. |
 | `/todolist create` | member | Opens a form and posts a todo list in the channel. See [Todo lists](./todolists). |
 | `/timers create` | officer | Creates the timer board of the channel. See [Timers](./timers). |
@@ -45,4 +46,4 @@ To cancel deletion before the deadline, invite PICKET back, then open `/picket s
 
 The old settings, permissions and data subcommands are replaced by this panel. During transition, an old command opens the corresponding screen **without applying its arguments**.
 
-Temporary voice channels are enabled by default and configurable from the settings home. Disabling this module blocks new deployments while existing channel cleanup continues. See [Temporary voice channels](./voice).
+Temporary voice channels are enabled by default. `/picket settings` controls their activation; `/voice settings` configures templates and includes **PICKET settings** to return to the server overview. Disabling this module blocks new deployments while existing channel cleanup continues. See [Temporary voice channels](./voice).

@@ -40,6 +40,8 @@ function toTextInput(input: ModalInput) {
 /** Immediate HTTP response to an interaction. */
 export function toWireResponse(reply: Reply): APIInteractionResponse {
   switch (reply.kind) {
+    case 'deleteOriginal':
+      throw new Error('Message deletion must be delivered after a deferred acknowledgement');
     case 'file':
       throw new Error('File replies must be delivered after a deferred acknowledgement');
     case 'panel': {

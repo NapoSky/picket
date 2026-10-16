@@ -474,7 +474,7 @@ export type MessageKey =
   | 'voice.resolve'
   | 'voice.resolveConfirm'
   | 'voice.results'
-  | 'voice.search'
+  | 'voice.settingsCommand'
   | 'voice.settingsSummary'
   | 'voice.settingsTitle'
   | 'voice.status.active'

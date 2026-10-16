@@ -12,6 +12,7 @@ import {
   type PanelContent,
   type Reply,
   type ModalInput,
+  type RootDescriptor,
 } from '@picket/discord';
 import type { Clock } from '@picket/kernel';
 import type { MessageKey } from '@picket/i18n';
@@ -33,6 +34,10 @@ interface Dependencies {
   clock: Clock;
   settingsHome: (context: CommandContext) => PanelButton;
 }
+export const VOICE_ROOT: RootDescriptor = {
+  name: 'voice',
+  description: 'voice.settingsTitle',
+};
 const text = (value: string): PanelContent => ({ kind: 'text', text: value });
 const identity = (c: CommandContext): VoiceIdentity => ({
   guildId: c.guildId,
@@ -156,32 +161,16 @@ export function createVoicePanel(deps: Dependencies) {
         ],
       });
     } else {
-      if (
-        models.some(
-          (m) =>
-            !s.state.search ||
-            m.name
-              .toLocaleLowerCase()
-              .includes(s.state.search.toLocaleLowerCase()),
-        )
-      )
+      if (models.length)
         components.push({
           kind: 'stringSelect',
           customId: id(s, 'pick'),
           placeholder: c.t('voice.pick'),
-          options: models
-            .filter(
-              (m) =>
-                !s.state.search ||
-                m.name
-                  .toLocaleLowerCase()
-                  .includes(s.state.search.toLocaleLowerCase()),
-            )
-            .map((m) => ({
-              label: m.name,
-              value: m.id,
-              selected: s.state.selected === m.id,
-            })),
+          options: models.map((m) => ({
+            label: m.name,
+            value: m.id,
+            selected: s.state.selected === m.id,
+          })),
         });
       else components.push(text(c.t('voice.noModels')));
       if (selected) components.push(text(details(selected)));
@@ -288,7 +277,6 @@ export function createVoicePanel(deps: Dependencies) {
                 ),
                 label: c.t('voice.addQuantity', { quantity: s.state.quantity }),
               },
-              button(c, s, 'voice.search', 'search'),
             ],
           },
           { kind: 'separator' },
@@ -337,7 +325,7 @@ export function createVoicePanel(deps: Dependencies) {
         });
       }
     }
-    if (settings && s.state.fromSettings)
+    if (settings)
       components.push({ kind: 'buttons', buttons: [deps.settingsHome(c)] });
     return {
       kind: 'panel',
@@ -351,22 +339,8 @@ export function createVoicePanel(deps: Dependencies) {
     action: string,
     model?: VoiceTemplate,
   ): Reply {
+    const copySuffix = ` (${c.t('voice.copy')})`;
     const inputs: ModalInput[] = [
-      {
-        customId: 'name',
-        label: c.t('voice.modelName'),
-        style: 'short',
-        maxLength: 80,
-        required: true,
-        ...(model
-          ? {
-              value:
-                action === 'copyModel'
-                  ? `${model.name} (${c.t('voice.copy')})`.slice(0, 80)
-                  : model.name,
-            }
-          : {}),
-      },
       {
         customId: 'category',
         label: c.t('voice.category'),
@@ -380,7 +354,14 @@ export function createVoicePanel(deps: Dependencies) {
         style: 'short',
         maxLength: 90,
         required: true,
-        ...(model ? { value: model.channelName } : {}),
+        ...(model
+          ? {
+              value:
+                action === 'copyModel'
+                  ? `${model.channelName.slice(0, 90 - copySuffix.length)}${copySuffix}`
+                  : model.channelName,
+            }
+          : {}),
       },
       {
         customId: 'capacity',
@@ -469,8 +450,6 @@ export function createVoicePanel(deps: Dependencies) {
           String(await deps.service.limit(c.guildId)),
           'saveLimit',
         );
-      if (!officer && isButton && action === 'search')
-        return modal('voice.search', 'search', s.state.search, 'saveSearch');
       if (!officer && isSelect && action === 'quantity' && pick === 'other')
         return modal(
           'voice.quantity',
@@ -505,7 +484,7 @@ export function createVoicePanel(deps: Dependencies) {
                 queue: {},
                 batchId: null,
               });
-              return ephemeral(c.t('voice.cancelled'));
+              return { kind: 'deleteOriginal' };
             } else if (isSelect && action === 'pick') {
               if (!models.some((m) => m.id === pick))
                 throw new VoiceError('access');
@@ -518,12 +497,7 @@ export function createVoicePanel(deps: Dependencies) {
                 1,
                 10,
               );
-            else if (!officer && isModal && action === 'saveSearch') {
-              state.search = (c.interaction.fields.search ?? '')
-                .trim()
-                .slice(0, 80);
-              state.selected = null;
-            } else if (!officer && isButton && action === 'addQueue') {
+            else if (!officer && isButton && action === 'addQueue') {
               const m = models.find((m) => m.id === state.selected);
               if (!m) throw new VoiceError('access');
               const old = state.queue[m.id];
@@ -561,7 +535,7 @@ export function createVoicePanel(deps: Dependencies) {
               await deps.service.saveTemplate(
                 i,
                 {
-                  name: c.interaction.fields.name ?? '',
+                  name: c.interaction.fields.channelName ?? '',
                   categoryId: c.interaction.fields.category ?? '',
                   channelName: c.interaction.fields.channelName ?? '',
                   capacity: integer(c.interaction.fields.capacity ?? '', 1, 99),
@@ -665,7 +639,6 @@ export function createVoicePanel(deps: Dependencies) {
   async function open(
     c: CommandContext,
     settings = false,
-    fromSettings = false,
   ): Promise<Reply> {
     const run = async (): Promise<Reply> => {
       try {
@@ -675,25 +648,27 @@ export function createVoicePanel(deps: Dependencies) {
           await deps.service.session(
             identity(c),
             settings ? 'settings' : 'member',
-            fromSettings,
           ),
         );
       } catch (e) {
         return failure(c, e);
       }
     };
-    // Guild settings has already acknowledged this interaction before opening a module.
-    return fromSettings
-      ? run()
-      : { kind: 'deferred', ephemeral: true, update: false, run };
+    return { kind: 'deferred', ephemeral: true, update: false, run };
   }
 
-  const command: CommandEntry = {
-    path: ['picket', 'voice'],
+  const createCommand: CommandEntry = {
+    path: ['voice', 'create'],
     description: 'voice.command',
     level: 'member',
     feature: 'voice',
     handler: (c) => open(c),
+  };
+  const settingsCommand: CommandEntry = {
+    path: ['voice', 'settings'],
+    description: 'voice.settingsCommand',
+    level: 'officer',
+    handler: (c) => open(c, true),
   };
   const families: ComponentFamily[] = [
     {
@@ -713,9 +688,9 @@ export function createVoicePanel(deps: Dependencies) {
     },
   ];
   return {
-    command,
+    createCommand,
+    settingsCommand,
+    entries: [createCommand, settingsCommand],
     families,
-    open: (c: CommandContext, fromSettings = false) =>
-      open(c, true, fromSettings),
   };
 }

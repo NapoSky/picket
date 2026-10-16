@@ -36,9 +36,7 @@ function setup(locale = 'en', settings = false, count = 1) {
       selected: null,
       quantity: 1,
       queue: {},
-      search: '',
       batchId: null,
-      fromSettings: settings,
     },
   };
   const service: jest.Mocked<VoiceService> = {
@@ -95,8 +93,8 @@ function setup(locale = 'en', settings = false, count = 1) {
   const open = async () =>
     finish(
       await (settings
-        ? panel.open(context(), true)
-        : panel.command.handler(context())),
+        ? panel.settingsCommand.handler(context())
+        : panel.createCommand.handler(context())),
     );
   const control = (r: Reply, action: string) => {
     if (r.kind !== 'panel') throw new Error(JSON.stringify(r));
@@ -194,18 +192,22 @@ describe('private voice deployment queue', () => {
     expect(e.service.deploy).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(r)).toContain('Deployment');
   });
-  it('opens a five-field native category/delay modal with capacity 99 and delay 15', async () => {
+  it('opens a four-field modal with category first, then channel name, capacity 99 and delay 15', async () => {
     const e = setup('fr', true);
     const r = await e.click(await e.open(), 'addModel');
     expect(r.kind).toBe('modal');
     if (r.kind !== 'modal') return;
-    expect(r.inputs).toHaveLength(5);
-    expect(r.inputs[1]).toMatchObject({
+    expect(r.inputs).toHaveLength(4);
+    expect(r.inputs.map((input) => input.customId)).toEqual([
+      'category', 'channelName', 'capacity', 'delay',
+    ]);
+    expect(r.inputs[0]).toMatchObject({
       kind: 'channelSelect',
       channelKinds: ['category'],
     });
-    expect(r.inputs[3]).toMatchObject({ value: '99' });
-    expect(r.inputs[4]).toMatchObject({
+    expect(r.inputs[1]).toMatchObject({ customId: 'channelName' });
+    expect(r.inputs[2]).toMatchObject({ value: '99' });
+    expect(r.inputs[3]).toMatchObject({
       kind: 'stringSelect',
       options: expect.arrayContaining([
         { label: '15 min', value: '15', selected: true },
@@ -221,18 +223,8 @@ describe('private voice deployment queue', () => {
     expect(denied.kind).toBe('message');
     expect(e.service.updateSession).not.toHaveBeenCalled();
   });
-  it('does not emit an invalid empty select when search has no results', async () => {
-    const e = setup();
-    const r = await e.open();
-    const modal = await e.click(r, 'search');
-    if (modal.kind !== 'modal') throw new Error('Expected modal');
-    const decoded = decodeCustomId(modal.customId)!;
-    const result = await e.finish(
-      await e.panel.families[0]!.onModal!({
-        ...e.context({ kind: 'modal', fields: { search: 'missing' } }),
-        payload: decoded.payload,
-      }),
-    );
+  it('does not emit an invalid empty template select when no templates are available', async () => {
+    const result = await setup('en', false, 0).open();
     toWireResponse(result);
   });
   it('confirms template removal against the version actually shown to the officer', async () => {

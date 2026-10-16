@@ -638,17 +638,16 @@
     "command": "Preparar e criar canais de voz temporários",
     "title": "Preparar canais de voz",
     "settingsTitle": "Canais de voz temporários",
-    "help": "Escolha modelos e quantidades com /picket voice.",
+    "help": "Configure modelos com /voice settings. Solicite canais com /voice create.",
     "disableHelp": "Novas criações são bloqueadas. A limpeza automática dos canais existentes vazios continua.",
     "pick": "Escolher modelo",
-    "noModels": "Nenhum modelo disponível. Um oficial pode configurá-los em /picket settings.",
+    "noModels": "Nenhum modelo disponível. Um oficial pode configurá-los em /voice settings.",
     "details": "{{capacity}} pessoas · excluir após {{minutes}} min vazio",
     "quantity": "Quantidade",
     "other": "Outra quantidade…",
     "addQueue": "Adicionar à fila",
     "addQuantity": "Adicionar × {{quantity}}",
     "queue": "Sua fila: {{count}} / {{limit}} canais",
-    "search": "Buscar modelos",
     "editQueue": "Escolher item para alterar ou remover",
     "editQuantity": "Quantidade (0 remove este item)",
     "unavailableModel": "Modelo indisponível",
@@ -690,13 +689,14 @@
       "limit": "Limite atingido: até 10 modelos por servidor; respeite o limite de criação indicado.",
       "full": "Há muitos canais abertos ou reservados no servidor (máximo 15).",
       "changed": "Um modelo ou canal mudou. Atualize e adicione novamente os itens afetados.",
-      "expired": "Esta preparação expirou ou mudou. Abra /picket voice ou as configurações novamente.",
+      "expired": "Esta preparação expirou ou mudou. Abra /voice create ou as configurações novamente.",
       "access": "As permissões atuais não permitem este destino ou ação.",
       "unavailable": "A verificação está indisponível temporariamente. A limpeza aguarda um estado confiável.",
       "occupied": "Este canal ainda tem participantes e não pode ser excluído.",
       "disabled": "Novas criações estão desativadas ou PICKET está suspenso neste servidor."
     },
     "resolve": "Encerrar acompanhamento",
-    "resolveConfirm": "Confirme após verificar esta criação incerta no Discord. PICKET libera a reserva; esta ação não exclui nenhum canal."
+    "resolveConfirm": "Confirme após verificar esta criação incerta no Discord. PICKET libera a reserva; esta ação não exclui nenhum canal.",
+    "settingsCommand": "Configurar canais de voz temporários"
   }
 }

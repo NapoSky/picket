@@ -21,8 +21,8 @@ Consultez [Permissions](./permissions) pour les détails.
 
 ## Demander des vocaux éphémères
 
-Un officier prépare les modèles dans `/picket settings` → **Vocaux éphémères** → **Configurer**.
-Les membres lancent ensuite `/picket voice`, choisissent leurs modèles et quantités, puis déploient leur file ensemble.
+Un officier prépare les modèles dans `/voice settings`.
+Les membres lancent ensuite `/voice create`, choisissent leurs modèles et quantités, puis déploient leur file ensemble.
 Les canaux vides se nettoient après le délai configuré. Voir [Vocaux éphémères](./voice) pour un premier déploiement,
 les réglages et les permissions.
 

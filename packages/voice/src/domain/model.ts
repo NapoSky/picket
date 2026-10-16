@@ -23,9 +23,7 @@ export interface VoiceDraft {
   selected: string | null;
   quantity: number;
   queue: Record<string, QueueEntry>;
-  search: string;
   batchId: string | null;
-  fromSettings: boolean;
 }
 export interface VoiceSession {
   id: string;
@@ -75,7 +73,7 @@ export function validateTemplate(input: TemplateInput): TemplateInput {
     channelName = input.channelName.trim();
   if (
     !name ||
-    name.length > 80 ||
+    name.length > 90 ||
     !channelName ||
     channelName.length > 90 ||
     /[\r\n]/.test(name + channelName) ||

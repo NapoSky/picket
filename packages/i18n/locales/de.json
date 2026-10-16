@@ -638,17 +638,16 @@
     "command": "Temporäre Sprachkanäle vorbereiten und erstellen",
     "title": "Sprachkanäle vorbereiten",
     "settingsTitle": "Temporäre Sprachkanäle",
-    "help": "Wähle Vorlagen und Mengen mit /picket voice.",
+    "help": "Vorlagen mit /voice settings konfigurieren. Sprachkanäle mit /voice create anfordern.",
     "disableHelp": "Neue Bereitstellungen werden gesperrt. Bestehende leere Kanäle werden weiterhin automatisch entfernt.",
     "pick": "Vorlage wählen",
-    "noModels": "Keine verfügbaren Vorlagen. Offiziere können sie unter /picket settings einrichten.",
+    "noModels": "Keine verfügbaren Vorlagen. Offiziere können sie unter /voice settings einrichten.",
     "details": "{{capacity}} Personen · nach {{minutes}} Min. ununterbrochen leer löschen",
     "quantity": "Anzahl",
     "other": "Andere Anzahl…",
     "addQueue": "Zur Warteschlange hinzufügen",
     "addQuantity": "Hinzufügen × {{quantity}}",
     "queue": "Deine Warteschlange: {{count}} / {{limit}} Kanäle",
-    "search": "Vorlagen suchen",
     "editQueue": "Eintrag ändern oder entfernen",
     "editQuantity": "Anzahl (0 entfernt diesen Eintrag)",
     "unavailableModel": "Vorlage nicht verfügbar",
@@ -690,13 +689,14 @@
       "limit": "Limit erreicht: höchstens 10 Vorlagen pro Server; beachte das angezeigte Bereitstellungslimit.",
       "full": "Zu viele offene oder reservierte Sprachkanäle auf dem Server (maximal 15).",
       "changed": "Eine Vorlage oder ein Kanal wurde geändert. Aktualisiere und erstelle betroffene Einträge neu.",
-      "expired": "Diese Vorbereitung ist abgelaufen oder geändert. Öffne /picket voice oder die Einstellungen erneut.",
+      "expired": "Diese Vorbereitung ist abgelaufen oder geändert. Öffne /voice create oder die Einstellungen erneut.",
       "access": "Die aktuellen Berechtigungen erlauben dieses Ziel oder diese Aktion nicht.",
       "unavailable": "Die Prüfung ist vorübergehend nicht verfügbar. Die Bereinigung wartet auf einen zuverlässigen Zustand.",
       "occupied": "Dieser Kanal hat noch Teilnehmer und kann nicht entfernt werden.",
       "disabled": "Neue Sprachkanäle sind deaktiviert oder PICKET ist auf diesem Server ausgesetzt."
     },
     "resolve": "Nachverfolgung beenden",
-    "resolveConfirm": "Bestätige erst nach Prüfung dieser unklaren Erstellung in Discord. PICKET gibt den reservierten Platz frei; es wird kein Discord-Kanal gelöscht."
+    "resolveConfirm": "Bestätige erst nach Prüfung dieser unklaren Erstellung in Discord. PICKET gibt den reservierten Platz frei; es wird kein Discord-Kanal gelöscht.",
+    "settingsCommand": "Temporäre Sprachkanäle konfigurieren"
   }
 }

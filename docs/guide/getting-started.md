@@ -20,8 +20,8 @@ Use `/picket status` to check the bot and your access level. See [Permissions](.
 
 ## Request temporary voice channels
 
-An officer prepares templates in `/picket settings` → **Temporary voice channels** → **Configure**.
-Members then run `/picket voice`, choose templates and quantities, and deploy their queue together.
+An officer prepares templates in `/voice settings`.
+Members then run `/voice create`, choose templates and quantities, and deploy their queue together.
 Empty channels clean themselves up after the configured delay. See [Temporary voice channels](./voice) for a
 first deployment, settings and permissions.
 

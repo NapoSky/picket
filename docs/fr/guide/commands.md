@@ -1,11 +1,12 @@
 # Commandes
 
-Les commandes commencent par `/picket`, `/todolist`, `/timers`, `/warlog` ou `/stats`, fonctionnent dans un serveur et répondent en privé. Les listes et tableaux créés sont des messages publics.
+Les commandes commencent par `/picket`, `/todolist`, `/timers`, `/warlog`, `/stats` ou `/voice`, fonctionnent dans un serveur et répondent en privé. Les listes et tableaux créés sont des messages publics.
 
 | Commande | Niveau | Effet |
 | --- | --- | --- |
 | `/picket status` | membre | Consulte la configuration, les modules disponibles, les rôles autorisés et ton niveau d’accès. |
-| `/picket voice` | membre | Composer une file privée de modèles et quantités, puis déployer des vocaux éphémères. Voir [Vocaux éphémères](./voice). |
+| `/voice create` | membre | Composer une file privée de modèles et quantités, puis déployer des vocaux éphémères. Voir [Vocaux éphémères](./voice). |
+| `/voice settings` | officier | Gérer les modèles vocaux, la limite par déploiement et les canaux ouverts. Comprend un bouton de retour aux réglages PICKET. |
 | `/picket settings` | officier | Ouvre le panneau privé de configuration, sans argument. Les permissions et données sont modifiables uniquement par les administrateurs. |
 | `/todolist create` | membre | Ouvre un formulaire et publie une todolist dans le canal. Voir [Todolists](./todolists). |
 | `/timers create` | officier | Crée le tableau de timers du canal. Voir [Timers](./timers). |
@@ -45,4 +46,4 @@ Pour annuler la suppression avant l’échéance, réinvite PICKET, puis ouvre `
 
 Les anciennes sous-commandes de configuration, permissions et données sont remplacées par ce panneau. Pendant la transition, une ancienne commande ouvre l’écran correspondant **sans appliquer ses arguments**.
 
-Les vocaux éphémères sont activés par défaut et configurables depuis l’accueil des réglages. Désactiver ce module bloque les nouveaux déploiements tout en maintenant le nettoyage des canaux existants. Voir [Vocaux éphémères](./voice).
+Les vocaux éphémères sont activés par défaut. `/picket settings` gère leur activation ; `/voice settings` configure les modèles et propose **Réglages PICKET** pour revenir à l’accueil du serveur. Désactiver ce module bloque les nouveaux déploiements tout en maintenant le nettoyage des canaux existants. Voir [Vocaux éphémères](./voice).

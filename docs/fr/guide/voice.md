@@ -5,7 +5,7 @@ puis laissez PICKET les retirer lorsqu'ils restent vides. Un canal encore occup�
 personne qui l'a demandé est partie.
 
 Un officier prépare des **modèles** : catégorie de destination, nom du vocal, capacité et délai de nettoyage.
-Les membres utilisent ensuite **`/picket voice`** pour choisir leurs modèles et quantités, composer une file privée
+Les membres utilisent ensuite **`/voice create`** pour choisir leurs modèles et quantités, composer une file privée
 et tout déployer ensemble. Le module est **activé par défaut** ; aucun salon de demandes dédié n'est nécessaire.
 
 ## Qui peut faire quoi ?
@@ -26,10 +26,10 @@ modèles. Un administrateur peut déléguer cette configuration à un rôle offi
 
 Supposons que votre groupe ait besoin de deux canaux de combat et d'un canal logistique pour une opération.
 
-1. **Un officier prépare les modèles** : ouvrez `/picket settings` → **Vocaux éphémères** → **Configurer**,
-   puis **Ajouter**. Créez un modèle `Combat`, choisissez la catégorie `Opérations`, le nom de vocal `Combat`,
+1. **Un officier prépare les modèles** : ouvrez `/voice settings`,
+   puis **Ajouter**. Choisissez la catégorie `Opérations`, puis le nom de vocal `Combat`,
    une capacité de `10` personnes et un délai de `15 min`. Créez ensuite un modèle `Logistique` de la même manière.
-2. **Un membre lance `/picket voice`**, depuis n'importe quel salon du serveur. Le panneau est privé et la file vide.
+2. **Un membre lance `/voice create`**, depuis n'importe quel salon du serveur. Le panneau est privé et la file vide.
 3. **Choisissez `Combat`, puis la quantité `2`** et cliquez sur **Ajouter × 2**. Deux vocaux sont ajoutés à la file,
    sans être créés à ce stade.
 4. **Choisissez `Logistique`, puis la quantité `1`** et cliquez sur **Ajouter × 1**. La file contient maintenant
@@ -63,11 +63,10 @@ ils ne sont pas encore créés. La disposition peut varier selon votre client Di
 | Combiner plusieurs modèles | Choisissez chaque modèle et sa quantité, puis ajoutez-les avant de déployer. |
 | Augmenter une entrée déjà préparée | Ajoutez de nouveau le même modèle : sa quantité augmente. |
 | Modifier ou retirer une entrée | Choisissez-la dans **Choisir une entrée à modifier ou retirer**, puis saisissez la nouvelle quantité. `0` retire cette entrée. |
-| Retrouver un modèle | Utilisez **Rechercher un modèle** pour filtrer les noms proposés. |
-| Recommencer la préparation | Cliquez sur **Vider la file**. **Annuler** abandonne la préparation sans créer de vocal. |
+| Recommencer la préparation | Cliquez sur **Vider la file**. **Annuler** abandonne la préparation et supprime son message privé sans créer de vocal. |
 
 Seules les destinations que vous pouvez voir et rejoindre sont proposées. Le panneau est réservé à la personne
-qui l'ouvre et expire après **15 minutes d'inactivité**. Relancez `/picket voice` pour recommencer. Un ancien bouton
+qui l'ouvre et expire après **15 minutes d'inactivité**. Relancez `/voice create` pour recommencer. Un ancien bouton
 ne permet pas de répéter un déploiement déjà confirmé.
 
 ### Retrouver les canaux créés
@@ -91,13 +90,14 @@ peut alors prendre plus de temps.
 
 ## Adapter les vocaux à votre organisation
 
-Un officier ouvre `/picket settings` → **Vocaux éphémères** → **Configurer**. Ce panneau privé regroupe les modèles,
+Un officier ouvre `/voice settings`. Ce panneau privé regroupe les modèles,
 le plafond par demande et les canaux suivis.
+Le bouton **Réglages PICKET** permet de revenir à la configuration générale du serveur.
 
 | Écran ou action | Ce que vous pouvez régler |
 | --- | --- |
 | **Accueil** | Consulter les modèles, la limite par déploiement et le nombre de canaux ouverts ou réservés. Sélectionner un modèle pour voir ses options. |
-| **Ajouter / Modifier / Dupliquer** | Remplir un formulaire : nom du modèle, catégorie de destination, nom du canal vocal, capacité et délai de nettoyage. Catégorie et délai utilisent des sélecteurs. |
+| **Ajouter / Modifier / Dupliquer** | Remplir les quatre champs, dans cet ordre : catégorie de destination, nom du canal vocal, capacité et délai de nettoyage. Le nom du vocal est aussi celui du modèle proposé aux membres. Catégorie et délai utilisent des sélecteurs. |
 | **Retirer** | Retirer le modèle après confirmation. Les vocaux déjà créés gardent leurs réglages et leur nettoyage. |
 | **Limite par déploiement (1–10)** | Choisir le nombre total de vocaux qu'une personne peut déployer en une fois. |
 | **Canaux ouverts** | Consulter les canaux suivis et leurs présences. Sélectionner un canal, puis **Supprimer si vide** pour demander son retrait anticipé. |
@@ -109,9 +109,8 @@ La suppression anticipée est refusée tant que le canal contient un occupant.
 
 | Réglage | Choix | Défaut |
 | --- | --- | --- |
-| Nom du modèle | Nom unique sur le serveur, jusqu'à 80 caractères. | À renseigner |
 | Catégorie de destination | Une catégorie Discord accessible. | À choisir |
-| Nom du vocal | Jusqu'à 90 caractères ; PICKET ajoute un numéro. | À renseigner |
+| Nom du vocal et du modèle | Nom unique sur le serveur, jusqu'à 90 caractères ; PICKET ajoute un numéro aux vocaux créés. | À renseigner |
 | Capacité | De 1 à 99 personnes. `0` et la capacité illimitée sont refusés. | 99 |
 | Délai continuellement vide avant suppression | 1, 5, 10, 15, 20 ou 30 minutes. | 15 min |
 | Canaux par déploiement, tous modèles confondus | De 1 à 10. | 6 |
@@ -142,7 +141,7 @@ partagent ce plafond ; une demande qui dépasse les places restantes est refusé
 | --- | --- |
 | Aucun modèle n'est proposé | Demandez à un officier de créer un modèle, puis vérifiez que vous pouvez voir et rejoindre sa destination et que le bot peut la gérer. |
 | Une commande ou un bouton vous est refusé | Vérifiez vos rôles PICKET, l'activation du module et les permissions Discord de la destination. |
-| La préparation a expiré ou changé | Relancez `/picket voice`, ou rouvrez les réglages. Si un modèle a changé, recréez les entrées concernées. |
+| La préparation a expiré ou changé | Relancez `/voice create`, ou rouvrez les réglages. Si un modèle a changé, recréez les entrées concernées. |
 | Le serveur a atteint sa limite | Attendez le nettoyage des vocaux vides, ou demandez à un officier de consulter **Canaux ouverts**. Les créations réservées comptent aussi. |
 | Un canal vide reste présent | Vérifiez que le délai est écoulé et qu'aucun bot n'est connecté. Une panne ou une perte de permissions suspend le nettoyage ; la reprise peut redonner un délai complet. |
 | Un canal a été supprimé manuellement | PICKET libère sa place après avoir confirmé son absence. Aucune intervention en base n'est nécessaire. |

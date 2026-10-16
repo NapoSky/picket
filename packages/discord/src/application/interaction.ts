@@ -76,6 +76,8 @@ export type Reply =
   | { readonly kind: 'message'; readonly content: string; readonly ephemeral: boolean }
   | { readonly kind: 'panel'; readonly panel: PanelView; readonly update: boolean }
   | { readonly kind: 'file'; readonly content: string; readonly file: ReplyFile; readonly ephemeral: true }
+  /** Delete the original interaction message after a deferred acknowledgement. */
+  | { readonly kind: 'deleteOriginal' }
   | { readonly kind: 'autocomplete'; readonly choices: readonly { readonly name: string; readonly value: string }[] }
   | { readonly kind: 'modal'; readonly customId: string; readonly title: string; readonly inputs: readonly ModalInput[]; readonly description?: string }
   | {

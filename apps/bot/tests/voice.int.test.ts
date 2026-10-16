@@ -4,7 +4,7 @@ import {
   toWireResponse,
   type PanelView,
 } from '@picket/discord';
-import { GuildId, noopLogger, systemClock } from '@picket/kernel';
+import { GuildId, UserId, noopLogger, systemClock } from '@picket/kernel';
 import {
   InMemoryInteractionReplies,
   InMemoryMessaging,
@@ -125,7 +125,9 @@ describe('voice through signed HTTP, Discord modal wire format and PostgreSQL', 
     expect(response.statusCode).toBe(200);
     const wire = response.json();
     if (wire.type !== 5 && wire.type !== 6) return wire;
-    const content = replies.replies.slice(before).at(-1)?.content;
+    const delivery = replies.replies.slice(before).at(-1);
+    if (delivery?.action === 'deleteOriginal') return wire;
+    const content = delivery?.content;
     if (typeof content === 'string') return content;
     if (!content || !('components' in content))
       throw new Error(JSON.stringify(replies.replies.slice(before)));
@@ -135,9 +137,9 @@ describe('voice through signed HTTP, Discord modal wire format and PostgreSQL', 
       panel: content as PanelView,
     });
   }
-  const command = (name: string, member = false) =>
+  const command = (name: string, member = false, root = 'picket') =>
     request(
-      { id: '1', name: 'picket', type: 1, options: [{ type: 1, name }] },
+      { id: '1', name: root, type: 1, options: [{ type: 1, name }] },
       { member },
     );
   const click = (
@@ -151,21 +153,20 @@ describe('voice through signed HTTP, Discord modal wire format and PostgreSQL', 
       { component_type: values ? 3 : 2, ...(values ? { values } : {}) },
       { customId: control(view, action, arg), member },
     );
-  it('configures a native five-field template and deploys a merged member queue', async () => {
+  it('configures a native four-field template with one shared name and deploys a merged member queue', async () => {
     const home = await command('settings');
-    const settings = await click(home, 'configure', 'voice');
+    expect(() => control(home, 'configure', 'voice')).toThrow('Missing');
+    const settings = await command('settings', false, 'voice');
+    expect(JSON.stringify(await click(settings, 'view', 'home'))).toContain('Server settings');
     const modal = await click(settings, 'addModel');
     expect(modal.type).toBe(9);
-    expect(modal.data.components).toHaveLength(5);
-    expect(modal.data.components[1].component.type).toBe(8);
+    expect(modal.data.components).toHaveLength(4);
+    expect(modal.data.components[0].component.type).toBe(8);
+    expect(modal.data.components[1].component.custom_id).toBe('channelName');
     const modelId = modal.data.custom_id;
     const result = await request(
       {
         components: [
-          {
-            type: 18,
-            component: { type: 4, custom_id: 'name', value: 'Combat' },
-          },
           {
             type: 18,
             component: {
@@ -193,10 +194,10 @@ describe('voice through signed HTTP, Discord modal wire format and PostgreSQL', 
     expect(JSON.stringify(result)).toContain('Combat');
     const rows = await queryAsAdmin(
       database,
-      'SELECT capacity,idle_minutes,category_id FROM voice_templates',
+      'SELECT name,channel_name,capacity,idle_minutes,category_id FROM voice_templates',
     );
     expect(rows).toEqual([
-      { capacity: 99, idle_minutes: 15, category_id: '600000000000000004' },
+      { name: 'Combat', channel_name: 'Combat', capacity: 99, idle_minutes: 15, category_id: '600000000000000004' },
     ]);
     await queryAsAdmin(
       database,
@@ -227,7 +228,7 @@ describe('voice through signed HTTP, Discord modal wire format and PostgreSQL', 
         'SELECT id FROM voice_templates',
       )
     )[0]!.id;
-    let member = await command('voice', true);
+    let member = await command('create', true, 'voice');
     member = await click(member, 'pick', undefined, [template], true);
     member = await click(member, 'quantity', undefined, ['2'], true);
     member = await click(member, 'addQueue', undefined, undefined, true);
@@ -256,15 +257,39 @@ describe('voice through signed HTTP, Discord modal wire format and PostgreSQL', 
       (await voice.channels(guildId)).filter((c) => c.status === 'active'),
     ).toHaveLength(3);
   });
+  it('cancels a prepared member queue by deleting its private message and invalidating old controls', async () => {
+    await command('create', true, 'voice');
+    await voice.saveTemplate(
+      { guildId, userId: UserId.assert('500000000000000001'), roleIds: [] },
+      { name: 'Cancel example', channelName: 'Cancel example', categoryId: '600000000000000004', capacity: 99, idleMinutes: 15 },
+    );
+    const templates = await queryAsAdmin<{ id: string }>(
+      database, "SELECT id FROM voice_templates WHERE name = 'Cancel example'",
+    );
+    const template = templates[0]!.id;
+    let member = await command('create', true, 'voice');
+    member = await click(member, 'pick', undefined, [template], true);
+    member = await click(member, 'addQueue', undefined, undefined, true);
+    const deploy = control(member, 'deploy');
+    const sessionId = decodeCustomId(deploy)!.payload.split('.')[0]!;
+    const channelsBefore = await voice.channels(guildId);
+    const deliveriesBefore = replies.replies.length;
+
+    expect(await click(member, 'cancel', undefined, undefined, true)).toEqual({ type: 6 });
+    expect(replies.replies.slice(deliveriesBefore)).toMatchObject([
+      { action: 'deleteOriginal', target: { applicationId: '800000000000000001' }, content: null },
+    ]);
+    expect(await queryAsAdmin(database, 'SELECT state->\'queue\' AS queue FROM voice_sessions WHERE id = $1', [sessionId]))
+      .toEqual([{ queue: {} }]);
+    expect(JSON.stringify(await request({ component_type: 2 }, { customId: deploy, member: true }))).toContain('expired');
+    expect(await voice.channels(guildId)).toEqual(channelsBefore);
+  });
   it('rejects member configuration and another member taking over a private draft', async () => {
     const settings = await command('settings');
     expect(JSON.stringify(settings)).toContain('Temporary voice channels');
-    const denied = await request(
-      { component_type: 2 },
-      { customId: control(settings, 'configure', 'voice'), member: true },
-    );
+    const denied = await command('settings', true, 'voice');
     expect(JSON.stringify(denied)).toContain('required level');
-    const member = await command('voice', true);
+    const member = await command('create', true, 'voice');
     const foreign = await request(
       { component_type: 2 },
       {

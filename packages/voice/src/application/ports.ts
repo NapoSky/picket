@@ -40,7 +40,6 @@ export interface VoiceService {
   session(
     identity: VoiceIdentity,
     mode: VoiceDraft['mode'],
-    fromSettings?: boolean,
   ): Promise<VoiceSession>;
   readSession(identity: VoiceIdentity, id: string): Promise<VoiceSession>;
   updateSession(

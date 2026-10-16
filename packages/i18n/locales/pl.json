@@ -642,17 +642,16 @@
     "command": "Przygotuj i utwórz tymczasowe kanały głosowe",
     "title": "Przygotuj kanały głosowe",
     "settingsTitle": "Tymczasowe kanały głosowe",
-    "help": "Wybierz szablony i ilości przez /picket voice.",
+    "help": "Skonfiguruj szablony przez /voice settings. Zamów kanały przez /voice create.",
     "disableHelp": "Nowe wdrożenia zostaną zablokowane. Automatyczne usuwanie istniejących pustych kanałów będzie kontynuowane.",
     "pick": "Wybierz szablon",
-    "noModels": "Brak dostępnych szablonów. Oficer może je skonfigurować w /picket settings.",
+    "noModels": "Brak dostępnych szablonów. Oficer może je skonfigurować w /voice settings.",
     "details": "{{capacity}} osób · usuwanie po {{minutes}} min bez uczestników",
     "quantity": "Liczba",
     "other": "Inna liczba…",
     "addQueue": "Dodaj do kolejki",
     "addQuantity": "Dodaj × {{quantity}}",
     "queue": "Twoja kolejka: {{count}} / {{limit}} kanałów",
-    "search": "Szukaj szablonów",
     "editQueue": "Wybierz pozycję do zmiany lub usunięcia",
     "editQuantity": "Liczba (0 usuwa tę pozycję)",
     "unavailableModel": "Niedostępny szablon",
@@ -694,13 +693,14 @@
       "limit": "Osiągnięto limit: maksymalnie 10 szablonów na serwer; przestrzegaj limitu wdrożenia.",
       "full": "Za dużo otwartych lub zarezerwowanych kanałów na serwerze (maksymalnie 15).",
       "changed": "Szablon lub kanał się zmienił. Odśwież i ponownie dodaj odpowiednie pozycje.",
-      "expired": "Przygotowanie wygasło lub się zmieniło. Otwórz ponownie /picket voice lub ustawienia.",
+      "expired": "Przygotowanie wygasło lub się zmieniło. Otwórz ponownie /voice create lub ustawienia.",
       "access": "Obecne uprawnienia nie pozwalają na to miejsce docelowe lub działanie.",
       "unavailable": "Weryfikacja jest chwilowo niedostępna. Usuwanie czeka na wiarygodny stan.",
       "occupied": "Kanał nadal ma uczestników i nie może zostać usunięty.",
       "disabled": "Nowe wdrożenia są wyłączone lub PICKET jest zawieszony na tym serwerze."
     },
     "resolve": "Zakończ śledzenie",
-    "resolveConfirm": "Potwierdź po sprawdzeniu niepewnego utworzenia w Discordzie. PICKET zwolni rezerwację; ta czynność nie usuwa kanału."
+    "resolveConfirm": "Potwierdź po sprawdzeniu niepewnego utworzenia w Discordzie. PICKET zwolni rezerwację; ta czynność nie usuwa kanału.",
+    "settingsCommand": "Skonfiguruj tymczasowe kanały głosowe"
   }
 }

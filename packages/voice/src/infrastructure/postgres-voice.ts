@@ -205,7 +205,6 @@ export class PostgresVoice implements VoiceRuntime {
   async session(
     identity: VoiceIdentity,
     mode: VoiceDraft['mode'],
-    fromSettings = false,
   ): Promise<VoiceSession> {
     const id = key();
     const state: VoiceDraft = {
@@ -213,9 +212,7 @@ export class PostgresVoice implements VoiceRuntime {
       selected: null,
       quantity: 1,
       queue: {},
-      search: '',
       batchId: null,
-      fromSettings,
     };
     await withTenant(this.db, identity.guildId, async (tx) => {
       await sql`DELETE FROM voice_sessions WHERE guild_id=${identity.guildId} AND expires_at<=${this.clock.now()}`.execute(

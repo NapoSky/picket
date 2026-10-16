@@ -11,7 +11,7 @@ must be done, what must be monitored, and what happened while you were away.
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-docs.picket--foxhole.com-informational)](https://docs.picket-foxhole.com)
 
-> **PICKET 1.1.0-rc.1 — acceptance testing.** The source includes the foundation, todo lists, timers, war log, opt-in voice statistics and temporary voice channels. See [what is built](#what-is-built).
+> **PICKET 1.1.0-rc.2 — acceptance testing.** The source includes the foundation, todo lists, timers, war log, opt-in voice statistics and temporary voice channels. See [what is built](#what-is-built).
 
 PICKET is faction-neutral (Wardens and Colonials alike), lightweight, and built for regiment-scale collaboration. It is a
 community project: it is **not** affiliated with, endorsed by or sponsored by Siege Camp.
@@ -40,7 +40,8 @@ Access roles are configured per server. Officers can also use member commands; s
 
 | Command | What it does |
 | --- | --- |
-| `/picket voice` | Build a private queue of voice templates and deploy one or several channels |
+| `/voice create` | Build a private queue of voice templates and deploy one or several channels |
+| `/voice settings` | Configure voice templates and deployment limits, and inspect open channels |
 | `/picket settings` | Opens the private server configuration panel; permission changes and data management are reserved for administrators |
 | `/stats settings` | Select target member roles, excluded voice channels and explicit activation |
 | `/stats status` / `/stats export` | Check collection settings or export authorized guild statistics |

@@ -1,4 +1,4 @@
-import { createVoicePanel, PostgresVoice, type VoiceRuntime } from '@picket/voice';
+import { createVoicePanel, PostgresVoice, VOICE_ROOT, type VoiceRuntime } from '@picket/voice';
 import {
   CommandRegistry,
   ComponentRegistry,
@@ -190,13 +190,13 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
       open: context => warPanel.open(context, true),
       disable: async (guildId, actorId) => `warlog.results.${await configureWarLog.execute(guildId, actorId, { kind: 'disable' })}`,
     },
-    voice:{open:context=>voicePanel.open(context,true)},
+    voice:true,
     stats:{open:context=>statsPanel.open(context,true),disable:async(guildId,actorId)=>{await statsStore.configure(guildId,actorId,{enabled:false});return 'panel.saved';}},
   });
   const status = statusCommand(new GetGuildStatus(settings), showPermissions);
   return {
     aliases: [...panel.aliases, { ...status, path: ['picket', 'permissions', 'show'] }],
-    entries: [status, panel.command, voicePanel.command, timerPanel.command, warPanel.command,...statsPanel.entries,
+    entries: [status, panel.command, ...voicePanel.entries, timerPanel.command, warPanel.command,...statsPanel.entries,
       ...todolistCommands(),
       ...timersCommands({
         createBoard: new CreateBoard(timers.deps),
@@ -259,7 +259,7 @@ function timerServices(db: Db, options: CompositionOptions, logger: Logger, sett
   return { store, maintenance, deps, features: { isEnabled: (guildId: Parameters<FeatureGate['isEnabled']>[0]) => features.isEnabled(guildId, TIMERS_FEATURE) } };
 }
 
-const ROOTS = [PICKET_ROOT, TODOLIST_ROOT, TIMERS_ROOT, WARLOG_ROOT,STATS_ROOT];
+const ROOTS = [PICKET_ROOT, TODOLIST_ROOT, TIMERS_ROOT, WARLOG_ROOT,STATS_ROOT,VOICE_ROOT];
 
 export function buildOperatorService(db: Db, options: CompositionOptions, logger: Logger = noopLogger): GuildOperatorService {
   const channel = options.supportGuildEventsChannelId ?? null;

@@ -216,8 +216,9 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
   });
   it('publishes status, settings and voice alongside unchanged feature commands', () => {
     const commands = buildCommandsPayload(buildCommandRegistry(database.handle.db, composition));
-    expect(commands.map((command) => command.name)).toEqual(['picket', 'stats', 'timers', 'todolist', 'warlog']);
-    expect(commands[0]?.options?.map((command) => [command.name, command.type])).toEqual([['settings', 1], ['status', 1], ['voice', 1]]);
+    expect(commands.map((command) => command.name)).toEqual(['picket', 'stats', 'timers', 'todolist', 'voice', 'warlog']);
+    expect(commands[0]?.options?.map((command) => [command.name, command.type])).toEqual([['settings', 1], ['status', 1]]);
+    expect(commands.find(command => command.name === 'voice')?.options?.map(command => command.name)).toEqual(['create', 'settings']);
     expect(commands.find(command=>command.name==='timers')?.options?.map((command) => command.name)).toEqual(['add', 'cleanup', 'create', 'repair', 'settings', 'strike']);
   });
   it('downloads a complete tenant export privately during suspension and denies non-administrators', async () => {

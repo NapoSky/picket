@@ -638,17 +638,16 @@
     "command": "Préparer et déployer des vocaux éphémères",
     "title": "Préparer des vocaux",
     "settingsTitle": "Vocaux éphémères",
-    "help": "Choisis tes modèles et quantités avec /picket voice.",
+    "help": "Configure les modèles avec /voice settings. Demande des vocaux avec /voice create.",
     "disableHelp": "Les nouveaux déploiements sont bloqués. Le nettoyage automatique des canaux existants est maintenu.",
     "pick": "Choisir un modèle",
-    "noModels": "Aucun modèle disponible. Un officier peut en configurer dans /picket settings.",
+    "noModels": "Aucun modèle disponible. Un officier peut en configurer dans /voice settings.",
     "details": "{{capacity}} personnes · suppression après {{minutes}} min à vide",
     "quantity": "Quantité",
     "other": "Autre quantité…",
     "addQueue": "Ajouter à la file",
     "addQuantity": "Ajouter × {{quantity}}",
     "queue": "Ta file : {{count}} / {{limit}} canaux",
-    "search": "Rechercher un modèle",
     "editQueue": "Choisir une entrée à modifier ou retirer",
     "editQuantity": "Quantité (0 retire cette entrée)",
     "unavailableModel": "Modèle indisponible",
@@ -690,13 +689,14 @@
       "limit": "Limite atteinte : 10 modèles par serveur maximum ; respecte la limite de déploiement affichée.",
       "full": "Le serveur a trop de vocaux ouverts ou réservés (15 maximum).",
       "changed": "Un modèle ou un canal a changé. Actualise et recrée les entrées concernées dans ta file.",
-      "expired": "Cette préparation a expiré ou changé. Relance /picket voice ou rouvre les réglages.",
+      "expired": "Cette préparation a expiré ou changé. Relance /voice create ou rouvre les réglages.",
       "access": "Les permissions actuelles ne permettent pas cette destination ou cette action.",
       "unavailable": "La vérification est temporairement indisponible. Le nettoyage attend un état fiable.",
       "occupied": "Ce canal contient encore des occupants et ne peut pas être supprimé.",
       "disabled": "Les nouveaux déploiements sont désactivés ou PICKET est suspendu sur ce serveur."
     },
     "resolve": "Clore le suivi",
-    "resolveConfirm": "Confirme seulement après avoir vérifié cette création incertaine dans Discord. PICKET libère la réservation ; cette action ne supprime aucun canal Discord."
+    "resolveConfirm": "Confirme seulement après avoir vérifié cette création incertaine dans Discord. PICKET libère la réservation ; cette action ne supprime aucun canal Discord.",
+    "settingsCommand": "Configurer les vocaux éphémères"
   }
 }

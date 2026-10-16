@@ -13,11 +13,14 @@ it('accepts only explicit numeric quantities and safe limits', () => {
 });
 it('validates names and the hard capacity and cleanup bounds', () => {
   expect(validateTemplate(input)).toEqual(input);
+  expect(validateTemplate({ ...input, name: 'a'.repeat(90), channelName: 'a'.repeat(90) }).name).toHaveLength(90);
   for (const v of [
     { capacity: 0 },
     { capacity: 100 },
     { idleMinutes: 31 },
     { name: '\n' },
+    { name: 'a'.repeat(91) },
+    { channelName: 'a'.repeat(91) },
     { categoryId: 'other' },
   ])
     expect(() => validateTemplate({ ...input, ...v })).toThrow();

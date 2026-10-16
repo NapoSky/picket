@@ -21,6 +21,10 @@ export async function deliverDeferred(options: {
   let failed = false;
   try {
     const result = await reply.run();
+    if (result?.kind === 'deleteOriginal') {
+      await replies.deleteOriginal(target);
+      return;
+    }
     if (result?.kind === 'file') {
       const content = { content: result.content, file: result.file };
       if (reply.update) await replies.followUp(target, content);

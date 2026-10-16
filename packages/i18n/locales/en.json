@@ -638,17 +638,16 @@
     "command": "Prepare and deploy temporary voice channels",
     "title": "Prepare voice channels",
     "settingsTitle": "Temporary voice channels",
-    "help": "Choose officer-defined templates and quantities with /picket voice.",
+    "help": "Configure templates with /voice settings. Request channels with /voice create.",
     "disableHelp": "New deployments stop. Existing channels keep their automatic empty-channel cleanup.",
     "pick": "Choose a template",
-    "noModels": "No available templates. An officer can configure them in /picket settings.",
+    "noModels": "No available templates. An officer can configure them in /voice settings.",
     "details": "{{capacity}} people · delete after {{minutes}} min continuously empty",
     "quantity": "Quantity",
     "other": "Other quantity…",
     "addQueue": "Add to queue",
     "addQuantity": "Add × {{quantity}}",
     "queue": "Your queue: {{count}} / {{limit}} channels",
-    "search": "Search templates",
     "editQueue": "Choose an entry to change or remove",
     "editQuantity": "Quantity (0 removes this entry)",
     "unavailableModel": "Unavailable template",
@@ -690,13 +689,14 @@
       "limit": "Limit reached: at most 10 templates per server; respect the deployment limit shown in the panel.",
       "full": "The server already has too many open or reserved voice channels (maximum 15).",
       "changed": "A template or channel changed. Refresh and rebuild the affected queue entries.",
-      "expired": "This preparation expired or changed. Run /picket voice again, or reopen settings.",
+      "expired": "This preparation expired or changed. Run /voice create again, or reopen settings.",
       "access": "The destination or action is unavailable with the current permissions.",
       "unavailable": "Verification is temporarily unavailable. No unsafe cleanup will be attempted.",
       "occupied": "This channel still has occupants and cannot be removed.",
       "disabled": "New voice deployments are disabled or PICKET is suspended on this server."
     },
     "resolve": "Close tracking",
-    "resolveConfirm": "Confirm only after checking this uncertain creation in Discord. PICKET releases the reserved slot; this action does not delete any Discord channel."
+    "resolveConfirm": "Confirm only after checking this uncertain creation in Discord. PICKET releases the reserved slot; this action does not delete any Discord channel.",
+    "settingsCommand": "Configure temporary voice channels"
   }
 }

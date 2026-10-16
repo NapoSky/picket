@@ -54,7 +54,7 @@ export interface SettingsPanelDependencies {
     readonly open: (context: CommandContext) => Promise<Reply>;
     readonly disable: (guildId: GuildId, actorId: UserId) => Promise<MessageKey>;
   };
-  readonly voice?: { readonly open:(context:CommandContext)=>Promise<Reply> };
+  readonly voice?: boolean;
   readonly stats?: {readonly open:(context:CommandContext)=>Promise<Reply>;readonly disable:(guildId:GuildId,actorId:UserId)=>Promise<MessageKey>};
 }
 
@@ -121,7 +121,7 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
           ...(['timers', 'todolists', 'warlog', ...(deps.stats ? ['stats' as const] : []), ...(deps.voice ? ['voice' as const] : [])] as const).flatMap((feature): PanelContent[] => [{
             kind: 'section', text: `### ${feature === 'voice' ? '🔊' : feature === 'timers' ? '⏱️' : feature === 'todolists' ? '📋' : feature==='stats' ? '📊' : '📡'} ${t(`features.${feature}`)}\n${settings.features[feature] ? '🟢' : '⚪'} **${t(settings.features[feature] ? 'panel.enabled' : 'panel.disabled')}**\n${t(feature === 'voice' ? 'voice.help' : feature === 'timers' ? 'panel.timersHelp' : feature === 'todolists' ? 'panel.todolistsHelp' : feature==='stats' ? 'stats.help' : 'panel.warlogHelp')}`,
             button: settings.features[feature] ? button('panel.disable', 'psnav', 'disable', feature) : button('panel.enable', 'psedit', 'enable', feature, 'success'),
-          }, ...(settings.features[feature] && (feature === 'warlog' || feature === 'stats' || feature === 'voice') ? [{
+          }, ...(settings.features[feature] && (feature === 'warlog' || feature === 'stats') ? [{
             kind: 'buttons' as const, buttons: [button('panel.configure', 'psedit', 'configure', feature, 'primary')],
           }] : [])]),
           text(`🔑 ${t('panel.access', { level: t(`levels.${context.level}`) })}`),
@@ -246,10 +246,6 @@ export function createSettingsPanel(deps: SettingsPanelDependencies) {
             if (['language', 'member', 'officer'].includes(action) && /^\d{1,6}$/.test(argument)) return render(context, action as Page, argument);
           }
           if (namespace === 'psedit') {
-            if(argument==='voice'&&context.interaction.componentKind==='button'&&deps.voice&&(action==='enable'||action==='configure')) {
-              if(action==='enable')await deps.update.execute({guildId:context.guildId,actorId:context.interaction.userId,change:{kind:'feature',feature:'voice',enabled:true}});
-              return deps.voice.open(context);
-            }
             if(argument==='stats'&&context.interaction.componentKind==='button'&&deps.stats) {
               if(action==='enable'||action==='configure') return deps.stats.open(context);
               if(action==='disable') return render(context,'home','0',await deps.stats.disable(context.guildId,context.interaction.userId));
