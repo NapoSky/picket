@@ -1,4 +1,4 @@
-import { GuildId, UserId, noopLogger } from '@picket/kernel';
+import { ChannelId, GuildId, UserId, noopLogger } from '@picket/kernel';
 import { sql, withTenant, purgeGuildData } from '@picket/persistence';
 import {
   createTestDatabase,
@@ -216,6 +216,95 @@ describe('durable ephemeral voice lifecycle', () => {
     });
     expect(await service.channels(guildId)).toHaveLength(15);
   });
+  it.each(['officer', 'gateway'])(
+    'reuses a missing number after %s deletion and restart, including concurrent deployments',
+    async (source) => {
+      await deploy(3);
+      await service.tick();
+      await service.tick();
+      const original = await service.channels(guildId);
+      const middle = original.find(
+        (channel) => channel.name === 'Combat · 02',
+      )!;
+      if (source === 'officer') await service.removeChannel(guildId, middle.id);
+      else
+        await service.handle(
+          {
+            type: 'channel_unusable',
+            guildId,
+            channelId: ChannelId.assert(middle.channelId!),
+            deleted: true,
+          },
+          delivery(),
+        );
+      expect(
+        (await service.channels(guildId)).map((channel) => channel.name).sort(),
+      ).toEqual(['Combat · 01', 'Combat · 03']);
+      service = new PostgresVoice(
+        database.handle.db,
+        discord,
+        clock,
+        noopLogger,
+      );
+      const a = await draft(),
+        b = await draft();
+      await Promise.all([
+        service.deploy(identity, a),
+        service.deploy(identity, b),
+      ]);
+      const channels = await service.channels(guildId);
+      expect(channels.map((channel) => channel.name).sort()).toEqual([
+        'Combat · 01',
+        'Combat · 02',
+        'Combat · 03',
+        'Combat · 04',
+      ]);
+      for (const kept of original.filter((channel) => channel.id !== middle.id))
+        expect(
+          channels.find((channel) => channel.id === kept.id),
+        ).toMatchObject({
+          name: kept.name,
+          channelId: kept.channelId,
+        });
+      expect(
+        await queryAsAdmin(
+          database,
+          'SELECT status FROM voice_channels WHERE id=$1',
+          [middle.id],
+        ),
+      ).toEqual([{ status: 'deleted' }]);
+      expect(
+        await queryAsAdmin(
+          database,
+          "SELECT count(*)::int n FROM voice_channels WHERE name='Combat · 02'",
+        ),
+      ).toEqual([{ n: 2 }]);
+      await service.tick();
+      expect(discord.create).toHaveBeenCalledTimes(5);
+      expect(discord.orderChannels).toHaveBeenLastCalledWith(
+        guildId,
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'Combat · 02' }),
+          expect.objectContaining({ name: 'Combat · 04' }),
+        ]),
+      );
+    },
+  );
+  it.each(['pending', 'creating', 'active', 'uncertain', 'failed'])(
+    'reserves numbers for %s creations unless they definitively failed',
+    async (status) => {
+      await deploy();
+      await queryAsAdmin(database, 'UPDATE voice_channels SET status=$1', [
+        status,
+      ]);
+      const nextDeployment = await deploy();
+      expect(
+        (await service.channels(guildId, nextDeployment.state.batchId!)).map(
+          (channel) => channel.name,
+        ),
+      ).toEqual([status === 'failed' ? 'Combat · 01' : 'Combat · 02']);
+    },
+  );
   it.each(['patch', 'lock'])(
     'retries a failed %s after restart without recreating saved channels',
     async (failure) => {

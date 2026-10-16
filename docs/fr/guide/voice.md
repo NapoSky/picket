@@ -82,6 +82,9 @@ Dans chaque catégorie, les vocaux PICKET sont regroupés par modèle dans l'ord
 Le classement s'applique au premier déploiement comme aux suivants : si `Combat · 01`, `Combat · 02`,
 `Combat · 03` et `Logi · 01` existent déjà, un nouveau `Combat · 04` prend place avant `Logi · 01`.
 Un échec temporaire du classement est réessayé sans recréer les vocaux.
+Un nouveau vocal reprend le plus petit numéro disponible : si `Combat · 02` a été supprimé et que `Combat · 01`
+et `Combat · 03` restent présents, le prochain sera `Combat · 02`. Les créations en attente ou incertaines
+gardent leur numéro réservé.
 
 Si un officier a modifié un modèle pendant votre préparation, ou si vos accès ont changé, PICKET bloque la
 confirmation : actualisez le panneau et recréez les entrées concernées.

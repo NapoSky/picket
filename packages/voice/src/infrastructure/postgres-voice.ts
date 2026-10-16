@@ -323,7 +323,7 @@ export class PostgresVoice implements VoiceRuntime {
           (
             await sql<{
               name: string;
-            }>`SELECT name FROM voice_channels WHERE guild_id=${identity.guildId}`.execute(
+            }>`SELECT name FROM voice_channels WHERE guild_id=${identity.guildId} AND status NOT IN ('deleted','failed')`.execute(
               tx,
             )
           ).rows.map((r) => r.name),

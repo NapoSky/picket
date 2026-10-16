@@ -45,10 +45,11 @@ describe('migrate (integration)', () => {
       '019_departure_acknowledgement',
       '020_ephemeral_voice',
       '021_voice_template_name',
+      '022_voice_channel_number_reuse',
     ]);
 
     const second = await run();
-    expect(second).toEqual({ applied: [], alreadyApplied: 21 });
+    expect(second).toEqual({ applied: [], alreadyApplied: 22 });
   });
 
   it('serialises concurrent runs with the advisory lock', async () => {
@@ -76,6 +77,7 @@ describe('migrate (integration)', () => {
       '019_departure_acknowledgement',
       '020_ephemeral_voice',
       '021_voice_template_name',
+      '022_voice_channel_number_reuse',
     ]);
   });
 
@@ -93,7 +95,7 @@ describe('migrate (integration)', () => {
       VALUES ('legacyalert',$1,$2,'bunker','Alpha','region','place','500000000000000099','down',3600,now())`, [board, guild]);
     const insert = `INSERT INTO timer_alerts(asset_id,board_id,guild_id,due_at,threshold_min) VALUES ('legacyalert',$1,$2,now()+interval '1 hour',$3)`;
     await queryAsAdmin(database, insert, [board, guild, 120]);
-    expect((await run()).applied).toEqual(['015_timer_alert_delivery', '016_support_guild_events', '017_guild_operations', '018_requested_departures', '019_departure_acknowledgement', '020_ephemeral_voice', '021_voice_template_name']);
+    expect((await run()).applied).toEqual(['015_timer_alert_delivery', '016_support_guild_events', '017_guild_operations', '018_requested_departures', '019_departure_acknowledgement', '020_ephemeral_voice', '021_voice_template_name', '022_voice_channel_number_reuse']);
     // The previous replica knows neither the new column nor a new INSERT shape.
     await queryAsAdmin(database, insert, [board, guild, 30]);
     expect(await queryAsAdmin(database, 'SELECT delivery_pending, message_id FROM timer_alerts')).toEqual([
@@ -111,7 +113,7 @@ describe('migrate (integration)', () => {
       ('700000000000000092', now(), 'left'),
       ('700000000000000093', now(), 'requested')`);
     await queryAsAdmin(database, "INSERT INTO stats_settings(guild_id, guild_name) VALUES ('700000000000000091', 'ABC')");
-    expect((await run()).applied).toEqual(['016_support_guild_events', '017_guild_operations', '018_requested_departures', '019_departure_acknowledgement', '020_ephemeral_voice', '021_voice_template_name']);
+    expect((await run()).applied).toEqual(['016_support_guild_events', '017_guild_operations', '018_requested_departures', '019_departure_acknowledgement', '020_ephemeral_voice', '021_voice_template_name', '022_voice_channel_number_reuse']);
     expect(await queryAsAdmin(database, 'SELECT guild_id, name, present FROM guild_support_presence ORDER BY guild_id')).toEqual([
       { guild_id: '700000000000000091', name: 'ABC', present: true },
       { guild_id: '700000000000000092', name: '', present: false },
@@ -130,7 +132,7 @@ describe('migrate (integration)', () => {
     const guild = '700000000000000097';
     await queryAsAdmin(database, 'INSERT INTO guild_registry(guild_id) VALUES ($1)', [guild]);
     await queryAsAdmin(database, "INSERT INTO guild_support_presence(guild_id, name, present) VALUES ($1, 'Legacy server', true)", [guild]);
-    expect((await run()).applied).toEqual(['017_guild_operations', '018_requested_departures', '019_departure_acknowledgement', '020_ephemeral_voice', '021_voice_template_name']);
+    expect((await run()).applied).toEqual(['017_guild_operations', '018_requested_departures', '019_departure_acknowledgement', '020_ephemeral_voice', '021_voice_template_name', '022_voice_channel_number_reuse']);
     expect(await queryAsAdmin(database, 'SELECT revision FROM guild_support_presence')).toEqual([{ revision: '0' }]);
     await queryAsAdmin(database, 'UPDATE guild_support_presence SET present=false');
     await queryAsAdmin(database, "UPDATE guild_support_presence SET name='Renamed server'");
@@ -149,7 +151,7 @@ describe('migrate (integration)', () => {
       ('700000000000000082', now(), 'left'), ('700000000000000083', NULL, NULL)`);
     await queryAsAdmin(database, `INSERT INTO guild_support_presence(guild_id, present, revision) VALUES
       ('700000000000000081', true, 7), ('700000000000000082', false, 2), ('700000000000000083', true, 0)`);
-    expect((await run()).applied).toEqual(['018_requested_departures', '019_departure_acknowledgement', '020_ephemeral_voice', '021_voice_template_name']);
+    expect((await run()).applied).toEqual(['018_requested_departures', '019_departure_acknowledgement', '020_ephemeral_voice', '021_voice_template_name', '022_voice_channel_number_reuse']);
     expect(await queryAsAdmin(database, 'SELECT guild_id, expected_revision, requested_at, status FROM guild_departure_requests')).toEqual([
       { guild_id: '700000000000000081', expected_revision: '7', requested_at: new Date('2026-10-14T03:04:52.200Z'), status: 'pending' },
     ]);
@@ -167,7 +169,7 @@ describe('migrate (integration)', () => {
     await queryAsAdmin(database, `INSERT INTO timer_events (guild_id, board_id, actor_id, action, at)
       VALUES ($1, '00000000-0000-4000-8000-000000000001', 'system', 'expired', now() - interval '31 days'),
              ($1, '00000000-0000-4000-8000-000000000001', 'system', 'recent', now())`, [guild]);
-    expect((await run()).applied).toEqual(['008_journal_retention', '009_audit_delivery', '010_warlog', '011_warlog_perspective', '012_stats', '013_instance_overview', '014_stats_admin_snapshot', '015_timer_alert_delivery', '016_support_guild_events', '017_guild_operations', '018_requested_departures', '019_departure_acknowledgement', '020_ephemeral_voice', '021_voice_template_name']);
+    expect((await run()).applied).toEqual(['008_journal_retention', '009_audit_delivery', '010_warlog', '011_warlog_perspective', '012_stats', '013_instance_overview', '014_stats_admin_snapshot', '015_timer_alert_delivery', '016_support_guild_events', '017_guild_operations', '018_requested_departures', '019_departure_acknowledgement', '020_ephemeral_voice', '021_voice_template_name', '022_voice_channel_number_reuse']);
     expect(await queryAsAdmin(database, 'SELECT action FROM guild_audit_log')).toEqual([{ action: 'recent' }]);
     expect(await queryAsAdmin(database, 'SELECT action FROM timer_events')).toEqual([{ action: 'recent' }]);
   });
@@ -186,7 +188,7 @@ describe('migrate (integration)', () => {
     await queryAsAdmin(database, 'INSERT INTO guild_registry(guild_id) VALUES($1)', [guild]);
     await queryAsAdmin(database, `INSERT INTO warlog_subscriptions(guild_id, channel_id, zones, paused, confirmed_war)
       VALUES($1, '600000000000000001', '["west_coast"]', false, 100)`, [guild]);
-    expect((await run()).applied).toEqual(['011_warlog_perspective', '012_stats', '013_instance_overview', '014_stats_admin_snapshot', '015_timer_alert_delivery', '016_support_guild_events', '017_guild_operations', '018_requested_departures', '019_departure_acknowledgement', '020_ephemeral_voice', '021_voice_template_name']);
+    expect((await run()).applied).toEqual(['011_warlog_perspective', '012_stats', '013_instance_overview', '014_stats_admin_snapshot', '015_timer_alert_delivery', '016_support_guild_events', '017_guild_operations', '018_requested_departures', '019_departure_acknowledgement', '020_ephemeral_voice', '021_voice_template_name', '022_voice_channel_number_reuse']);
     expect(await queryAsAdmin(database, 'SELECT perspective, channel_id, zones, paused, confirmed_war FROM warlog_subscriptions')).toEqual([
       { perspective: 'NONE', channel_id: '600000000000000001', zones: ['west_coast'], paused: false, confirmed_war: 100 },
     ]);
@@ -231,7 +233,7 @@ describe('migrate (integration)', () => {
     await queryAsAdmin(database,`INSERT INTO guild_settings(guild_id,features) VALUES
       ('700000000000000081','{"timers":false,"future":true}'),
       ('700000000000000082','{"timers":false,"voice":false}')`);
-    expect((await run()).applied).toEqual(['020_ephemeral_voice', '021_voice_template_name']);
+    expect((await run()).applied).toEqual(['020_ephemeral_voice', '021_voice_template_name', '022_voice_channel_number_reuse']);
     const rows=await queryAsAdmin(database,'SELECT guild_id,features FROM guild_settings ORDER BY guild_id');
     expect(rows).toEqual([{guild_id:'700000000000000081',features:{timers:false,future:true,voice:true}},{guild_id:'700000000000000082',features:{timers:false,voice:false}}]);
   });
@@ -253,7 +255,7 @@ describe('migrate (integration)', () => {
     const statsBefore = await queryAsAdmin(database, 'SELECT * FROM stats_settings ORDER BY guild_id');
     const rolesBefore = await queryAsAdmin(database, 'SELECT * FROM guild_permission_roles ORDER BY guild_id');
 
-    expect((await run()).applied).toEqual(['020_ephemeral_voice', '021_voice_template_name']);
+    expect((await run()).applied).toEqual(['020_ephemeral_voice', '021_voice_template_name', '022_voice_channel_number_reuse']);
     expect(await queryAsAdmin(database, 'SELECT guild_id, features FROM guild_settings ORDER BY guild_id')).toEqual([
       { guild_id: '700000000000000083', features: { stats: true, timers: false, voice: true } },
       { guild_id: '700000000000000084', features: { stats: true, warlog: true, voice: true } },
@@ -272,13 +274,37 @@ describe('migrate (integration)', () => {
     await queryAsAdmin(database, `INSERT INTO voice_templates(id,guild_id,name,category_id,channel_name)
       VALUES ('legacy-template','700000000000000085','Legacy name','600000000000000085',$1)`, [channelName]);
 
-    expect((await run()).applied).toEqual(['021_voice_template_name']);
+    expect((await run()).applied).toEqual(['021_voice_template_name', '022_voice_channel_number_reuse']);
     expect(await queryAsAdmin(database, 'SELECT name,channel_name FROM voice_templates')).toEqual([
       { name: 'Legacy name', channel_name: channelName },
     ]);
     expect(await queryAsAdmin(database, 'UPDATE voice_templates SET name=channel_name RETURNING name')).toEqual([
       { name: channelName },
     ]);
+  });
+
+  it('releases completed channel names on upgrade while preserving history and live uniqueness', async () => {
+    for (const file of (await readdir(MIGRATIONS_DIR)).filter(name => name.endsWith('.sql') && name < '022_')) {
+      await writeFile(join(directory, file), await readFile(join(MIGRATIONS_DIR, file)));
+    }
+    await run(directory);
+    const guild = '700000000000000086';
+    await queryAsAdmin(database, 'INSERT INTO guild_registry(guild_id) VALUES ($1)', [guild]);
+    const insert = `INSERT INTO voice_channels(id,guild_id,batch_id,template_revision,category_id,name,capacity,idle_minutes,status)
+      VALUES ($1,$2,'legacy',1,'600000000000000086',$3,99,15,$4)`;
+    const statuses = ['pending', 'creating', 'active', 'uncertain', 'failed', 'deleted'];
+    for (const status of statuses)
+      await queryAsAdmin(database, insert, [status, guild, `Combat ${status}`, status]);
+    const before = await queryAsAdmin(database, 'SELECT * FROM voice_channels ORDER BY id');
+    expect((await run()).applied).toEqual(['022_voice_channel_number_reuse']);
+    expect(await queryAsAdmin(database, 'SELECT * FROM voice_channels ORDER BY id')).toEqual(before);
+    for (const status of statuses) {
+      const create = () => queryAsAdmin(database, insert, [`new-${status}`, guild, `Combat ${status}`, 'pending']);
+      if (status === 'failed' || status === 'deleted') await create();
+      else await expect(create()).rejects.toThrow(/unique constraint/);
+    }
+    await expect(queryAsAdmin(database, insert, ['duplicate', guild, 'Combat deleted', 'pending'])).rejects.toThrow(/unique constraint/);
+    expect((await run()).applied).toEqual([]);
   });
 
 });

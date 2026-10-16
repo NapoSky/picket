@@ -78,6 +78,8 @@ Within each category, PICKET channels are grouped alphabetically by template, th
 the first deployment and later additions: with `Combat · 01`, `Combat · 02`, `Combat · 03` and `Logi · 01`
 already present, a new `Combat · 04` is placed before `Logi · 01`.
 Temporary positioning failures are retried without recreating the channels.
+New channels use the smallest available number: if `Combat · 02` was removed while `Combat · 01` and
+`Combat · 03` remain, the next channel is `Combat · 02`. Pending or uncertain creations keep their number reserved.
 
 If an officer changes a template while you are preparing your queue, or your access changes, PICKET blocks
 confirmation: refresh the panel and rebuild the affected entries.
