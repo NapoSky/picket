@@ -75,6 +75,11 @@ Après confirmation, **Actualiser** affiche l'état de chaque vocal : en attente
 ou création à vérifier avec un officier. Les canaux créés ont un lien permettant de les rejoindre.
 **Nouveau déploiement** ouvre une nouvelle file vide.
 
+Dans chaque catégorie, les vocaux PICKET sont regroupés par modèle dans l'ordre alphabétique, puis par numéro.
+Le classement s'applique au premier déploiement comme aux suivants : si `Combat · 01`, `Combat · 02`,
+`Combat · 03` et `Logi · 01` existent déjà, un nouveau `Combat · 04` prend place avant `Logi · 01`.
+Un échec temporaire du classement est réessayé sans recréer les vocaux.
+
 Si un officier a modifié un modèle pendant votre préparation, ou si vos accès ont changé, PICKET bloque la
 confirmation : actualisez le panneau et recréez les entrées concernées.
 

@@ -173,7 +173,7 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
   const statsStore=options.stats?.store ?? new PostgresStatsStore(db,()=>options.clock.now());
   const statsBuffer=options.stats?.buffer ?? new DiskVoiceBuffer('./data/voice-buffer');
   const statsPanel=createStatsPanel({store:statsStore,buffer:statsBuffer,access,gate,clock:options.clock,dashboardUrl:options.stats?.dashboardUrl ?? null,settingsHome:context=>settingsHomeButton(context,options.clock)});
-  const voice = options.voice ?? new PostgresVoice(db, {category:unavailable,create:unavailable,exists:unavailable,remove:unavailable}, options.clock, logger);
+  const voice = options.voice ?? new PostgresVoice(db, {category:unavailable,create:unavailable,orderChannels:unavailable,exists:unavailable,remove:unavailable}, options.clock, logger, options.locks);
   const voicePanel=createVoicePanel({service:voice,access,gate,clock:options.clock,settingsHome:c=>settingsHomeButton(c,options.clock)});
   const panel = createSettingsPanel({
     settings: new GetGuildSettings(settings), update: new UpdateGuildSettings(settings, options.i18n.locales),

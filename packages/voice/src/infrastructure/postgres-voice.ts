@@ -2,7 +2,11 @@ import { randomBytes } from 'node:crypto';
 import { sql, withTenant, type Db, type Tx } from '@picket/persistence';
 import { GuildId, type Clock, type Logger } from '@picket/kernel';
 import type { GatewayDelivery, GatewayEvent } from '@picket/discord';
-import type { Lease } from '@picket/coordination';
+import {
+  PostgresKeyedLock,
+  type KeyedLock,
+  type Lease,
+} from '@picket/coordination';
 import type {
   VoiceDiscord,
   VoiceIdentity,
@@ -69,6 +73,7 @@ export class PostgresVoice implements VoiceRuntime {
     private readonly discord: VoiceDiscord,
     private readonly clock: Clock,
     private readonly logger: Logger,
+    private readonly ordering: KeyedLock = new PostgresKeyedLock(db),
   ) {}
   private async lock(tx: Tx, guildId: GuildId) {
     await sql`INSERT INTO voice_settings(guild_id) VALUES(${guildId}) ON CONFLICT DO NOTHING`.execute(
@@ -568,6 +573,7 @@ export class PostgresVoice implements VoiceRuntime {
           )
         ).rows,
     );
+    const verified: string[] = [];
     for (const job of active) {
       if (!job.channel_id) continue;
       if (!(await this.discord.exists(guildId, job.channel_id))) {
@@ -576,15 +582,11 @@ export class PostgresVoice implements VoiceRuntime {
       }
       if (!(await withTenant(this.db, guildId, (tx) => this.live(tx, guildId))))
         continue;
-      if (job.needs_check)
-        await withTenant(this.db, guildId, async (tx) => {
-          await sql`UPDATE voice_channels SET needs_check=false,last_verified_at=${this.clock.now()} WHERE guild_id=${guildId} AND id=${job.id}`.execute(
-            tx,
-          );
-        });
+      if (job.needs_check) verified.push(job.id);
       else if (job.delete_after && job.delete_after <= this.clock.now())
         await this.removeChannel(guildId, job.id, job.delete_after);
     }
+    if (verified.length) await this.orderChannels(guildId, verified);
     await withTenant(this.db, guildId, async (tx) => {
       await sql`DELETE FROM voice_sessions WHERE guild_id=${guildId} AND expires_at<=${this.clock.now()}`.execute(
         tx,
@@ -596,6 +598,53 @@ export class PostgresVoice implements VoiceRuntime {
         tx,
       );
     });
+  }
+  private async orderChannels(guildId: GuildId, verified: readonly string[]) {
+    // A late worker must not overwrite a newer worker's placement during rollout.
+    // Production supplies the existing dedicated lock pool; REST budgeting uses the data pool.
+    try {
+      await this.ordering.withLock(`voice-order:${guildId}`, async () => {
+        const channels = await withTenant(this.db, guildId, async (tx) => {
+          if (!(await this.live(tx, guildId))) return null;
+          return (
+            await sql<ChannelRow & { template_name: string }>`
+          SELECT c.*, COALESCE(t.channel_name, regexp_replace(c.name, ' · [0-9]+$', '')) AS template_name
+          FROM voice_channels c LEFT JOIN voice_templates t ON t.guild_id=c.guild_id AND t.id=c.template_id
+          WHERE c.guild_id=${guildId} AND c.status='active' AND c.channel_id IS NOT NULL
+        `.execute(tx)
+          ).rows;
+        });
+        if (!channels) return;
+        await this.discord.orderChannels(
+          guildId,
+          channels.map((channel) => ({
+            channelId: channel.channel_id!,
+            categoryId: channel.category_id,
+            templateId: channel.template_id ?? channel.id,
+            templateName: channel.template_name,
+            name: channel.name,
+          })),
+        );
+        // Keep verification pending until positioning succeeds. Failed PATCHes can be
+        // retried after restart without ever repeating a channel-creation POST.
+        await withTenant(this.db, guildId, async (tx) => {
+          if (!(await this.live(tx, guildId))) return;
+          await sql`UPDATE voice_channels SET needs_check=false,last_verified_at=${this.clock.now()}
+          WHERE guild_id=${guildId} AND id=ANY(${verified}::text[]) AND status='active'`.execute(
+            tx,
+          );
+        });
+      });
+    } catch (error) {
+      // Also retry if the lock connection was lost just after Discord accepted a
+      // position update: a concurrent worker may have cleared the older check flags.
+      await withTenant(this.db, guildId, async (tx) => {
+        await sql`UPDATE voice_channels SET needs_check=true WHERE guild_id=${guildId} AND status='active'`.execute(
+          tx,
+        );
+      });
+      throw error;
+    }
   }
   async handle(event: GatewayEvent, delivery?: GatewayDelivery): Promise<void> {
     if (!delivery) return;

@@ -1,11 +1,17 @@
 import { channelPermissions, type DiscordBotRestClient } from '@picket/discord';
 import type { GuildId } from '@picket/kernel';
-import type { VoiceDiscord, VoiceIdentity } from '../application/ports';
+import type {
+  ManagedVoiceChannel,
+  VoiceDiscord,
+  VoiceIdentity,
+} from '../application/ports';
 import { VoiceError, type TemplateInput } from '../domain/model';
 interface Channel {
   id: string;
   guild_id: string;
   type: number;
+  position?: number;
+  parent_id?: string | null;
   permission_overwrites?: {
     id: string;
     type: number;
@@ -158,6 +164,99 @@ export class DiscordVoice implements VoiceDiscord {
       if (missing(e)) return false;
       throw e;
     }
+  }
+  async orderChannels(
+    guildId: GuildId,
+    managed: readonly ManagedVoiceChannel[],
+  ): Promise<void> {
+    const categories = new Map<string, number>();
+    for (const channel of managed)
+      categories.set(
+        channel.categoryId,
+        (categories.get(channel.categoryId) ?? 0) + 1,
+      );
+    if (![...categories.values()].some((count) => count > 1)) return;
+
+    // Read current positions only when reconciliation is pending; never poll an idle guild.
+    const channels = (await this.rest.get(
+      `/guilds/${guildId}/channels`,
+    )) as Channel[];
+    if (
+      channels.some(
+        (channel) => channel.guild_id && channel.guild_id !== guildId,
+      )
+    )
+      throw new Error('Unexpected guild channel response');
+    const compareId = (a: string, b: string) =>
+      a.length - b.length || a.localeCompare(b);
+    const current = channels
+      .filter((channel) => channel.type === 2 || channel.type === 13)
+      .sort(
+        (a, b) =>
+          (a.position ?? 0) - (b.position ?? 0) || compareId(a.id, b.id),
+      );
+    const known = new Map(
+      managed.map((channel) => [channel.channelId, channel]),
+    );
+    const collator = new Intl.Collator('en', {
+      numeric: true,
+      sensitivity: 'base',
+    });
+    const templateNames = new Map<string, string>();
+    for (const channel of managed) {
+      const previous = templateNames.get(channel.templateId);
+      if (
+        previous === undefined ||
+        collator.compare(channel.templateName, previous) < 0
+      )
+        templateNames.set(channel.templateId, channel.templateName);
+    }
+    const desired = [...current];
+    const changed = new Set<string>();
+    for (const [categoryId, count] of categories) {
+      if (count < 2) continue;
+      const slots = current.flatMap((channel, index) => {
+        const entry = known.get(channel.id);
+        return channel.type === 2 &&
+          channel.parent_id === categoryId &&
+          entry?.categoryId === categoryId
+          ? [index]
+          : [];
+      });
+      const sorted = slots
+        .map((index) => current[index]!)
+        .sort((a, b) => {
+          const left = known.get(a.id)!,
+            right = known.get(b.id)!;
+          const leftNumber = / · (\d+)$/.exec(left.name)?.[1];
+          const rightNumber = / · (\d+)$/.exec(right.name)?.[1];
+          return (
+            collator.compare(
+              templateNames.get(left.templateId)!,
+              templateNames.get(right.templateId)!,
+            ) ||
+            compareId(left.templateId, right.templateId) ||
+            (leftNumber && rightNumber
+              ? collator.compare(leftNumber, rightNumber)
+              : 0) ||
+            collator.compare(left.name, right.name) ||
+            compareId(a.id, b.id)
+          );
+        });
+      slots.forEach((index, offset) => {
+        desired[index] = sorted[offset]!;
+        if (current[index]!.id !== desired[index]!.id) changed.add(categoryId);
+      });
+    }
+    if (!changed.size) return;
+    // Preserve every other voice/stage channel's slot. Include the affected category's
+    // siblings so tied Discord positions also become a deterministic, unique order.
+    const positions = desired.flatMap((channel, position) =>
+      channel.parent_id && changed.has(channel.parent_id)
+        ? [{ id: channel.id, position }]
+        : [],
+    );
+    await this.rest.patch(`/guilds/${guildId}/channels`, { body: positions });
   }
   async remove(channelId: string): Promise<void> {
     try {

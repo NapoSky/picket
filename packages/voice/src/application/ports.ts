@@ -12,6 +12,13 @@ export interface VoiceIdentity {
   userId: UserId;
   roleIds: readonly string[];
 }
+export interface ManagedVoiceChannel {
+  channelId: string;
+  categoryId: string;
+  templateId: string;
+  templateName: string;
+  name: string;
+}
 export interface VoiceDiscord {
   category(
     guildId: GuildId,
@@ -20,6 +27,10 @@ export interface VoiceDiscord {
     fresh?: boolean,
   ): Promise<void>;
   create(guildId: GuildId, input: TemplateInput, name: string): Promise<string>;
+  orderChannels(
+    guildId: GuildId,
+    channels: readonly ManagedVoiceChannel[],
+  ): Promise<void>;
   exists(guildId: GuildId, channelId: string): Promise<boolean>;
   remove(channelId: string): Promise<void>;
 }

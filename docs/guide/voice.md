@@ -71,6 +71,11 @@ deployment.
 After confirmation, **Refresh** shows each channel as queued, creating, open, not created or creation to verify with
 an officer. Created channels include a link to join them. **New deployment** starts another empty queue.
 
+Within each category, PICKET channels are grouped alphabetically by template, then by number. This applies to
+the first deployment and later additions: with `Combat · 01`, `Combat · 02`, `Combat · 03` and `Logi · 01`
+already present, a new `Combat · 04` is placed before `Logi · 01`.
+Temporary positioning failures are retried without recreating the channels.
+
 If an officer changes a template while you are preparing your queue, or your access changes, PICKET blocks
 confirmation: refresh the panel and rebuild the affected entries.
 

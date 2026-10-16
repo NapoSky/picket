@@ -81,6 +81,7 @@ describe('durable ephemeral voice lifecycle', () => {
         ),
       exists: jest.fn().mockResolvedValue(true),
       remove: jest.fn().mockResolvedValue(undefined),
+      orderChannels: jest.fn().mockResolvedValue(undefined),
     };
     service = new PostgresVoice(database.handle.db, discord, clock, noopLogger);
     await service.handle(
@@ -180,6 +181,72 @@ describe('durable ephemeral voice lifecycle', () => {
       { reason: 'expired' },
     );
   });
+  it.each(['patch', 'lock'])(
+    'retries a failed %s after restart without recreating saved channels',
+    async (failure) => {
+      await deploy(2);
+      if (failure === 'patch')
+        discord.orderChannels.mockRejectedValueOnce(
+          new Error('Discord positioning unavailable'),
+        );
+      else
+        service = new PostgresVoice(
+          database.handle.db,
+          discord,
+          clock,
+          noopLogger,
+          {
+            withLock: async (_key, work) => {
+              await work();
+              throw new Error('Lock connection lost after positioning');
+            },
+          },
+        );
+      await service.tick();
+      const created = await service.channels(guildId);
+      expect(created).toHaveLength(2);
+      expect(
+        created.every(
+          (channel) => channel.status === 'active' && channel.channelId,
+        ),
+      ).toBe(true);
+      expect(discord.create).toHaveBeenCalledTimes(2);
+      expect(
+        await queryAsAdmin(database, 'SELECT needs_check FROM voice_channels'),
+      ).toEqual([{ needs_check: true }, { needs_check: true }]);
+      expect(discord.orderChannels).toHaveBeenCalledWith(
+        guildId,
+        expect.arrayContaining(
+          created.map((channel) =>
+            expect.objectContaining({
+              channelId: channel.channelId,
+              categoryId: input.categoryId,
+              templateName: 'Combat',
+              name: channel.name,
+            }),
+          ),
+        ),
+      );
+      service = new PostgresVoice(
+        database.handle.db,
+        discord,
+        clock,
+        noopLogger,
+      );
+      now = new Date(now.getTime() + 61_000);
+      await service.tick();
+      expect(discord.orderChannels).toHaveBeenCalledTimes(2);
+      expect(discord.create).toHaveBeenCalledTimes(2);
+      expect(
+        (await service.channels(guildId)).map((channel) => channel.channelId),
+      ).toEqual(created.map((channel) => channel.channelId));
+      expect(
+        await queryAsAdmin(database, 'SELECT needs_check FROM voice_channels'),
+      ).toEqual([{ needs_check: false }, { needs_check: false }]);
+      await service.tick();
+      expect(discord.orderChannels).toHaveBeenCalledTimes(2);
+    },
+  );
   it('does not create after a template changes or a member loses destination access', async () => {
     await service.saveTemplate(identity, input);
     const s = await draft();

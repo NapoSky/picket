@@ -74,7 +74,8 @@ async function run(): Promise<void> {
   const voiceCollector=new VoiceCollector(statsStore,voiceBuffer,logger,()=>new Date(),rest);
   voiceCollector.shardCount=config.shardCount;
   const voiceCreateRest=createDiscordBotRest(config.discord.botToken,{globalRequestsPerSecond:config.discord.restGlobalRps,retries:0},restBudget,metrics);
-  const ephemeralVoice=new PostgresVoice(database.db,new DiscordVoice(rest,voiceCreateRest),systemClock,logger);
+  const locks = new PostgresKeyedLock(lockDatabase.db);
+  const ephemeralVoice=new PostgresVoice(database.db,new DiscordVoice(rest,voiceCreateRest),systemClock,logger,locks);
   const composition = {
     voice:ephemeralVoice,
     timeZone: config.timeZone,
@@ -85,7 +86,7 @@ async function run(): Promise<void> {
     i18n: createI18n(),
     discord,
     metrics,
-    locks: new PostgresKeyedLock(lockDatabase.db),
+    locks,
     flushGuildLogs: () => logDestination.flush(),
     stats:{store:statsStore,buffer:voiceBuffer,collector:voiceCollector,dashboardUrl:config.dashboard.origin},
   };
