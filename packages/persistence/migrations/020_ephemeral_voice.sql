@@ -1,8 +1,16 @@
 -- Durable configuration, private drafts and operational voice lifecycle state.
 ALTER TABLE guild_settings ALTER COLUMN features SET DEFAULT '{"timers":true,"todolists":true,"warlog":false,"voice":true}';
-ALTER TABLE guild_settings NO FORCE ROW LEVEL SECURITY;
-UPDATE guild_settings SET features = features || '{"voice":true}'::jsonb WHERE NOT features ? 'voice';
-ALTER TABLE guild_settings FORCE ROW LEVEL SECURITY;
+-- Existing feature triggers read tenant-scoped member roles, including when only
+-- an unrelated feature changes. Keep each update in its guild's RLS context.
+DO $$
+DECLARE target text; previous text := current_setting('app.guild_id', true);
+BEGIN
+  FOR target IN SELECT guild_id FROM guild_settings WHERE NOT features ? 'voice' LOOP
+    PERFORM set_config('app.guild_id', target, true);
+    UPDATE guild_settings SET features = features || '{"voice":true}'::jsonb WHERE guild_id = target;
+  END LOOP;
+  PERFORM set_config('app.guild_id', COALESCE(previous, ''), true);
+END $$;
 CREATE TABLE voice_settings (
   guild_id text PRIMARY KEY REFERENCES guild_registry(guild_id) ON DELETE CASCADE,
   deployment_limit integer NOT NULL DEFAULT 6 CHECK (deployment_limit BETWEEN 1 AND 10)

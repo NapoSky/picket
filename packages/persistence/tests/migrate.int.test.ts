@@ -234,4 +234,30 @@ describe('migrate (integration)', () => {
     expect(rows).toEqual([{guild_id:'700000000000000081',features:{timers:false,future:true,voice:true}},{guild_id:'700000000000000082',features:{timers:false,voice:false}}]);
   });
 
+  it('preserves enabled statistics and their targets when upgrading several existing guilds', async () => {
+    for (const file of (await readdir(MIGRATIONS_DIR)).filter(name => name.endsWith('.sql') && name < '020_')) {
+      await writeFile(join(directory, file), await readFile(join(MIGRATIONS_DIR, file)));
+    }
+    await run(directory);
+    await queryAsAdmin(database, `
+      INSERT INTO guild_registry(guild_id) VALUES ('700000000000000083'), ('700000000000000084');
+      INSERT INTO guild_settings(guild_id, features) VALUES
+        ('700000000000000083', '{"stats":true,"timers":false}'),
+        ('700000000000000084', '{"stats":true,"warlog":true}');
+      INSERT INTO guild_permission_roles(guild_id, level, role_id) VALUES
+        ('700000000000000083', 'member', '800000000000000083'),
+        ('700000000000000084', 'member', '800000000000000084');
+    `);
+    const statsBefore = await queryAsAdmin(database, 'SELECT * FROM stats_settings ORDER BY guild_id');
+    const rolesBefore = await queryAsAdmin(database, 'SELECT * FROM guild_permission_roles ORDER BY guild_id');
+
+    expect((await run()).applied).toEqual(['020_ephemeral_voice']);
+    expect(await queryAsAdmin(database, 'SELECT guild_id, features FROM guild_settings ORDER BY guild_id')).toEqual([
+      { guild_id: '700000000000000083', features: { stats: true, timers: false, voice: true } },
+      { guild_id: '700000000000000084', features: { stats: true, warlog: true, voice: true } },
+    ]);
+    expect(await queryAsAdmin(database, 'SELECT * FROM stats_settings ORDER BY guild_id')).toEqual(statsBefore);
+    expect(await queryAsAdmin(database, 'SELECT * FROM guild_permission_roles ORDER BY guild_id')).toEqual(rolesBefore);
+  });
+
 });
