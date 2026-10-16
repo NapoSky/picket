@@ -40,26 +40,28 @@ Access roles are configured per server. Officers can also use member commands; s
 
 | Command | What it does |
 | --- | --- |
-| `/voice create` | Build a private queue of voice templates and deploy one or several channels |
-| `/voice settings` | Configure voice templates and deployment limits, and inspect open channels |
 | `/picket settings` | Opens the private server configuration panel; permission changes and data management are reserved for administrators |
-| `/stats settings` | Select target member roles, excluded voice channels and explicit activation |
-| `/stats status` / `/stats export` | Check collection settings or export authorized guild statistics |
-| `/warlog settings` | Chooses a text channel, up to three zones and activation for the current war |
-| `/timers create` | Creates the channel's timer board |
-| `/timers settings` | Opens the private timer configuration panel |
+| `/stats export` | Export statistics exclusively for this server (CSV/JSON, 1–60 days) |
+| `/stats settings` | Configure explicit activation and excluded voice channels; member role changes require an administrator |
+| `/stats status` | Show collection settings and retention |
 | `/timers cleanup` | Removes struck timers |
+| `/timers create` | Creates the channel's timer board |
 | `/timers repair` | Reposts the timer board |
+| `/timers settings` | Opens the private timer configuration panel |
+| `/voice settings` | Configure voice templates and deployment limits, and inspect open channels |
+| `/warlog settings` | Chooses a text channel, up to three zones and activation for the current war |
 
 **Members**
 
 | Command | What it does |
 | --- | --- |
-| `/stats link` / `/stats privacy` | Open the dashboard, opt out or erase your voice statistics |
 | `/picket status` | Shows server settings, configured access roles and your access level |
-| `/todolist create` | Opens a form and posts a todo list in the channel |
+| `/stats link` | Open the voice statistics dashboard |
+| `/stats privacy` | Opt out or erase your voice statistics |
 | `/timers add` | Adds a timer: choose its type and place, then fill in a form |
 | `/timers strike` | Strikes a timer |
+| `/todolist create` | Opens a form and posts a todo list in the channel |
+| `/voice create` | Build a private queue of voice templates and deploy one or several channels |
 
 The official voice statistics dashboard is **[stats.picket-foxhole.com](https://stats.picket-foxhole.com)**.
 Sign in with Discord; see the [voice statistics guide](https://docs.picket-foxhole.com/guide/stats) for setup and privacy.
