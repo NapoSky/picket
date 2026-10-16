@@ -57,3 +57,5 @@ Sources: [Compose](https://github.com/NapoSky/picket/blob/155e6e94b1786ea5dae79f
 [dashboard runtime](https://github.com/NapoSky/picket/blob/155e6e94b1786ea5dae79f23055e207e423a3012/apps/stats/src/runtime.ts).
 
 </details>
+
+Temporary voice channels reuse the Gateway event stream and one shared job-runner loop. PostgreSQL stores template configuration, private expiring drafts, quota reservations and channel cleanup deadlines. No per-channel or per-guild polling watcher is created. The 1.1 rollout refreshes Gateway snapshots once to initialize the new durable consumer; subsequent compatible sessions resume normally.

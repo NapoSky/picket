@@ -30,7 +30,7 @@ export const GUILD_EXPORT_TABLES = {
 
 const BATCH_SIZE = 100;
 /** Internal voice facts feed member summaries; they are never shipped as rows. */
-export const GUILD_EXPORT_INTERNAL_TABLES = ['stats_users', 'stats_channels', 'stats_voice_events', 'stats_voice_segments', 'stats_voice_presence', 'guild_departure_requests'] as const;
+export const GUILD_EXPORT_INTERNAL_TABLES = ['voice_settings','voice_templates','voice_sessions','voice_channels','voice_presence','voice_runtime','stats_users', 'stats_channels', 'stats_voice_events', 'stats_voice_segments', 'stats_voice_presence', 'guild_departure_requests'] as const;
 const statsCutoff = sql`CURRENT_TIMESTAMP - INTERVAL '60 days'`;
 
 export interface GuildExportOptions {
@@ -106,6 +106,8 @@ export class PostgresGuildDataExportRepository implements GuildDataExportReposit
           members.set(event.userId, member);
         }
       }
+      data.voice_templates=(await sql<{name:string}>`SELECT name FROM voice_templates WHERE guild_id=${guildId} ORDER BY name,id`.execute(trx)).rows;
+      for(const row of data.voice_templates){bytes+=Buffer.byteLength(JSON.stringify(row,null,2),'utf8');if(bytes>maxBytes)return null;}
       data.stats_members = [...members.values()].sort((a, b) => a.userId.localeCompare(b.userId));
       data.stats_summary = [{ retentionDays: 60, members: members.size,
         totalSeconds: [...members.values()].reduce((sum, member) => sum + member.totalSeconds, 0),

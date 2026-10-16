@@ -11,7 +11,7 @@ must be done, what must be monitored, and what happened while you were away.
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-docs.picket--foxhole.com-informational)](https://docs.picket-foxhole.com)
 
-> **Status: core features implemented.** The source includes the foundation, todo lists, timers, war log and opt-in voice statistics. See [what is built](#what-is-built).
+> **PICKET 1.1.0-rc.1 — acceptance testing.** The source includes the foundation, todo lists, timers, war log, opt-in voice statistics and temporary voice channels. See [what is built](#what-is-built).
 
 PICKET is faction-neutral (Wardens and Colonials alike), lightweight, and built for regiment-scale collaboration. It is a
 community project: it is **not** affiliated with, endorsed by or sponsored by Siege Camp.
@@ -28,6 +28,7 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 | **Data management** | Administrator removal makes the bot leave and schedules data erasure; retention also applies after an external removal |
 | **Languages** | English, French, German, Spanish, Brazilian Portuguese and Polish; add one by dropping a JSON file in [`packages/i18n/locales`](packages/i18n/locales) |
 | **Operations** | Zero-downtime rolling updates, several identical replicas, signed requests only, secrets kept out of the repository and the logs; private owner-only server departures from the support server |
+| **Temporary voice channels** | Private deployment queue, up to 10 officer-defined templates, automatic empty-channel cleanup and restart recovery |
 | **Voice statistics** | Opt-in role-filtered presence, 60-day history, own-data erasure and custom EN/FR dashboards with Discord OAuth and Team administration |
 | **War log** | One shared collector; one-line events in a regular text channel; up to three of five zones per server; subscription renewal for each war; recovery without replay |
 
@@ -39,6 +40,7 @@ Access roles are configured per server. Officers can also use member commands; s
 
 | Command | What it does |
 | --- | --- |
+| `/picket voice` | Build a private queue of voice templates and deploy one or several channels |
 | `/picket settings` | Opens the private server configuration panel; permission changes and data management are reserved for administrators |
 | `/stats settings` | Select target member roles, excluded voice channels and explicit activation |
 | `/stats status` / `/stats export` | Check collection settings or export authorized guild statistics |
@@ -83,7 +85,7 @@ board with `/timers create`.
 
 Discord's installation link requests the configured scopes and permissions automatically. PICKET needs **View Channel**,
 **Send Messages**, **Embed Links** and **Read Message History** where you use it, plus **Send Messages in Threads** for
-threads. It requests Server Members Intent to track role eligibility during voice presence; Presence and Message Content intents remain disabled. It reads its own messages to update your lists and boards.
+threads. Temporary voice channels additionally require **Manage Channels** and visibility of their destination categories. No Audit Log, Connect or extra intent is requested. It requests Server Members Intent to track role eligibility during voice presence; Presence and Message Content intents remain disabled. It reads its own messages to update your lists and boards.
 
 Need help or want to share feedback? Join the **[PICKET support Discord](https://discord.gg/syCQmrPxsV)**.
 

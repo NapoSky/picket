@@ -1,0 +1,27 @@
+{
+  "name": "@picket/voice",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@picket/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@picket/kernel": "workspace:*",
+    "@picket/persistence": "workspace:*",
+    "@picket/discord": "workspace:*",
+    "@picket/i18n": "workspace:*",
+    "@picket/coordination": "workspace:*"
+  },
+  "devDependencies": {
+    "@picket/guild": "workspace:*"
+  }
+}

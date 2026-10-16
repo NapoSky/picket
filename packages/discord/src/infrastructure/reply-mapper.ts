@@ -1,5 +1,6 @@
 import {
   InteractionResponseType,
+  SelectMenuDefaultValueType, ChannelType,
   MessageFlags,
   TextInputStyle,
   type APIInteractionResponse,
@@ -18,6 +19,8 @@ const AUTOCOMPLETE_TEXT_MAX = 100;
 const clip = (text: string, max: number): string => (text.length <= max ? text : `${text.slice(0, max - 1)}\u2026`);
 
 function toTextInput(input: ModalInput) {
+  if(input.kind === 'channelSelect') return {type:18 as const,label:clip(input.label,45),component:{type:8 as const,custom_id:input.customId,channel_types:[ChannelType.GuildCategory],min_values:1,max_values:1,...(input.values?.length?{default_values:input.values.map(id=>({id,type:SelectMenuDefaultValueType.Channel as const}))}:{})}};
+  if(input.kind === 'stringSelect') return {type:18 as const,label:clip(input.label,45),component:{type:3 as const,custom_id:input.customId,min_values:1,max_values:1,options:input.options.map(o=>({label:clip(o.label,100),value:o.value,default:o.selected??false}))}};
   return {
     type: 18 as const,
     label: clip(input.label, MODAL_LABEL_MAX),

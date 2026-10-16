@@ -60,3 +60,5 @@ Sources : [Compose](https://github.com/NapoSky/picket/blob/155e6e94b1786ea5dae79
 [runtime dashboard](https://github.com/NapoSky/picket/blob/155e6e94b1786ea5dae79f23055e207e423a3012/apps/stats/src/runtime.ts).
 
 </details>
+
+Les vocaux éphémères réutilisent le flux Gateway et une boucle partagée du job-runner. PostgreSQL conserve les modèles, préparations privées expirables, réservations de quota et échéances de nettoyage. Aucun watcher périodique par canal ou serveur n’est créé. Le déploiement 1.1 renouvelle une fois les snapshots Gateway pour initialiser ce nouveau consommateur persistant ; les sessions compatibles suivantes reprennent normalement.

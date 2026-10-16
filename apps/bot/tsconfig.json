@@ -18,6 +18,7 @@
     { "path": "../../packages/guild" },
     { "path": "../../packages/timers" },
     { "path": "../../packages/todolist" },
-    { "path": "../../packages/warlog" }
+    { "path": "../../packages/warlog" },
+    { "path": "../../packages/voice" }
   ]
 }

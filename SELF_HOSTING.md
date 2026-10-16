@@ -21,6 +21,7 @@ monthly isolated verification are in [disaster recovery](docs/self-hosting/disas
 Create your own Discord application for your instance. In the Developer Portal, configure **Guild Install** with the
 `bot` and `applications.commands` scopes and these permissions:
 
+- **Manage Channels**, for temporary voice channels
 - **View Channel**
 - **Send Messages**
 - **Embed Links**
@@ -29,6 +30,8 @@ Create your own Discord application for your instance. In the Developer Portal, 
 
 Select **Discord Provided Link** and use the generated link to invite your instance. Its default installation settings
 supply the scopes and permissions; the official PICKET invitation in the README installs the official instance.
+
+Temporary voice channels inherit category permissions. Give PICKET visibility and channel-management access to the destinations you configure. This feature does not request Connect, View Audit Log, Administrator or new intents. If effective permissions prevent channel management, the destination is unavailable. Existing installations need an administrator to grant Manage Channels; changing installation defaults does not update existing roles automatically.
 
 ## How it works
 
@@ -48,6 +51,7 @@ A modular monolith in a pnpm workspace, organised in clean layers (`domain`, `ap
 | [`packages/guild`](packages/guild) | Servers: settings, permissions, lifecycle |
 | [`packages/game-data`](packages/game-data) | Regions and locations of the game, and the search behind the autocomplete |
 | [`packages/todolist`](packages/todolist) | Todo lists: grammar, layout, ticking |
+| [`packages/voice`](packages/voice) | Temporary voice templates, private deployment queues and durable cleanup |
 | [`packages/stats`](packages/stats) | Filtered voice facts, persistent buffer, OAuth dashboard and privacy |
 | [`packages/timers`](packages/timers) | Timer boards: database state, pure rendering, alerts, board upkeep |
 

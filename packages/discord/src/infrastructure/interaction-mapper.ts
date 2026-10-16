@@ -60,10 +60,11 @@ function parseModalFields(components: unknown): Record<string, string> {
   const fields: Record<string, string> = {};
   const visit = (node: unknown): void => {
     if (typeof node !== 'object' || node === null) return;
-    const candidate = node as { custom_id?: unknown; value?: unknown; components?: unknown; component?: unknown };
+    const candidate = node as { custom_id?: unknown; value?: unknown; values?: unknown; components?: unknown; component?: unknown };
     if (typeof candidate.custom_id === 'string' && typeof candidate.value === 'string') {
       fields[candidate.custom_id] = candidate.value;
     }
+    if (typeof candidate.custom_id === 'string' && Array.isArray(candidate.values) && candidate.values.length === 1 && typeof candidate.values[0] === 'string') fields[candidate.custom_id] = candidate.values[0];
     if (Array.isArray(candidate.components)) candidate.components.forEach(visit);
     visit(candidate.component);
   };

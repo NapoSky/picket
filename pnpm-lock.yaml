@@ -226,6 +226,9 @@ importers:
       '@picket/todolist':
         specifier: workspace:*
         version: link:../../packages/todolist
+      '@picket/voice':
+        specifier: workspace:*
+        version: link:../../packages/voice
       '@picket/warlog':
         specifier: workspace:*
         version: link:../../packages/warlog
@@ -455,6 +458,28 @@ importers:
       '@picket/kernel':
         specifier: workspace:*
         version: link:../kernel
+
+  packages/voice:
+    dependencies:
+      '@picket/coordination':
+        specifier: workspace:*
+        version: link:../coordination
+      '@picket/discord':
+        specifier: workspace:*
+        version: link:../discord
+      '@picket/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@picket/kernel':
+        specifier: workspace:*
+        version: link:../kernel
+      '@picket/persistence':
+        specifier: workspace:*
+        version: link:../persistence
+    devDependencies:
+      '@picket/guild':
+        specifier: workspace:*
+        version: link:../guild
 
   packages/warlog:
     dependencies:

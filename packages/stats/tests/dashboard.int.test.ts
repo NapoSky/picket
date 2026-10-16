@@ -269,7 +269,7 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
     const overview = (await get('/api/instance')).json();
     expect(overview).toEqual({ activeGuilds: 2, updatedAt: expect.any(String), features: [
       { feature: 'timers', enabledGuilds: 2 }, { feature: 'todolists', enabledGuilds: 2 },
-      { feature: 'warlog', enabledGuilds: 0 }, { feature: 'stats', enabledGuilds: 2 },
+      { feature: 'warlog', enabledGuilds: 0 }, { feature: 'stats', enabledGuilds: 2 }, { feature: 'voice', enabledGuilds: 2 },
     ] });
     expect((await sql`SELECT * FROM guild_settings`.execute(database.handle.db)).rows).toEqual([]);
     expect((await get('/api/activity?guild=all')).statusCode).toBe(403);
@@ -279,14 +279,14 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
     memberships = []; roles = [];
     expect((await get('/api/instance')).json()).toMatchObject({ activeGuilds: 2, features: [
       { feature: 'timers', enabledGuilds: 1 }, { feature: 'todolists', enabledGuilds: 1 },
-      { feature: 'warlog', enabledGuilds: 1 }, { feature: 'stats', enabledGuilds: 1 },
+      { feature: 'warlog', enabledGuilds: 1 }, { feature: 'stats', enabledGuilds: 1 }, { feature: 'voice', enabledGuilds: 2 },
     ] });
     await queryAsAdmin(database, "UPDATE guild_registry SET inactive_since=now(),inactive_reason='requested' WHERE guild_id=$1", [OTHER]);
     expect((await get('/api/instance')).json().activeGuilds).toBe(1);
     await queryAsAdmin(database, "UPDATE guild_registry SET inactive_since=now(),inactive_reason='left' WHERE guild_id=$1", [A]);
     expect((await get('/api/instance')).json()).toMatchObject({ activeGuilds: 0, features: [
       { feature: 'timers', enabledGuilds: 0 }, { feature: 'todolists', enabledGuilds: 0 },
-      { feature: 'warlog', enabledGuilds: 0 }, { feature: 'stats', enabledGuilds: 0 },
+      { feature: 'warlog', enabledGuilds: 0 }, { feature: 'stats', enabledGuilds: 0 }, { feature: 'voice', enabledGuilds: 0 },
     ] });
   });
   it('exposes per-server feature settings only to PICKET instance administrators', async () => {
@@ -302,7 +302,7 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
     await queryAsAdmin(database, "UPDATE guild_settings SET features=features || '{\"timers\":false,\"warlog\":true}'::jsonb WHERE guild_id=$1", [A]);
     const features = [
       { feature: 'timers', enabled: false }, { feature: 'todolists', enabled: true },
-      { feature: 'warlog', enabled: true }, { feature: 'stats', enabled: true },
+      { feature: 'warlog', enabled: true }, { feature: 'stats', enabled: true }, { feature: 'voice', enabled: true },
     ];
     for (const filters of ['', '&days=1&channel=600000000000000002']) {
       const response = await get(`/api/activity?guild=${A}&mode=guild${filters}`);
@@ -311,7 +311,7 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
     }
     expect((await get(`/api/activity?guild=${B}&mode=guild`)).json().guildFeatures).toEqual([
       { feature: 'timers', enabled: true }, { feature: 'todolists', enabled: true },
-      { feature: 'warlog', enabled: false }, { feature: 'stats', enabled: true },
+      { feature: 'warlog', enabled: false }, { feature: 'stats', enabled: true }, { feature: 'voice', enabled: true },
     ]);
     await store.configure(A, U, { enabled: false });
     await queryAsAdmin(database, "UPDATE guild_registry SET inactive_since=now(),inactive_reason='left' WHERE guild_id=$1", [A]);

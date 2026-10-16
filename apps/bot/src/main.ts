@@ -1,3 +1,4 @@
+import { DiscordVoice, PostgresVoice } from '@picket/voice';
 import { randomBytes } from 'node:crypto';
 import { hostname } from 'node:os';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -72,7 +73,10 @@ async function run(): Promise<void> {
   await voiceBuffer.initialize();
   const voiceCollector=new VoiceCollector(statsStore,voiceBuffer,logger,()=>new Date(),rest);
   voiceCollector.shardCount=config.shardCount;
+  const voiceCreateRest=createDiscordBotRest(config.discord.botToken,{globalRequestsPerSecond:config.discord.restGlobalRps,retries:0},restBudget,metrics);
+  const ephemeralVoice=new PostgresVoice(database.db,new DiscordVoice(rest,voiceCreateRest),systemClock,logger);
   const composition = {
+    voice:ephemeralVoice,
     timeZone: config.timeZone,
     statsAdminRefreshCron: config.statsAdminRefreshCron,
     clock: systemClock,

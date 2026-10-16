@@ -54,7 +54,12 @@ export interface IncomingInteraction {
   readonly resolvedChannels: Readonly<Record<string, { readonly kind: 'text' | 'announcement' | 'voice' | 'stage' | 'other' }>>;
 }
 
-export interface ModalInput {
+export type ModalInput = ModalTextInput | {
+ readonly customId:string; readonly label:string; readonly required?:boolean; readonly value?:string; readonly kind:'channelSelect'; readonly channelKinds:readonly ('category')[]; readonly values?:readonly string[];
+} | { readonly customId:string; readonly label:string; readonly required?:boolean; readonly value?:string; readonly kind:'stringSelect'; readonly options:readonly {label:string;value:string;selected?:boolean}[] };
+
+export interface ModalTextInput {
+  readonly kind?: 'text';
   readonly customId: string;
   readonly label: string;
   readonly placeholder?: string;

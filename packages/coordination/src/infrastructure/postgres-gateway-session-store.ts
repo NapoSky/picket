@@ -11,6 +11,7 @@ function isSession(value: unknown): value is GatewaySession {
     Number.isInteger(candidate['sequence']) &&
     Number.isInteger(candidate['shardCount']) &&
     Number.isInteger(candidate['shardId']) &&
+    (candidate['consumerVersion'] === undefined || Number.isSafeInteger(candidate['consumerVersion'])) &&
     (candidate['intents'] === undefined || (Number.isSafeInteger(candidate['intents']) && (candidate['intents'] as number) >= 0))
   );
 }

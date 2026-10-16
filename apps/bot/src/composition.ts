@@ -1,3 +1,4 @@
+import { createVoicePanel, PostgresVoice, type VoiceRuntime } from '@picket/voice';
 import {
   CommandRegistry,
   ComponentRegistry,
@@ -134,6 +135,7 @@ export interface CompositionOptions {
   readonly metrics?: OperationalMetrics;
   /** Locks hold SQL connections across REST calls; use a separate pool in the running bot. */
   readonly locks?: KeyedLock;
+  readonly voice?: VoiceRuntime;
   readonly stats?: {readonly store:PostgresStatsStore;readonly buffer:DurableVoiceBuffer;readonly collector?:VoiceCollector;readonly dashboardUrl:string|null};
 }
 
@@ -171,6 +173,8 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
   const statsStore=options.stats?.store ?? new PostgresStatsStore(db,()=>options.clock.now());
   const statsBuffer=options.stats?.buffer ?? new DiskVoiceBuffer('./data/voice-buffer');
   const statsPanel=createStatsPanel({store:statsStore,buffer:statsBuffer,access,gate,clock:options.clock,dashboardUrl:options.stats?.dashboardUrl ?? null,settingsHome:context=>settingsHomeButton(context,options.clock)});
+  const voice = options.voice ?? new PostgresVoice(db, {category:unavailable,create:unavailable,exists:unavailable,remove:unavailable}, options.clock, logger);
+  const voicePanel=createVoicePanel({service:voice,access,gate,clock:options.clock,settingsHome:c=>settingsHomeButton(c,options.clock)});
   const panel = createSettingsPanel({
     settings: new GetGuildSettings(settings), update: new UpdateGuildSettings(settings, options.i18n.locales),
     permissions: showPermissions, updatePermissions: new UpdatePermissions(permissions), access: new ResolveAccess(permissions),
@@ -186,12 +190,13 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
       open: context => warPanel.open(context, true),
       disable: async (guildId, actorId) => `warlog.results.${await configureWarLog.execute(guildId, actorId, { kind: 'disable' })}`,
     },
+    voice:{open:context=>voicePanel.open(context,true)},
     stats:{open:context=>statsPanel.open(context,true),disable:async(guildId,actorId)=>{await statsStore.configure(guildId,actorId,{enabled:false});return 'panel.saved';}},
   });
   const status = statusCommand(new GetGuildStatus(settings), showPermissions);
   return {
     aliases: [...panel.aliases, { ...status, path: ['picket', 'permissions', 'show'] }],
-    entries: [status, panel.command, timerPanel.command, warPanel.command,...statsPanel.entries,
+    entries: [status, panel.command, voicePanel.command, timerPanel.command, warPanel.command,...statsPanel.entries,
       ...todolistCommands(),
       ...timersCommands({
         createBoard: new CreateBoard(timers.deps),
@@ -204,6 +209,7 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
     ],
     families: [
       ...panel.families,
+      ...voicePanel.families,
       ...statsPanel.families,
       warPanel.family,
       timerPanel.family,
@@ -355,6 +361,7 @@ export function buildJobRunner(
     logger,
     ...(options.metrics ? { metrics: options.metrics, component: 'job-runner' as const } : {}),
     onAcquired: async () => {
+      const stopEphemeralVoice = options.voice ? startLeasedLoop({tick:()=>options.voice!.tick(),intervalMs:5_000,logger}) : async()=>undefined;
       const stopTimers = startLeasedLoop({ tick: () => sweep.tick(), intervalMs: SWEEP_INTERVAL_MS, logger, component: 'timers', ...(options.metrics ? { metrics: options.metrics } : {}) });
       const stopDepartures = startLeasedLoop({ tick: () => departures.recover(), intervalMs: 15_000, logger, component: 'retention', ...(options.metrics ? { metrics: options.metrics } : {}) });
       const stopRetention = startLeasedLoop({ tick: () => retention.execute(), intervalMs: RETENTION_CHECK_INTERVAL_MS, logger, component: 'retention', ...(options.metrics ? { metrics: options.metrics } : {}) });
@@ -367,7 +374,7 @@ export function buildJobRunner(
       const stopRefresh = options.stats?.dashboardUrl
         ? startLeasedLoop({ tick: () => refresh.execute(), intervalMs:60_000, logger, component: 'stats-refresh', ...(options.metrics ? { metrics: options.metrics } : {}) })
         : async () => undefined;
-      return async () => { await Promise.all([stopTimers(), stopDepartures(), stopRetention(), stopAudit(), stopSupport(), stopOperators(),stopStats(),stopRefresh()]); };
+      return async () => { await Promise.all([stopEphemeralVoice(), stopTimers(), stopDepartures(), stopRetention(), stopAudit(), stopSupport(), stopOperators(),stopStats(),stopRefresh()]); };
     },
   });
 }
@@ -448,11 +455,12 @@ export function buildGatewayHandler(db: Db, logger: Logger, options: Composition
   );
   const store = new PostgresWarStore(db);
   return { handle: async (event,delivery) => {
-    if (event.type === 'channel_unusable') { await store.channelChanged(event.guildId, event.channelId); await options.stats?.collector?.handle(event,delivery); return; }
+    if (event.type === 'channel_unusable') { await options.voice?.handle(event,delivery); await store.channelChanged(event.guildId, event.channelId); await options.stats?.collector?.handle(event,delivery); return; }
     await guildHandler.handle(event);
+    await options.voice?.handle(event,delivery);
     await support.handle(event);
     await options.stats?.collector?.handle(event,delivery);
-  },connectionChanged:(shardId,connected,lease)=>options.stats?.collector?.connectionChanged(shardId,connected,lease) ?? Promise.resolve() };
+  },connectionChanged:async(shardId,connected,lease)=>{await options.voice?.connectionChanged?.(shardId,connected,lease);await options.stats?.collector?.connectionChanged(shardId,connected,lease);} };
 }
 
 export function buildShardRunner(

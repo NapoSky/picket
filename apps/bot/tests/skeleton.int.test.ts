@@ -118,7 +118,7 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
     await click(advanced, 'channel', '0', { componentType: 8, values: [channel], resolved: { channels: { [channel]: { id: channel, type: 0 } } } });
     await click(await click(home, 'disable', 'timers'), 'disable', 'timers');
     const rows = await queryAsAdmin(database, 'SELECT locale, timezone, audit_channel_id, features FROM guild_settings WHERE guild_id = $1', [GUILD]);
-    expect(rows).toEqual([{ locale: null, timezone: 'Europe/Paris', audit_channel_id: channel, features: { timers: false, todolists: true, warlog: false } }]);
+    expect(rows).toEqual([{ locale: null, timezone: 'Europe/Paris', audit_channel_id: channel, features: { timers: false, todolists: true, warlog: false, voice: true } }]);
     const audit = await queryAsAdmin<{ action: string }>(database, "SELECT action FROM guild_audit_log WHERE action LIKE 'settings.%' ORDER BY id");
     expect(audit.map((row) => row.action)).toEqual(['settings.language', 'settings.language', 'settings.timezone', 'settings.audit_channel', 'settings.feature']);
   });
@@ -134,7 +134,7 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
     const home = await say(options);
     const warPanel = await click(home, 'enable', 'warlog', options);
     expect(JSON.stringify(warPanel)).toContain('Choose a regular text channel');
-    expect(await queryAsAdmin(database, 'SELECT features FROM guild_settings WHERE guild_id = $1', [guildId])).toEqual([{ features: { timers: true, todolists: true, warlog: false } }]);
+    expect(await queryAsAdmin(database, 'SELECT features FROM guild_settings WHERE guild_id = $1', [guildId])).toEqual([{ features: { timers: true, todolists: true, warlog: false, voice: true } }]);
     const store = new PostgresWarStore(database.handle.db);
     const lease = (await new PostgresLeaseStore(database.handle.db).acquire('warlog-poller', 'settings-test', 300_000))!;
     const snapshot = { war: { id: 'settings-war100', number: 100, startedAt: businessNow.getTime(), endedAt: null, winner: 'NONE' as const }, regions: {}, objects: {} };
@@ -163,7 +163,7 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
     const disabled = await click(confirmation, 'disable', 'warlog', options);
     expect(control(disabled, 'enable', 'warlog')).toBeDefined();
     expect((await store.subscription(GuildId.assert(guildId))).paused).toBe(true);
-    expect(await queryAsAdmin(database, 'SELECT features FROM guild_settings WHERE guild_id = $1', [guildId])).toEqual([{ features: { timers: true, todolists: true, warlog: false } }]);
+    expect(await queryAsAdmin(database, 'SELECT features FROM guild_settings WHERE guild_id = $1', [guildId])).toEqual([{ features: { timers: true, todolists: true, warlog: false, voice: true } }]);
     expect(await queryAsAdmin(database, 'SELECT guild_id FROM warlog_deliveries WHERE guild_id = $1', [guildId])).toHaveLength(0);
   });
   it('keeps Stats navigation contextual through edits, disable, reconfiguration and suspension recovery', async () => {
@@ -214,10 +214,10 @@ describe('settings panel: signed HTTP -> guards -> Postgres -> Discord replies',
     const dm = payload({ path: status }) as Record<string, unknown>; delete dm.guild_id; delete dm.member; dm.user = { id: caller };
     const app = server(); expect((await app.inject(signed(dm))).json().data.content).toContain('only be used in a server'); await app.close();
   });
-  it('publishes only two picket commands alongside unchanged feature commands', () => {
+  it('publishes status, settings and voice alongside unchanged feature commands', () => {
     const commands = buildCommandsPayload(buildCommandRegistry(database.handle.db, composition));
     expect(commands.map((command) => command.name)).toEqual(['picket', 'stats', 'timers', 'todolist', 'warlog']);
-    expect(commands[0]?.options?.map((command) => [command.name, command.type])).toEqual([['settings', 1], ['status', 1]]);
+    expect(commands[0]?.options?.map((command) => [command.name, command.type])).toEqual([['settings', 1], ['status', 1], ['voice', 1]]);
     expect(commands.find(command=>command.name==='timers')?.options?.map((command) => command.name)).toEqual(['add', 'cleanup', 'create', 'repair', 'settings', 'strike']);
   });
   it('downloads a complete tenant export privately during suspension and denies non-administrators', async () => {

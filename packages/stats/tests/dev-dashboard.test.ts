@@ -83,14 +83,14 @@ describe('offline dashboard development environment', () => {
     try {
       expect((await app.inject('/api/instance')).json()).toEqual({ activeGuilds: 5, updatedAt: now.toISOString(), features: [
         { feature: 'timers', enabledGuilds: 5 }, { feature: 'todolists', enabledGuilds: 4 },
-        { feature: 'warlog', enabledGuilds: 2 }, { feature: 'stats', enabledGuilds: 4 },
+        { feature: 'voice', enabledGuilds: 5 }, { feature: 'warlog', enabledGuilds: 2 }, { feature: 'stats', enabledGuilds: 4 },
       ] });
       expect((await app.inject('/api/activity?guild=all')).statusCode).toBe(role === 'admin' ? 200 : 403);
       const selected = await app.inject(`/api/activity?guild=${B}&mode=guild`);
       if (role === 'admin') {
         expect(selected.json().guildFeatures).toEqual([
           { feature: 'timers', enabled: true }, { feature: 'todolists', enabled: false },
-          { feature: 'warlog', enabled: true }, { feature: 'stats', enabled: true },
+          { feature: 'warlog', enabled: true }, { feature: 'stats', enabled: true }, { feature: 'voice', enabled: true },
         ]);
         const paused = await app.inject('/api/activity?guild=700000000000000005&mode=guild');
         expect(paused.json().guildFeatures).toContainEqual({ feature: 'stats', enabled: false });

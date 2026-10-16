@@ -5,6 +5,7 @@ Commands start with `/picket`, `/todolist`, `/timers`, `/warlog` or `/stats`, wo
 | Command | Level | What it does |
 | --- | --- | --- |
 | `/picket status` | member | Shows settings, available modules, configured access roles and your access level. |
+| `/picket voice` | member | Build a private queue of templates and quantities, then deploy temporary voice channels. See [Temporary voice channels](./voice). |
 | `/picket settings` | officer | Opens the private settings panel with no arguments. Only administrators can edit permissions and manage data. |
 | `/todolist create` | member | Opens a form and posts a todo list in the channel. See [Todo lists](./todolists). |
 | `/timers create` | officer | Creates the timer board of the channel. See [Timers](./timers). |
@@ -43,3 +44,5 @@ In **Data**, preview and confirm removal. PICKET sends the final private confirm
 To cancel deletion before the deadline, invite PICKET back, then open `/picket settings` → **Data** as a server administrator and cancel the scheduled deletion. Reinvitation alone does not cancel an explicit deletion request. See [Privacy](../legal/privacy).
 
 The old settings, permissions and data subcommands are replaced by this panel. During transition, an old command opens the corresponding screen **without applying its arguments**.
+
+Temporary voice channels are enabled by default and configurable from the settings home. Disabling this module blocks new deployments while existing channel cleanup continues. See [Temporary voice channels](./voice).

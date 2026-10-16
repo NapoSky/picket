@@ -134,3 +134,5 @@ Sources : [export SQL](https://github.com/NapoSky/picket/blob/155e6e94b1786ea5da
 [sauvegarde](https://github.com/NapoSky/picket/blob/155e6e94b1786ea5dae79f23055e207e423a3012/deploy/backup/run.sh).
 
 </details>
+
+Pour les vocaux éphémères, l’export serveur inclut uniquement les noms des modèles actuels. Options, préparations privées, présence opérationnelle, identifiants des canaux et état de vérification/nettoyage sont exclus. Voir [Vocaux éphémères](../guide/voice).

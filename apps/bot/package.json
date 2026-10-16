@@ -19,6 +19,7 @@
     "@picket/persistence": "workspace:*",
     "@picket/timers": "workspace:*",
     "@picket/todolist": "workspace:*",
-    "@picket/warlog": "workspace:*"
+    "@picket/warlog": "workspace:*",
+    "@picket/voice": "workspace:*"
   }
 }

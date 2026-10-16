@@ -55,7 +55,7 @@ describe('PostgresGuildSettingsRepository (integration)', () => {
       auditChannelId: '600000000000000001',
       features: { timers: false, todolists: true, warlog: true },
     });
-    expect(Object.keys(settings.features)).toEqual(['timers', 'todolists', 'warlog']);
+    expect(Object.keys(settings.features)).toEqual(['timers', 'todolists', 'warlog', 'voice']);
   });
 
   it('ignores a malformed audit channel id instead of failing the command', async () => {
@@ -128,7 +128,7 @@ describe('PostgresGuildSettingsRepository (integration)', () => {
         apply(guildId, { kind: 'feature', feature: 'todolists', enabled: false }),
         apply(guildId, { kind: 'feature', feature: 'warlog', enabled: true }),
       ]);
-      expect((await repository.findOrCreate(guildId)).features).toEqual({ timers: false, todolists: false, warlog: true });
+      expect((await repository.findOrCreate(guildId)).features).toEqual({ timers: false, todolists: false, warlog: true, voice: true });
       const entries = await audit(guildId);
       expect(entries).toHaveLength(3);
       for (let index = 1; index < entries.length; index += 1) {

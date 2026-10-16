@@ -143,7 +143,20 @@ export interface TimerScheduleTable {
   wake_at: Date | string;
 }
 
+export interface VoiceSettingsTable { guild_id:string; deployment_limit:Generated<number> }
+export interface VoiceTemplatesTable { id:string;guild_id:string;name:string;category_id:string;channel_name:string;capacity:Generated<number>;idle_minutes:Generated<number>;revision:Generated<number> }
+export interface VoiceSessionsTable { id:string;guild_id:string;user_id:string;state:ColumnType<unknown,string,string>;revision:Generated<number>;expires_at:Timestamp }
+export interface VoiceChannelsTable { id:string;guild_id:string;batch_id:string;template_id:Nullable<string>;template_revision:number;category_id:string;name:string;capacity:number;idle_minutes:number;channel_id:Nullable<string>;status:Generated<'pending'|'creating'|'active'|'uncertain'|'failed'|'deleted'>;completed_at:Nullable<Date>;attempted_at:Nullable<Date>;created_at:Timestamp;empty_since:Nullable<Date>;delete_after:Nullable<Date>;last_verified_at:Nullable<Date>;retry_at:Timestamp;needs_check:Generated<boolean> }
+export interface VoicePresenceTable { guild_id:string;user_id:string;channel_id:string }
+export interface VoiceRuntimeTable { guild_id:string;lease_name:string;lease_token:string;ready:Generated<boolean> }
+
 export interface Schema {
+  voice_settings:VoiceSettingsTable;
+  voice_templates:VoiceTemplatesTable;
+  voice_sessions:VoiceSessionsTable;
+  voice_channels:VoiceChannelsTable;
+  voice_presence:VoicePresenceTable;
+  voice_runtime:VoiceRuntimeTable;
   guild_support_presence: GuildSupportPresenceTable;
   support_guild_deliveries: SupportGuildDeliveriesTable;
   stats_settings:StatsSettingsTable;

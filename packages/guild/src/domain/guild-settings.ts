@@ -1,8 +1,8 @@
 import type { ChannelId, GuildId } from '@picket/kernel';
 
-export const FEATURES = ['timers', 'todolists', 'warlog', 'stats'] as const;
+export const FEATURES = ['timers', 'todolists', 'warlog', 'stats', 'voice'] as const;
 export type Feature = (typeof FEATURES)[number];
-export type GuildFeatures = Readonly<Record<Exclude<Feature,'stats'>, boolean> & { stats?: boolean }>;
+export type GuildFeatures = Readonly<Record<Exclude<Feature,'stats' | 'voice'>, boolean> & { stats?: boolean; voice?: boolean }>;
 
 export interface GuildSettings {
   readonly guildId: GuildId;

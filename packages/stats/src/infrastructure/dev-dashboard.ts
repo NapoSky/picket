@@ -65,7 +65,7 @@ export function createStatsDevServer(role: PreviewRole = 'admin', now = new Date
   app.get('/api/instance', async () => ({ activeGuilds: guilds.length,
     features: [
       { feature: 'timers', enabledGuilds: 5 }, { feature: 'todolists', enabledGuilds: 4 },
-      { feature: 'warlog', enabledGuilds: 2 }, { feature: 'stats', enabledGuilds: guilds.filter((g) => g.enabled).length },
+      { feature: 'voice', enabledGuilds: 5 }, { feature: 'warlog', enabledGuilds: 2 }, { feature: 'stats', enabledGuilds: guilds.filter((g) => g.enabled).length },
     ], updatedAt: now.toISOString() }));
   app.get('/auth/discord', async (_request, reply) => { signedIn = true; return reply.redirect('/'); });
   app.post('/api/logout', async () => { signedIn = false; return { ok: true }; });
@@ -121,7 +121,7 @@ export function createStatsDevServer(role: PreviewRole = 'admin', now = new Date
     }
     const guildFeatures = role === 'admin' && guild && scope !== 'overview' && !exporting
       ? FEATURES.map(feature => ({ feature, enabled: feature === 'stats' ? guild.enabled
-        : feature === 'timers' || (feature === 'todolists' ? guild.id !== B : [A, B].includes(guild.id)) }))
+        : feature === 'timers' || feature === 'voice' || (feature === 'todolists' ? guild.id !== B : [A, B].includes(guild.id)) }))
       : undefined;
     return { scope, ...(guildFeatures ? { guildFeatures } : {}), ...(global ? {snapshotAt:now.toISOString()} : {}), from: period.from.toISOString(), to: period.to.toISOString(), timezone: 'UTC',
       seconds: visible.reduce((sum, s) => sum + s.seconds, 0), activeUsers: new Set(visible.map((s) => s.userId)).size,

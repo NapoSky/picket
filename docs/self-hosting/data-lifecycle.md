@@ -126,3 +126,5 @@ Sources: [SQL export](https://github.com/NapoSky/picket/blob/155e6e94b1786ea5dae
 [backup](https://github.com/NapoSky/picket/blob/155e6e94b1786ea5dae79f23055e207e423a3012/deploy/backup/run.sh).
 
 </details>
+
+For temporary voice channels, the server export includes current template names only. Template options, private deployment drafts, operational presence, channel identifiers and verification/cleanup state are excluded. See [Temporary voice channels](../guide/voice).

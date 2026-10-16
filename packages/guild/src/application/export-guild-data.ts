@@ -28,6 +28,7 @@ export class ExportGuildData {
       scope: 'Server configuration and stored data, with voice-statistics member summaries over the last 60 days and pending-event counts.',
       notIncluded: [
         'Content stored only in Discord, including todolists.',
+        'Ephemeral voice template options, channel lifecycle state, private drafts and presence records (template names only are included).',
         'Global application state, process coordination and secrets.',
         'Raw voice events, individual voice segments, connected-state records and disk journal contents.',
       ],

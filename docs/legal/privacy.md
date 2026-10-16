@@ -123,3 +123,5 @@ and Discord's Developer Terms require, and informs the affected server administr
 
 The date at the top of this page changes with every update. The history is public in the
 [repository](https://github.com/NapoSky/picket/commits/main/docs/legal/privacy.md).
+
+For temporary voice channels, the server export includes current template names only. Template options, private deployment drafts, operational presence, channel identifiers and verification/cleanup state are excluded. See [Temporary voice channels](../guide/voice).

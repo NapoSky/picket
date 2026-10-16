@@ -50,6 +50,7 @@ const translations = {
     featureTodolists: 'TodoLists',
     featureWarlog: 'Warlog',
     featureStats: 'Voice stats',
+    featureVoice: 'Temporary voice channels',
     serverFeatures: 'Server features',
     serverFeaturesHelp: 'Current settings for this server, independent of the period and channel filters.',
     featureEnabled: 'Enabled',
@@ -233,6 +234,7 @@ const translations = {
     featureTodolists: 'TodoLists',
     featureWarlog: 'Warlog',
     featureStats: 'Statistiques vocales',
+    featureVoice: 'Vocaux éphémères',
     serverFeatures: 'Fonctionnalités du serveur',
     serverFeaturesHelp: 'Réglages actuels de ce serveur, indépendants des filtres de période et de salon.',
     featureEnabled: 'Activé',
@@ -401,7 +403,7 @@ let displayedReportKey = null;
 const privacyCache = new Map();
 let overviewPage = 'overview';
 const t = (key) => translations[language][key] ?? translations.en[key] ?? key;
-const featureLabels = { timers: 'featureTimers', todolists: 'featureTodolists', warlog: 'featureWarlog', stats: 'featureStats' };
+const featureLabels = { timers: 'featureTimers', todolists: 'featureTodolists', warlog: 'featureWarlog', stats: 'featureStats', voice: 'featureVoice' };
 const number = (value, decimals = 0) =>
   new Intl.NumberFormat(language, { maximumFractionDigits: decimals }).format(value);
 const date = (value) =>

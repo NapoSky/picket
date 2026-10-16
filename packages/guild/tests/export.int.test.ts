@@ -54,8 +54,8 @@ describe('guild data export (PostgreSQL integration)', () => {
     expect(json).not.toContain('SECRET-DO-NOT-EXPORT');
     const exported = JSON.parse(json);
     expect(exported.guildId).toBe(GUILD_A);
-    expect(Object.keys(exported.data).sort()).toEqual([...exportedTables, 'stats_members', 'stats_summary'].sort());
-    for (const table of GUILD_EXPORT_INTERNAL_TABLES) expect(exported.data).not.toHaveProperty(table);
+    expect(Object.keys(exported.data).sort()).toEqual([...exportedTables, 'stats_members', 'stats_summary', 'voice_templates'].sort());
+    for (const table of GUILD_EXPORT_INTERNAL_TABLES) if(table!=='voice_templates') expect(exported.data).not.toHaveProperty(table);
     for (const table of Object.keys(GUILD_EXPORT_TABLES)) {
       const expected = await queryAsAdmin(database, `SELECT * FROM ${table} WHERE guild_id = $1`, [GUILD_A]);
       expect(exported.data[table]).toEqual(JSON.parse(JSON.stringify(expected)));

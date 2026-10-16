@@ -47,6 +47,7 @@ function sidebar(lang: Lang): DefaultTheme.Sidebar {
         { text: s.sections.guide[4], link: `${prefix}/guide/permissions` },
         { text: s.sections.guide[5], link: `${prefix}/guide/warlog` },
         { text: s.sections.guide[6], link: `${prefix}/guide/stats` },
+        { text: lang === 'fr' ? 'Vocaux éphémères' : 'Temporary voice channels', link: `${prefix}/guide/voice` },
       ],
     },
     {

@@ -5,6 +5,7 @@ Les commandes commencent par `/picket`, `/todolist`, `/timers`, `/warlog` ou `/s
 | Commande | Niveau | Effet |
 | --- | --- | --- |
 | `/picket status` | membre | Consulte la configuration, les modules disponibles, les rôles autorisés et ton niveau d’accès. |
+| `/picket voice` | membre | Composer une file privée de modèles et quantités, puis déployer des vocaux éphémères. Voir [Vocaux éphémères](./voice). |
 | `/picket settings` | officier | Ouvre le panneau privé de configuration, sans argument. Les permissions et données sont modifiables uniquement par les administrateurs. |
 | `/todolist create` | membre | Ouvre un formulaire et publie une todolist dans le canal. Voir [Todolists](./todolists). |
 | `/timers create` | officier | Crée le tableau de timers du canal. Voir [Timers](./timers). |
@@ -43,3 +44,5 @@ Dans **Données**, prévisualise puis confirme le retrait. PICKET envoie la conf
 Pour annuler la suppression avant l’échéance, réinvite PICKET, puis ouvre `/picket settings` → **Données** en tant qu’administrateur du serveur et annule la suppression programmée. Réinviter le bot ne suffit pas à annuler une demande explicite de suppression. Voir [Confidentialité](../legal/privacy).
 
 Les anciennes sous-commandes de configuration, permissions et données sont remplacées par ce panneau. Pendant la transition, une ancienne commande ouvre l’écran correspondant **sans appliquer ses arguments**.
+
+Les vocaux éphémères sont activés par défaut et configurables depuis l’accueil des réglages. Désactiver ce module bloque les nouveaux déploiements tout en maintenant le nettoyage des canaux existants. Voir [Vocaux éphémères](./voice).

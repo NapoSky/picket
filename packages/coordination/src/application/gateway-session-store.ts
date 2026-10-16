@@ -9,6 +9,8 @@ export interface GatewaySession {
   readonly shardId: number;
   /** Intents sent when identifying. Legacy sessions have no recorded mask. */
   readonly intents?: number;
+  /** Version of durable consumers; upgrades may require a fresh guild snapshot. */
+  readonly consumerVersion?: number;
 }
 
 export interface GatewaySessionStore {

@@ -27,7 +27,7 @@ it('requests only guild, member-role and voice-state events', async () => {
     token: new Secret('unused'),
     logger: noopLogger,
     sessions: {
-      load: async () => ({ ...info, shardId: 0, intents: 131 }),
+      load: async () => ({ ...info, shardId: 0, intents: 131, consumerVersion: 1 }),
       save: async () => true,
       clear: async () => undefined,
     },
@@ -43,7 +43,7 @@ it('persists only the sequence delivered durably and never advances past a faile
   const connection = createWsShardConnector({
     token: new Secret('unused'),
     logger: noopLogger,
-    sessions: { load: async () => ({ ...info, shardId: 0, intents: 131 }), save, clear: async () => undefined },
+    sessions: { load: async () => ({ ...info, shardId: 0, intents: 131, consumerVersion: 1 }), save, clear: async () => undefined },
     handler: { handle },
   })({ shardId: 0, shardCount: 1, lease });
   await connection.start();
@@ -78,7 +78,7 @@ it('saves the latest successfully consumed sequence during handoff', async () =>
   const connection = createWsShardConnector({
     token: new Secret('unused'),
     logger: noopLogger,
-    sessions: { load: async () => ({ ...info, shardId: 0, intents: 131 }), save, clear: async () => undefined },
+    sessions: { load: async () => ({ ...info, shardId: 0, intents: 131, consumerVersion: 1 }), save, clear: async () => undefined },
     handler: { handle: async () => undefined },
   })({ shardId: 0, shardCount: 1, lease });
   await connection.start();
@@ -96,7 +96,7 @@ it('saves the latest successfully consumed sequence during handoff', async () =>
       0,
     );
   await connection.stop();
-  expect(save).toHaveBeenCalledWith(lease, { ...info, shardId: 0, sequence: 11, intents: 131 });
+  expect(save).toHaveBeenCalledWith(lease, { ...info, shardId: 0, sequence: 11, intents: 131, consumerVersion: 1 });
 });
 
 it.each([undefined, 1])('replaces a saved session with legacy or incompatible intents (%s)', async intents => {
@@ -124,7 +124,7 @@ it('resumes a session with the current intents without identifying on every roll
   const clear = jest.fn(async () => undefined);
   const connection = createWsShardConnector({
     token: new Secret('unused'), logger: noopLogger,
-    sessions: { load: async () => ({ ...info, intents: 131 }), save: async () => true, clear },
+    sessions: { load: async () => ({ ...info, intents: 131, consumerVersion: 1 }), save: async () => true, clear },
     handler: { handle: async () => undefined },
   })({ shardId: 0, shardCount: 1, lease });
   await connection.start();
@@ -132,4 +132,10 @@ it('resumes a session with the current intents without identifying on every roll
     .toMatchObject({ sessionId: info.sessionId, sequence: info.sequence });
   expect(clear).not.toHaveBeenCalled();
   await connection.stop();
+});
+
+it('refreshes guild snapshots once when adding a new durable consumer without changing intents',async()=>{
+ const clear=jest.fn(async()=>undefined);
+ const connection=createWsShardConnector({token:new Secret('unused'),logger:noopLogger,sessions:{load:async()=>({...info,intents:131}),save:async()=>true,clear},handler:{handle:async()=>undefined}})({shardId:0,shardCount:1,lease});
+ await connection.start();expect(await jest.mocked(WebSocketManager).mock.calls.at(-1)![0].retrieveSessionInfo!(0)).toBeNull();expect(clear).toHaveBeenCalledWith(lease,0);await connection.stop();
 });

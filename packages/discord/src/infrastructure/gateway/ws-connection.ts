@@ -20,6 +20,8 @@ export interface WsConnectorDependencies {
   readonly flushEveryMs?: number;
 }
 
+const CONSUMER_VERSION = 1;
+
 /** Voice collection plus exact role changes. Message content and presence are unnecessary. */
 const INTENTS =
   GatewayIntentBits.Guilds | GatewayIntentBits.GuildVoiceStates | GatewayIntentBits.GuildMembers;
@@ -59,9 +61,10 @@ class DiscordWsShardConnection implements ShardConnection {
     await this.#flush();
     const stored = await this.#deps.sessions.load(this.#shardId);
     if(this.#preserving) return;
-    const compatible = stored && stored.shardCount === this.#shardCount && stored.intents === INTENTS;
+    const compatible = stored && stored.shardCount === this.#shardCount && stored.intents === INTENTS && stored.consumerVersion === CONSUMER_VERSION;
     if (stored && !compatible) {
-      // RESUME retains the old subscriptions. Only IDENTIFY applies new intents.
+      // RESUME retains subscriptions and does not resend guild snapshots.
+      // New durable consumers require one fresh snapshot before subsequent resumes.
       // A legacy session's intents are unknown, so it must be replaced once.
       await this.#deps.sessions.clear(this.#lease, this.#shardId);
       this.#logger.info({ previousIntents: stored.intents ?? null, intents: INTENTS,
@@ -216,7 +219,7 @@ class DiscordWsShardConnection implements ShardConnection {
     this.#dirty = false;
     let saved: boolean;
     try {
-      saved = await this.#deps.sessions.save(this.#lease, { ...this.#delivered, shardId: this.#shardId, intents: INTENTS });
+      saved = await this.#deps.sessions.save(this.#lease, { ...this.#delivered, shardId: this.#shardId, intents: INTENTS, consumerVersion: CONSUMER_VERSION });
     } catch (error) {
       this.#dirty = true;
       throw error;

@@ -521,7 +521,7 @@ export class PostgresStatsStore {
     return withTenant(this.db, GuildId.assert(guildId), async (trx) => {
       const row = (await sql<{ features: Record<string, boolean> }>
         `SELECT features FROM guild_settings WHERE guild_id=${guildId}`.execute(trx)).rows[0];
-      return FEATURES.map(feature => ({ feature, enabled: row?.features[feature] === true }));
+      return FEATURES.map(feature => ({ feature, enabled: feature==='voice' ? row?.features.voice!==false : row?.features[feature] === true }));
     });
   }
   async allGuildIds(): Promise<string[]> {

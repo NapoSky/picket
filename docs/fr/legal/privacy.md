@@ -129,3 +129,5 @@ administrateurs des serveurs concernés.
 
 La date en tête de page change à chaque mise à jour. L'historique est public dans le
 [dépôt](https://github.com/NapoSky/picket/commits/main/docs/legal/privacy.md).
+
+Pour les vocaux éphémères, l’export serveur inclut uniquement les noms des modèles actuels. Options, préparations privées, présence opérationnelle, identifiants des canaux et état de vérification/nettoyage sont exclus. Voir [Vocaux éphémères](../guide/voice).
