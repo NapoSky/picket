@@ -129,6 +129,31 @@ Plain letters must be uppercase. After a plain letter, the `-` and `:` separator
 
 :::
 
+::: tip Custom emoji not showing?
+
+If a custom emoji stays as text in your list, use
+[Discord's full format](https://docs.discord.com/developers/reference#message-formatting):
+
+- Static emoji: `<:name:ID>`
+- Animated emoji: `<a:name:ID>`
+
+These formats are templates: replace `name` with your chosen emoji's name and `ID` with its numeric identifier.
+Example task to adapt: `A - <:name:ID> Prepare the convoy`.
+PICKET does not automatically convert names such as `:name:` into custom emoji, including those added to the
+application in the Discord Developer Portal. The emoji must also be available to the bot to display.
+
+To find this format when the emoji is available in your Discord emoji picker:
+
+1. In a Discord message, type `\:name:`, replacing `name` with your chosen emoji's name and selecting the suggested
+   emoji after the backslash `\`.
+2. Send the message: Discord displays that emoji's full code in the format `<:name:ID>` or `<a:name:ID>`.
+3. Copy that code into the todo list form, without the backslash.
+
+This method applies to emoji you can use yourself. For an emoji reserved for the PICKET application, ask the person managing the
+bot for its full code.
+
+:::
+
 ## Limits
 
 | Limit | Value |
@@ -153,6 +178,7 @@ published list: create a new list if you need to change its content.
 | --- | --- |
 | The form is refused | PICKET explains why and returns your text to copy: check that it contains a recognized task and meets the limits. |
 | A line has no button | Use a format such as `A - Crates`, with an uppercase letter and a space after the dash. `- Crates` alone remains free text. |
+| A custom emoji stays as text | Use `<:name:ID>` for a static emoji or `<a:name:ID>` for an animated emoji, with its actual name and ID. PICKET does not convert `:name:` on its own. |
 | You cannot create a list or click | Check your PICKET roles, whether Todo lists is enabled and the channel's Discord permissions. |
 | A click is reported as temporarily busy | Wait a moment, then try again. |
 | A list message was deleted manually | PICKET cannot restore its content or progress. Create a new list. |

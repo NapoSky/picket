@@ -132,6 +132,31 @@ PICKET attribue 🇦, 🇧, 🇨… dans l'ordre des tâches.
 
 :::
 
+::: tip Un émoji personnalisé ne s'affiche pas ?
+
+Si un émoji personnalisé reste du texte dans votre liste, utilisez le
+[format Discord complet](https://docs.discord.com/developers/reference#message-formatting) :
+
+- Émoji fixe : `<:nom:ID>`
+- Émoji animé : `<a:nom:ID>`
+
+Ces formats sont des modèles : remplacez `nom` par le nom de l'émoji choisi et `ID` par son identifiant numérique.
+Exemple de tâche à adapter : `A - <:nom:ID> Préparer le convoi`.
+PICKET ne convertit pas automatiquement les noms comme `:nom:` en émojis personnalisés, y compris ceux ajoutés à
+l'application dans le Discord Developer Portal. L'émoji doit aussi être accessible au bot pour s'afficher.
+
+Pour retrouver ce format si l'émoji est disponible dans votre sélecteur Discord :
+
+1. Dans un message Discord, saisissez `\:nom:`, en remplaçant `nom` par le nom de l'émoji choisi et en sélectionnant
+   l'émoji proposé après la barre oblique inverse `\`.
+2. Envoyez le message : Discord affiche le code complet de cet émoji, au format `<:nom:ID>` ou `<a:nom:ID>`.
+3. Copiez ce code dans le formulaire de todolist, sans la barre oblique inverse.
+
+Cette méthode concerne les émojis que vous pouvez utiliser vous-même. Pour un émoji réservé à l'application PICKET, demandez son
+code complet à la personne qui gère le bot.
+
+:::
+
 ## Limites
 
 | Limite | Valeur |
@@ -156,6 +181,7 @@ ajouter des tâches à une liste publiée : créez une nouvelle liste si vous de
 | --- | --- |
 | Le formulaire est refusé | PICKET indique la raison et vous renvoie le texte pour le recopier : vérifiez qu'il contient une tâche reconnue et respecte les limites. |
 | Une ligne n'a pas de bouton | Utilisez par exemple `A - Caisses`, avec une lettre majuscule et une espace après le tiret. `- Caisses` seul reste du texte libre. |
+| Un émoji personnalisé reste du texte | Utilisez `<:nom:ID>` pour un émoji fixe ou `<a:nom:ID>` pour un émoji animé, avec son vrai nom et son ID. `:nom:` seul n'est pas converti par PICKET. |
 | Vous ne pouvez pas créer une liste ou cliquer | Vérifiez vos rôles PICKET, l'activation de Todolists et les permissions Discord du canal. |
 | Un clic est signalé comme temporairement occupé | Attendez un instant, puis réessayez. |
 | Un message de liste a été supprimé manuellement | Son contenu et sa progression ne peuvent pas être restaurés par PICKET. Créez une nouvelle liste. |
