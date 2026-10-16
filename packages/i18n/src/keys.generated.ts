@@ -182,6 +182,7 @@ export type MessageKey =
   | 'ops.title'
   | 'ops.unknownName'
   | 'ops.verification'
+  | 'ops.voiceChannels'
   | 'ops.yes'
   | 'panel.access'
   | 'panel.addRole'

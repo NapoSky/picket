@@ -583,6 +583,7 @@
     "modules": "Módulos ativados",
     "configuredNotUsage": "Um módulo ativado, por si só, não comprova uso.",
     "records": "Quadros Timers: {{boards}} · Timers ativos: {{assets}}\nWarlog configurado: {{warlog}} · Stats ativado: {{stats}}",
+    "voiceChannels": "Canais de voz temporários: {{active}} ativos · {{reserved}} reservados · Limite do servidor: {{limit}}",
     "yes": "Sim",
     "no": "Não",
     "consequences": "O PICKET sairá deste servidor. Os dados seguirão o prazo de retenção habitual.",

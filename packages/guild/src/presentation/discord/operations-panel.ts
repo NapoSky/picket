@@ -19,7 +19,7 @@ const normalized = (value: string) => value.normalize('NFD').replace(/\p{M}/gu, 
 const stamp = (value: Date) => `<t:${Math.floor(value.getTime() / 1000)}:f>`;
 const text = (value: string): PanelContent => ({ kind: 'text', text: value });
 
-export function createOperationsPanel(service: GuildOperatorService, i18n: I18n, clock: Clock, replies?: InteractionReplies) {
+export function createOperationsPanel(service: GuildOperatorService, i18n: I18n, clock: Clock, limits: { voiceChannels: number }, replies?: InteractionReplies) {
   const local = <T extends CommandContext>(context: T): T => ({ ...context, t: i18n.translator(i18n.resolve(context.interaction.locale, context.interaction.guildLocale)).t });
   const id = (session: OpsSession, action: string, arg = '0') => encodeCustomId('ops', 1, `${session.id}.${action}.${arg}`);
   const button = (ctx: CommandContext, session: OpsSession, label: MessageKey, action: string, arg = '0', style: PanelButton['style'] = 'secondary', disabled = false): PanelButton =>
@@ -37,7 +37,7 @@ export function createOperationsPanel(service: GuildOperatorService, i18n: I18n,
     ] }];
   };
   const featureNames = (ctx: CommandContext, features: Readonly<Record<string, boolean>>) =>
-    (['timers', 'todolists', 'warlog', 'stats'] as const).filter(key => features[key]).map(key => ctx.t(`features.${key}`)).join(' · ') || ctx.t('ops.none');
+    (['timers', 'todolists', 'warlog', 'stats', 'voice'] as const).filter(key => features[key]).map(key => ctx.t(`features.${key}`)).join(' · ') || ctx.t('ops.none');
   const purgeText = (ctx: CommandContext, since: Date | null, fallback: Date = clock.now(), days = service.retentionDays) =>
     ctx.t('ops.purge', { date: stamp(new Date((since ?? fallback).getTime() + days * 86_400_000)) });
 
@@ -78,6 +78,7 @@ export function createOperationsPanel(service: GuildOperatorService, i18n: I18n,
         text(`${t('ops.presence')}: **${t(`ops.live.${live}`)}**\n${t('ops.service')}: ${t(detail.inactiveSince ? 'ops.suspended' : 'ops.active')}\n${t('ops.registered', { date: stamp(detail.registeredAt) })}\n${t('ops.checked', { date: stamp(clock.now()) })}`),
         text(`**${t('ops.modules')}**\n${featureNames(ctx, detail.features)}\n${t('ops.configuredNotUsage')}`),
         text(t('ops.records', { boards: detail.boards, assets: detail.assets, warlog: t(detail.warlogConfigured ? 'ops.yes' : 'ops.no'), stats: t(detail.features.stats ? 'ops.yes' : 'ops.no') })),
+        text(t('ops.voiceChannels', { active: detail.voiceChannels, reserved: detail.reservedVoiceChannels, limit: limits.voiceChannels })),
         text(`${t('ops.consequences')}\n${purgeText(ctx, detail.inactiveSince)}\n${t(detail.deletionRequested ? 'ops.requestedDeletion' : 'ops.returnAllowed')}`),
       ];
       if (notice) components.push(text(t(notice)));

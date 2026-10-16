@@ -34,6 +34,8 @@ export interface OpsServer {
 export interface OpsDetail extends OpsServer {
   readonly boards: number;
   readonly assets: number;
+  readonly voiceChannels: number;
+  readonly reservedVoiceChannels: number;
   readonly warlogConfigured: boolean;
 }
 export type OpsStatus = 'prepared' | 'pending' | 'executing' | 'uncertain' | 'left' | 'absent' | 'failed' | 'returned';

@@ -583,6 +583,7 @@
     "modules": "Aktivierte Module",
     "configuredNotUsage": "Ein aktiviertes Modul allein belegt keine Nutzung.",
     "records": "Timer-Boards: {{boards}} · Aktive Timer: {{assets}}\nWarlog eingerichtet: {{warlog}} · Stats aktiviert: {{stats}}",
+    "voiceChannels": "Temporäre Sprachkanäle: {{active}} aktiv · {{reserved}} reserviert · Serverlimit: {{limit}}",
     "yes": "Ja",
     "no": "Nein",
     "consequences": "PICKET verlässt diesen Server. Die normale Aufbewahrungsfrist gilt weiter.",

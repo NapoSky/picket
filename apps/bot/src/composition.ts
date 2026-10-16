@@ -1,4 +1,4 @@
-import { createVoicePanel, PostgresVoice, VOICE_ROOT, type VoiceRuntime } from '@picket/voice';
+import { createVoicePanel, MAX_CHANNELS, PostgresVoice, VOICE_ROOT, type VoiceRuntime } from '@picket/voice';
 import {
   CommandRegistry,
   ComponentRegistry,
@@ -274,7 +274,7 @@ export function buildRequestedDepartures(db: Db, options: CompositionOptions, lo
 }
 
 export function buildOperatorRegistry(db: Db, options: CompositionOptions): CommandRegistry {
-  const ops = createOperationsPanel(buildOperatorService(db, options), options.i18n, options.clock);
+  const ops = createOperationsPanel(buildOperatorService(db, options), options.i18n, options.clock, { voiceChannels: MAX_CHANNELS });
   return new CommandRegistry([OPS_ROOT], [ops.command], options.i18n);
 }
 
@@ -309,7 +309,7 @@ export function buildCommandRegistry(db: Db, options: CompositionOptions): Comma
 export function buildPipeline(db: Db, logger: Logger, options: CompositionOptions): InteractionPipeline {
   const guild = guildModule(db, options, logger);
   const service = buildOperatorService(db, options, logger);
-  const ops = createOperationsPanel(service, options.i18n, options.clock, options.discord?.replies);
+  const ops = createOperationsPanel(service, options.i18n, options.clock, { voiceChannels: MAX_CHANNELS }, options.discord?.replies);
   return new InteractionPipeline({
     registry: new CommandRegistry([...ROOTS, OPS_ROOT], [...guild.entries, ops.command], options.i18n, guild.aliases),
     components: new ComponentRegistry([...guild.families, ops.family]),

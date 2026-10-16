@@ -61,11 +61,14 @@ export class PostgresGuildOperationsRepository implements GuildOperationsReposit
     const row = (await sql<ServerRow>`SELECT * FROM picket_operator_servers() WHERE server_id=${guildId}`.execute(this.db)).rows[0];
     if (!row) return null;
     return withTenant(this.db, guildId, async trx => {
-      const counts = (await sql<{ boards: string; assets: string; warlog: boolean }>`SELECT
+      const counts = (await sql<{ boards: string; assets: string; voice_channels: string; reserved_voice_channels: string; warlog: boolean }>`SELECT
         (SELECT count(*) FROM timer_boards WHERE guild_id=${guildId} AND archived_at IS NULL) AS boards,
         (SELECT count(*) FROM timer_assets WHERE guild_id=${guildId} AND status='active') AS assets,
+        (SELECT count(*) FROM voice_channels WHERE guild_id=${guildId} AND status='active') AS voice_channels,
+        (SELECT count(*) FROM voice_channels WHERE guild_id=${guildId} AND status IN ('pending','creating','uncertain')) AS reserved_voice_channels,
         EXISTS (SELECT 1 FROM warlog_subscriptions WHERE guild_id=${guildId} AND channel_id IS NOT NULL) AS warlog`.execute(trx)).rows[0]!;
-      return { ...server(row), boards: Number(counts.boards), assets: Number(counts.assets), warlogConfigured: counts.warlog };
+      return { ...server(row), boards: Number(counts.boards), assets: Number(counts.assets),
+        voiceChannels: Number(counts.voice_channels), reservedVoiceChannels: Number(counts.reserved_voice_channels), warlogConfigured: counts.warlog };
     });
   }
 

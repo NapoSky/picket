@@ -583,6 +583,7 @@
     "modules": "Enabled modules",
     "configuredNotUsage": "An enabled module alone does not demonstrate usage.",
     "records": "Timer boards: {{boards}} · Active timers: {{assets}}\nWarlog configured: {{warlog}} · Stats enabled: {{stats}}",
+    "voiceChannels": "Temporary voice channels: {{active}} active · {{reserved}} reserved · Server limit: {{limit}}",
     "yes": "Yes",
     "no": "No",
     "consequences": "PICKET will leave this server. Data will follow the normal retention period.",

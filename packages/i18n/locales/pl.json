@@ -587,6 +587,7 @@
     "modules": "Włączone moduły",
     "configuredNotUsage": "Samo włączenie modułu nie świadczy o jego używaniu.",
     "records": "Tablice Timers: {{boards}} · Aktywne timery: {{assets}}\nWarlog skonfigurowany: {{warlog}} · Stats włączone: {{stats}}",
+    "voiceChannels": "Tymczasowe kanały głosowe: aktywne: {{active}} · zarezerwowane: {{reserved}} · Limit serwera: {{limit}}",
     "yes": "Tak",
     "no": "Nie",
     "consequences": "PICKET opuści ten serwer. Dane będą podlegać zwykłemu okresowi przechowywania.",

@@ -3,6 +3,7 @@ import { AccessCheckError, buildCommandsPayload, toWireResponse } from '@picket/
 import { ChannelId, GuildId, InteractionId, UserId, noopLogger } from '@picket/kernel';
 import { HandleGuildAvailable, PostgresGuildLifecycleRepository, PostgresGuildOperationsRepository, PostgresGuildDataExportRepository, PostgresSupportGuildEventsRepository, OpsError } from '@picket/guild';
 import { withTenant, sql } from '@picket/persistence';
+import { MAX_CHANNELS } from '@picket/voice';
 import { createTestDatabase, InMemoryInteractionReplies, InMemoryMessaging, makeInteraction, queryAsAdmin, recordingLogger, testI18n, type TestDatabase } from '@picket/testing';
 import { buildCommandRegistry, buildGatewayHandler, buildOperatorService, buildPipeline } from '../src/composition';
 
@@ -60,6 +61,40 @@ describe('private service operations (PostgreSQL)', () => {
 
   it('never includes the operator command in global deployment', () => {
     expect(buildCommandsPayload(buildCommandRegistry(database.handle.db, options())).map(root => root.name)).not.toContain('picket-ops');
+  });
+
+  it('shows current temporary voice usage and its server limit, including reservations and excluding other servers', async () => {
+    expect(await repo().detail(target)).toMatchObject({ voiceChannels: 0, reservedVoiceChannels: 0 });
+    for (const guildId of [target, other]) await withTenant(database.handle.db, guildId, async trx => {
+      const statuses = guildId === target ? ['active', 'active', 'pending', 'creating', 'uncertain', 'deleted', 'failed'] : ['active'];
+      for (const [index, status] of statuses.entries()) await sql`INSERT INTO voice_channels
+        (id,guild_id,batch_id,template_revision,category_id,name,capacity,idle_minutes,status)
+        VALUES (${`${guildId}-${index}`},${guildId},'batch',1,${channel},${`Voice ${index}`},10,15,${status})`.execute(trx);
+    });
+    expect(await repo().detail(target)).toMatchObject({ voiceChannels: 2, reservedVoiceChannels: 3 });
+    const pipeline = buildPipeline(database.handle.db, noopLogger, options());
+    const session = await service().start(interaction());
+    const inspect = async (locale: string) => finish(await pipeline.handle(interaction({ kind: 'component', commandPath: [], locale,
+      customId: `ops:1:${session.id}.detail.${target}` })));
+    const modules = (reply: Reply, locale: string) => reply.kind === 'panel' ? reply.panel.components.find(item =>
+      item.kind === 'text' && item.text.startsWith(`**${testI18n.translator(locale).t('ops.modules')}**`)) : undefined;
+    for (const locale of ['en', 'fr', 'de', 'es-ES', 'pt-BR', 'pl']) {
+      const detail = await inspect(locale);
+      const { t } = testI18n.translator(locale);
+      expect(detail).toMatchObject({ kind: 'panel', panel: { components: expect.arrayContaining([
+        { kind: 'text', text: t('ops.voiceChannels', { active: 2, reserved: 3, limit: MAX_CHANNELS }) },
+      ]) } });
+      expect(modules(detail, locale)).toMatchObject({ text: expect.stringContaining(t('features.voice')) });
+    }
+    // Disabling creation does not release existing channels or hide their usage.
+    await withTenant(database.handle.db, target, trx => sql`UPDATE guild_settings SET features=features || '{"voice":false}'::jsonb WHERE guild_id=${target}`.execute(trx));
+    const disabled = await inspect('fr');
+    expect(JSON.stringify(disabled)).toContain(testI18n.translator('fr').t('ops.voiceChannels', { active: 2, reserved: 3, limit: MAX_CHANNELS }));
+    expect(modules(disabled, 'fr')).toMatchObject({ text: expect.not.stringContaining(testI18n.translator('fr').t('features.voice')) });
+    await withTenant(database.handle.db, target, trx => sql`UPDATE voice_channels SET status='deleted' WHERE guild_id=${target}`.execute(trx));
+    const refreshed = await finish(await pipeline.handle(interaction({ kind: 'component', commandPath: [],
+      customId: `ops:1:${session.id}.refresh.0` })));
+    expect(JSON.stringify(refreshed)).toContain(testI18n.translator('fr').t('ops.voiceChannels', { active: 0, reserved: 0, limit: MAX_CHANNELS }));
   });
 
   it('denies server administrators who are not the application owner, including forged components', async () => {
