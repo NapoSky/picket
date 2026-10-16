@@ -19,6 +19,7 @@ import {
   MAX_TEMPLATES,
   SESSION_MS,
   VoiceError,
+  VoiceQuotaError,
   integer,
   queueSize,
   validateTemplate,
@@ -308,7 +309,7 @@ export class PostgresVoice implements VoiceRuntime {
           tx,
         )
       ).rows[0]!.n;
-      if (count + total > MAX_CHANNELS) throw new VoiceError('full');
+      if (count + total > MAX_CHANNELS) throw new VoiceQuotaError(count, total);
       const batchId = key();
       for (const [id, q] of Object.entries(current.state.queue)) {
         const row = (

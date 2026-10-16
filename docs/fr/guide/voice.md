@@ -51,6 +51,9 @@ PICKET ne demande pas **Se connecter**, **Parler**, **Déplacer les membres**, *
 
 Le panneau présente les modèles accessibles, la quantité à ajouter et votre file actuelle. Les vocaux ne sont créés
 qu'après votre clic sur **Déployer** : vous pouvez préparer une seule entrée ou combiner plusieurs modèles.
+La quantité proposée va de **1 à 6 maximum**, même si un déploiement peut contenir 10 vocaux au total.
+Les choix diminuent selon les places restantes dans votre file et sur le serveur : s'il reste deux places, seuls
+**1 et 2** sont proposés. Lorsqu'il n'en reste aucune, l'ajout est désactivé.
 
 ![Panneau privé de préparation des vocaux en anglais : modèle Logistics sélectionné, quantité 1, file contenant deux Combat et un Logistics, et bouton de déploiement des trois canaux.](/images/voice-queue-example.png)
 
@@ -147,7 +150,7 @@ partagent ce plafond ; une demande qui dépasse les places restantes est refusé
 | Aucun modèle n'est proposé | Demandez à un officier de créer un modèle, puis vérifiez que vous pouvez voir et rejoindre sa destination et que le bot peut la gérer. |
 | Une commande ou un bouton vous est refusé | Vérifiez vos rôles PICKET, l'activation du module et les permissions Discord de la destination. |
 | La préparation a expiré ou changé | Relancez `/voice create`, ou rouvrez les réglages. Si un modèle a changé, recréez les entrées concernées. |
-| Le serveur a atteint sa limite | Attendez le nettoyage des vocaux vides, ou demandez à un officier de consulter **Canaux ouverts**. Les créations réservées comptent aussi. |
+| Le serveur a atteint sa limite | Attendez le nettoyage des vocaux vides, ou demandez à un officier de consulter **Canaux ouverts**. Les créations réservées comptent aussi. Un déploiement refusé affiche le maximum (15), le nombre actuel, la quantité totale demandée et le nombre de canaux en trop. |
 | Un canal vide reste présent | Vérifiez que le délai est écoulé et qu'aucun bot n'est connecté. Une panne ou une perte de permissions suspend le nettoyage ; la reprise peut redonner un délai complet. |
 | Un canal a été supprimé manuellement | PICKET libère sa place après avoir confirmé son absence. Aucune intervention en base n'est nécessaire. |
 | Une création est à vérifier | Un officier vérifie les canaux dans Discord, puis peut sélectionner l'entrée dans **Canaux ouverts** et **Clore le suivi** après confirmation. Cela libère la réservation sans supprimer de canal Discord. |

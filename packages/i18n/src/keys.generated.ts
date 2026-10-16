@@ -455,6 +455,7 @@ export type MessageKey =
   | 'voice.errors.invalid'
   | 'voice.errors.limit'
   | 'voice.errors.occupied'
+  | 'voice.errors.serverQuota'
   | 'voice.errors.unavailable'
   | 'voice.help'
   | 'voice.limit'

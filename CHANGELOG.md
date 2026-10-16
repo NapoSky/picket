@@ -2,6 +2,8 @@
 
 ## 1.1.0 (unreleased — acceptance testing)
 
+- Acceptance candidate `1.1.0-rc.4`: offer quantities from 1 to 6 at most, reduced to remaining deployment and server capacity; explain server quota refusals with current, requested and excess counts.
+- Split the English and French documentation navigation into Guide and Features.
 - Acceptance candidate `1.1.0-rc.3`: group voice channels by template and number, including subsequent deployments and recovery after positioning failures.
 - Acceptance candidate `1.1.0-rc.2`: cancelling voice preparation removes its private message and invalidates old controls.
 - Use one voice channel name for the template, with category first in the four-field form; preserve existing templates when extending name capacity.

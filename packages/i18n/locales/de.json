@@ -688,6 +688,7 @@
       "invalid": "Prüfe die Felder: Kapazität 1–99, Leerlauf 1–30 Min. und eindeutiger Vorlagenname.",
       "limit": "Limit erreicht: höchstens 10 Vorlagen pro Server; beachte das angezeigte Bereitstellungslimit.",
       "full": "Zu viele offene oder reservierte Sprachkanäle auf dem Server (maximal 15).",
+      "serverQuota": "Serverlimit: {{maximum}} temporäre Sprachkanäle. Bereits offen oder reserviert: {{current}}. Für diese Bereitstellung angefordert: {{requested}}. Über dem Limit: {{excess}}. Verkleinere deine Warteschlange oder warte, bis Kanäle entfernt werden.",
       "changed": "Eine Vorlage oder ein Kanal wurde geändert. Aktualisiere und erstelle betroffene Einträge neu.",
       "expired": "Diese Vorbereitung ist abgelaufen oder geändert. Öffne /voice create oder die Einstellungen erneut.",
       "access": "Die aktuellen Berechtigungen erlauben dieses Ziel oder diese Aktion nicht.",

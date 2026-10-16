@@ -9,11 +9,13 @@ type Lang = 'en' | 'fr';
 const t = {
   en: {
     guide: 'Guide',
+    features: 'Features',
     selfHosting: 'Self-hosting',
     contributing: 'Contributing',
     legal: 'Legal',
     sections: {
-      guide: ['Getting started', 'Commands', 'Todo lists', 'Timers', 'Permissions', 'War log', 'Voice statistics'],
+      guide: ['Getting started', 'Permissions', 'Commands'],
+      features: ['Todo lists', 'Timers', 'War log', 'Voice statistics', 'Temporary voice channels'],
       selfHosting: ['Installation', 'Configuration'],
       contributing: ['Translating', 'Architecture'],
       legal: ['Terms of Service', 'Privacy Policy'],
@@ -21,11 +23,13 @@ const t = {
   },
   fr: {
     guide: 'Guide',
+    features: 'Fonctionnalités',
     selfHosting: 'Auto-hébergement',
     contributing: 'Contribuer',
     legal: 'Mentions légales',
     sections: {
-      guide: ['Prise en main', 'Commandes', 'Todolists', 'Timers', 'Permissions', 'Journal de guerre', 'Statistiques vocales'],
+      guide: ['Prise en main', 'Permissions', 'Commandes'],
+      features: ['Todolists', 'Timers', 'Journal de guerre', 'Statistiques vocales', 'Vocaux éphémères'],
       selfHosting: ['Installation', 'Configuration'],
       contributing: ['Traduire', 'Architecture'],
       legal: ["Conditions d'utilisation", 'Politique de confidentialité'],
@@ -41,13 +45,18 @@ function sidebar(lang: Lang): DefaultTheme.Sidebar {
       text: s.guide,
       items: [
         { text: s.sections.guide[0], link: `${prefix}/guide/getting-started` },
-        { text: s.sections.guide[1], link: `${prefix}/guide/commands` },
-        { text: s.sections.guide[2], link: `${prefix}/guide/todolists` },
-        { text: s.sections.guide[3], link: `${prefix}/guide/timers` },
-        { text: s.sections.guide[4], link: `${prefix}/guide/permissions` },
-        { text: s.sections.guide[5], link: `${prefix}/guide/warlog` },
-        { text: s.sections.guide[6], link: `${prefix}/guide/stats` },
-        { text: lang === 'fr' ? 'Vocaux éphémères' : 'Temporary voice channels', link: `${prefix}/guide/voice` },
+        { text: s.sections.guide[1], link: `${prefix}/guide/permissions` },
+        { text: s.sections.guide[2], link: `${prefix}/guide/commands` },
+      ],
+    },
+    {
+      text: s.features,
+      items: [
+        { text: s.sections.features[0], link: `${prefix}/guide/todolists` },
+        { text: s.sections.features[1], link: `${prefix}/guide/timers` },
+        { text: s.sections.features[2], link: `${prefix}/guide/warlog` },
+        { text: s.sections.features[3], link: `${prefix}/guide/stats` },
+        { text: s.sections.features[4], link: `${prefix}/guide/voice` },
       ],
     },
     {
@@ -115,6 +124,7 @@ export default defineConfig({
         },
         nav: [
           { text: t.en.guide, link: '/guide/getting-started' },
+          { text: t.en.features, link: '/guide/todolists' },
           { text: t.en.selfHosting, link: '/self-hosting/install' },
           { text: t.en.contributing, link: '/contributing/translating' },
           { text: 'Support', link: supportDiscord },
@@ -134,6 +144,7 @@ export default defineConfig({
         },
         nav: [
           { text: t.fr.guide, link: '/fr/guide/getting-started' },
+          { text: t.fr.features, link: '/fr/guide/todolists' },
           { text: t.fr.selfHosting, link: '/fr/self-hosting/install' },
           { text: t.fr.contributing, link: '/fr/contributing/translating' },
           { text: 'Support', link: supportDiscord },

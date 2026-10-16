@@ -1,5 +1,6 @@
 import {
   createVoicePanel,
+  VoiceQuotaError,
   type VoiceService,
   type VoiceSession,
   type VoiceTemplate,
@@ -151,7 +152,208 @@ function setup(locale = 'en', settings = false, count = 1) {
     },
   };
 }
+function quantityOptions(reply: Reply): string[] {
+  if (reply.kind !== 'panel') throw new Error('Expected panel');
+  const select = reply.panel.components.find(
+    (component) =>
+      component.kind === 'stringSelect' &&
+      decodeCustomId(component.customId)?.payload.split('.')[2] === 'quantity',
+  );
+  return select?.kind === 'stringSelect'
+    ? select.options.map((option) => option.value)
+    : [];
+}
+const openChannels = (count: number) =>
+  Array.from({ length: count }, (_, n) => ({
+    id: String(n),
+    channelId: String(610000000000000000n + BigInt(n)),
+    name: `Existing ${n}`,
+    status: 'active' as const,
+    occupants: 0,
+    deleteAfter: null,
+    lastVerifiedAt: null,
+  }));
 describe('private voice deployment queue', () => {
+  it.each([
+    { limit: 6, open: 0, maximum: 6 },
+    { limit: 10, open: 0, maximum: 6 },
+    { limit: 3, open: 0, maximum: 3 },
+    { limit: 6, open: 13, maximum: 2 },
+    { limit: 10, open: 15, maximum: 0 },
+  ])(
+    'offers only usable quantities with deployment limit $limit and $open channels already reserved',
+    async ({ limit, open, maximum }) => {
+      const e = setup();
+      e.service.limit.mockResolvedValue(limit);
+      e.service.channels.mockResolvedValue(openChannels(open));
+      const reply = await e.open();
+      expect(quantityOptions(reply)).toEqual(
+        Array.from({ length: maximum }, (_, n) => String(n + 1)),
+      );
+      toWireResponse(reply);
+    },
+  );
+  it('shrinks quantities after queue additions and checks changed server capacity before adding', async () => {
+    const e = setup();
+    let reply = await e.open();
+    reply = await e.click(reply, 'pick', {
+      componentKind: 'stringSelect',
+      selectedValues: [e.models[0]!.id],
+    });
+    reply = await e.click(reply, 'quantity', {
+      componentKind: 'stringSelect',
+      selectedValues: ['4'],
+    });
+    e.service.channels.mockResolvedValue(openChannels(13));
+    e.service.updateSession.mockClear();
+    expect(JSON.stringify(await e.click(reply, 'addQueue'))).toContain(
+      'Server limit: 15 temporary voice channels. Already open or reserved: 13. Requested in this deployment: 4. Over the limit by: 2.',
+    );
+    expect(e.service.updateSession).not.toHaveBeenCalled();
+    reply = await e.click(reply, 'quantity', {
+      componentKind: 'stringSelect',
+      selectedValues: ['1'],
+    });
+    reply = await e.click(reply, 'addQueue');
+    expect(quantityOptions(reply)).toEqual(['1']);
+    reply = await e.click(reply, 'pick', {
+      componentKind: 'stringSelect',
+      selectedValues: [e.models[0]!.id],
+    });
+    reply = await e.click(reply, 'addQueue');
+    expect(quantityOptions(reply)).toEqual([]);
+    expect(e.read().state.queue[e.models[0]!.id]!.quantity).toBe(2);
+    expect(JSON.stringify(reply)).toContain('Your queue: 2 / 2 channels');
+    if (reply.kind !== 'panel') throw new Error('Expected panel');
+    const add = reply.panel.components
+      .flatMap((component) =>
+        component.kind === 'buttons' ? component.buttons : [],
+      )
+      .find(
+        (button) =>
+          decodeCustomId(button.customId)?.payload.split('.')[2] === 'addQueue',
+      );
+    expect(add?.disabled).toBe(true);
+    toWireResponse(reply);
+  });
+  it('rejects forged quantities above six and the removed free-form option even when deployments allow ten', async () => {
+    const e = setup();
+    e.service.limit.mockResolvedValue(10);
+    const reply = await e.open();
+    for (const value of ['7', '99', 'other']) {
+      expect(
+        (
+          await e.click(reply, 'quantity', {
+            componentKind: 'stringSelect',
+            selectedValues: [value],
+          })
+        ).kind,
+      ).toBe('message');
+    }
+    expect(e.service.updateSession).not.toHaveBeenCalled();
+  });
+  it.each(['en', 'fr', 'de', 'es-ES', 'pt-BR', 'pl'])(
+    'explains an atomic deployment quota refusal in %s without losing the queue',
+    async (locale) => {
+      const e = setup(locale);
+      let reply = await e.open();
+      reply = await e.click(reply, 'pick', {
+        componentKind: 'stringSelect',
+        selectedValues: [e.models[0]!.id],
+      });
+      reply = await e.click(reply, 'quantity', {
+        componentKind: 'stringSelect',
+        selectedValues: ['4'],
+      });
+      reply = await e.click(reply, 'addQueue');
+      e.service.deploy.mockRejectedValueOnce(new VoiceQuotaError(13, 4));
+      e.service.updateSession.mockClear();
+      const refused = await e.click(reply, 'deploy');
+      const expected = testI18n
+        .translator(locale)
+        .t('voice.errors.serverQuota', {
+          maximum: 15,
+          current: 13,
+          requested: 4,
+          excess: 2,
+        });
+      expect(refused).toMatchObject({ kind: 'message', content: expected });
+      expect(expected).not.toContain('{{');
+      expect(expected).toContain('15');
+      expect(expected).toContain('13');
+      expect(expected).toContain('4');
+      expect(expected).toContain('2');
+      expect(e.service.updateSession).not.toHaveBeenCalled();
+      expect(e.read().state.queue[e.models[0]!.id]!.quantity).toBe(4);
+      e.service.channels.mockResolvedValue(openChannels(13));
+      const refreshed = await e.open();
+      expect(JSON.stringify(refreshed)).toContain(expected);
+      toWireResponse(refreshed);
+    },
+  );
+  it('reports the complete queue when a subsequent addition exceeds the server quota', async () => {
+    const e = setup('fr');
+    let reply = await e.open();
+    reply = await e.click(reply, 'pick', {
+      componentKind: 'stringSelect',
+      selectedValues: [e.models[0]!.id],
+    });
+    reply = await e.click(reply, 'quantity', {
+      componentKind: 'stringSelect',
+      selectedValues: ['3'],
+    });
+    reply = await e.click(reply, 'addQueue');
+    reply = await e.click(reply, 'pick', {
+      componentKind: 'stringSelect',
+      selectedValues: [e.models[0]!.id],
+    });
+    e.service.channels.mockResolvedValue(openChannels(12));
+    e.service.updateSession.mockClear();
+    const refused = await e.click(reply, 'addQueue');
+    expect(JSON.stringify(refused)).toContain(
+      'Déjà ouverts ou réservés : 12. Demandés pour ce déploiement : 4. En trop : 1.',
+    );
+    expect(e.service.updateSession).not.toHaveBeenCalled();
+    expect(e.read().state.queue[e.models[0]!.id]!.quantity).toBe(3);
+  });
+  it('bounds queue editing against the space occupied by other entries', async () => {
+    const e = setup('en', false, 2);
+    let reply = await e.open();
+    for (const [index, quantity] of [
+      [0, '2'],
+      [1, '3'],
+    ] as const) {
+      reply = await e.click(reply, 'pick', {
+        componentKind: 'stringSelect',
+        selectedValues: [e.models[index]!.id],
+      });
+      reply = await e.click(reply, 'quantity', {
+        componentKind: 'stringSelect',
+        selectedValues: [quantity],
+      });
+      reply = await e.click(reply, 'addQueue');
+    }
+    const modal = await e.click(reply, 'editQueue', {
+      componentKind: 'stringSelect',
+      selectedValues: [e.models[0]!.id],
+    });
+    if (modal.kind !== 'modal') throw new Error('Expected modal');
+    expect(modal.inputs[0]).toMatchObject({
+      value: '2',
+      placeholder: '0–3',
+      maxLength: 1,
+    });
+    const payload = decodeCustomId(modal.customId)!.payload;
+    e.service.updateSession.mockClear();
+    const result = await e.finish(
+      await e.panel.families[0]!.onModal!({
+        ...e.context({ kind: 'modal', fields: { quantity: '4' } }),
+        payload,
+      }),
+    );
+    expect(result.kind).toBe('message');
+    expect(e.service.updateSession).not.toHaveBeenCalled();
+  });
   it.each(testI18n.locales)(
     'renders a queue and the ten-template settings within Discord limits in %s',
     async (locale) => {
@@ -199,7 +401,10 @@ describe('private voice deployment queue', () => {
     if (r.kind !== 'modal') return;
     expect(r.inputs).toHaveLength(4);
     expect(r.inputs.map((input) => input.customId)).toEqual([
-      'category', 'channelName', 'capacity', 'delay',
+      'category',
+      'channelName',
+      'capacity',
+      'delay',
     ]);
     expect(r.inputs[0]).toMatchObject({
       kind: 'channelSelect',

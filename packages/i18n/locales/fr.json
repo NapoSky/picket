@@ -688,6 +688,7 @@
       "invalid": "Vérifie les champs : capacité de 1 à 99, inoccupation de 1 à 30 min et nom de modèle unique.",
       "limit": "Limite atteinte : 10 modèles par serveur maximum ; respecte la limite de déploiement affichée.",
       "full": "Le serveur a trop de vocaux ouverts ou réservés (15 maximum).",
+      "serverQuota": "Limite du serveur : {{maximum}} vocaux éphémères. Déjà ouverts ou réservés : {{current}}. Demandés pour ce déploiement : {{requested}}. En trop : {{excess}}. Réduisez votre file ou attendez la suppression de canaux.",
       "changed": "Un modèle ou un canal a changé. Actualise et recrée les entrées concernées dans ta file.",
       "expired": "Cette préparation a expiré ou changé. Relance /voice create ou rouvre les réglages.",
       "access": "Les permissions actuelles ne permettent pas cette destination ou cette action.",

@@ -692,6 +692,7 @@
       "invalid": "Sprawdź pola: pojemność 1–99, bezczynność 1–30 min i unikalna nazwa.",
       "limit": "Osiągnięto limit: maksymalnie 10 szablonów na serwer; przestrzegaj limitu wdrożenia.",
       "full": "Za dużo otwartych lub zarezerwowanych kanałów na serwerze (maksymalnie 15).",
+      "serverQuota": "Limit serwera: {{maximum}} tymczasowych kanałów głosowych. Już otwarte lub zarezerwowane: {{current}}. Żądane w tym wdrożeniu: {{requested}}. Ponad limit: {{excess}}. Zmniejsz kolejkę lub poczekaj na usunięcie kanałów.",
       "changed": "Szablon lub kanał się zmienił. Odśwież i ponownie dodaj odpowiednie pozycje.",
       "expired": "Przygotowanie wygasło lub się zmieniło. Otwórz ponownie /voice create lub ustawienia.",
       "access": "Obecne uprawnienia nie pozwalają na to miejsce docelowe lub działanie.",

@@ -48,6 +48,9 @@ PICKET does not join the call or receive its audio.
 
 The panel shows available templates, the quantity to add and your current queue. Channels are created only after
 you click **Deploy**: prepare a single entry or combine several templates.
+The quantity selector offers **1 to 6 at most**, even when a deployment can contain 10 channels in total.
+Choices shrink to fit the slots left in your queue and on the server: with two slots left, only **1 and 2**
+are offered. Adding is disabled when no slots remain.
 
 ![Private voice preparation panel in English: Logistics selected, quantity 1, a queue containing two Combat and one Logistics channels, and a button to deploy all three.](/images/voice-queue-example.png)
 
@@ -142,7 +145,7 @@ exceeds the remaining slots is refused before creation is queued.
 | No templates are offered | Ask an officer to create a template, then check that you can view and join its destination and that the bot can manage it. |
 | A command or button is refused | Check your PICKET roles, whether the module is enabled and destination permissions in Discord. |
 | Preparation expired or changed | Run `/voice create` again, or reopen settings. If a template changed, rebuild the affected entries. |
-| The server reached its limit | Wait for empty channels to clean up, or ask an officer to inspect **Open channels**. Reserved creations count too. |
+| The server reached its limit | Wait for empty channels to clean up, or ask an officer to inspect **Open channels**. Reserved creations count too. A refused deployment shows the maximum (15), the current count, the complete requested quantity and how many channels exceed the limit. |
 | An empty channel is still present | Check that its delay elapsed and no bot is connected. Outages or lost permissions suspend cleanup; recovery may grant a full new delay. |
 | A channel was deleted manually | PICKET releases its slot after confirming its absence. No database intervention is needed. |
 | A creation needs verification | An officer checks channels in Discord, then can select the entry in **Open channels** and **Close tracking** after confirmation. This releases the reservation without deleting a Discord channel. |

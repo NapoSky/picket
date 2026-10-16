@@ -688,6 +688,7 @@
       "invalid": "Revisa los campos: capacidad 1–99, inactividad 1–30 min y nombre único.",
       "limit": "Límite alcanzado: máximo 10 plantillas por servidor; respeta el límite de creación indicado.",
       "full": "Demasiados canales abiertos o reservados en el servidor (máximo 15).",
+      "serverQuota": "Límite del servidor: {{maximum}} canales de voz temporales. Ya abiertos o reservados: {{current}}. Solicitados para este despliegue: {{requested}}. Por encima del límite: {{excess}}. Reduce la cola o espera a que se eliminen canales.",
       "changed": "Cambió una plantilla o un canal. Actualiza y vuelve a añadir las entradas afectadas.",
       "expired": "Esta preparación caducó o cambió. Abre /voice create o los ajustes de nuevo.",
       "access": "Los permisos actuales no permiten este destino o acción.",

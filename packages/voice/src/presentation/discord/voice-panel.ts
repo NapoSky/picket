@@ -22,6 +22,7 @@ import {
   MAX_CHANNELS,
   MAX_TEMPLATES,
   VoiceError,
+  VoiceQuotaError,
   integer,
   queueSize,
   type VoiceSession,
@@ -39,11 +40,29 @@ export const VOICE_ROOT: RootDescriptor = {
   description: 'voice.settingsTitle',
 };
 const text = (value: string): PanelContent => ({ kind: 'text', text: value });
+const quotaMessage = (c: CommandContext, error: VoiceQuotaError) =>
+  c.t('voice.errors.serverQuota', {
+    maximum: error.maximum,
+    current: error.current,
+    requested: error.requested,
+    excess: error.excess,
+  });
 const identity = (c: CommandContext): VoiceIdentity => ({
   guildId: c.guildId,
   userId: c.interaction.userId,
   roleIds: c.interaction.memberRoleIds,
 });
+const quantityLimit = (
+  s: VoiceSession,
+  limit: number,
+  open: number,
+  replacing?: string,
+) => {
+  const queued =
+    queueSize(s.state.queue) -
+    (replacing ? (s.state.queue[replacing]?.quantity ?? 0) : 0);
+  return Math.max(0, Math.min(6, limit - queued, MAX_CHANNELS - open - queued));
+};
 export function createVoicePanel(deps: Dependencies) {
   const id = (s: VoiceSession, action: string, arg = '0') =>
     encodeCustomId(
@@ -88,6 +107,11 @@ export function createVoicePanel(deps: Dependencies) {
       deps.service.channels(c.guildId, s.state.batchId ?? undefined),
     ]);
     const selected = models.find((m) => m.id === s.state.selected);
+    const maximum = quantityLimit(s, limit, channels.length);
+    const deploymentCapacity = Math.max(
+      0,
+      Math.min(limit, MAX_CHANNELS - channels.length),
+    );
     const components: PanelContent[] = [
       text(`## 🔊 ${c.t(settings ? 'voice.settingsTitle' : 'voice.title')}`),
     ];
@@ -248,20 +272,32 @@ export function createVoicePanel(deps: Dependencies) {
           ],
         });
       } else {
-        components.push(
-          {
+        if (maximum > 0)
+          components.push({
             kind: 'stringSelect',
             customId: id(s, 'quantity'),
             placeholder: c.t('voice.quantity'),
-            options: [
-              ...Array.from({ length: 10 }, (_, n) => ({
-                label: String(n + 1),
-                value: String(n + 1),
-                selected: s.state.quantity === n + 1,
-              })),
-              { label: c.t('voice.other'), value: 'other' },
-            ],
-          },
+            options: Array.from({ length: maximum }, (_, n) => ({
+              label: String(n + 1),
+              value: String(n + 1),
+              selected: s.state.quantity === n + 1,
+            })),
+          });
+        else if (channels.length >= MAX_CHANNELS && !queueSize(s.state.queue))
+          components.push(text(c.t('voice.errors.full')));
+        if (
+          queueSize(s.state.queue) + channels.length > MAX_CHANNELS &&
+          queueSize(s.state.queue)
+        )
+          components.push(
+            text(
+              quotaMessage(
+                c,
+                new VoiceQuotaError(channels.length, queueSize(s.state.queue)),
+              ),
+            ),
+          );
+        components.push(
           {
             kind: 'buttons',
             buttons: [
@@ -272,7 +308,7 @@ export function createVoicePanel(deps: Dependencies) {
                   'voice.addQueue',
                   'addQueue',
                   '0',
-                  !selected,
+                  !selected || s.state.quantity > maximum,
                   true,
                 ),
                 label: c.t('voice.addQuantity', { quantity: s.state.quantity }),
@@ -280,7 +316,12 @@ export function createVoicePanel(deps: Dependencies) {
             ],
           },
           { kind: 'separator' },
-          text(c.t('voice.queue', { count: queueSize(s.state.queue), limit })),
+          text(
+            c.t('voice.queue', {
+              count: queueSize(s.state.queue),
+              limit: deploymentCapacity,
+            }),
+          ),
         );
         for (const [modelId, q] of Object.entries(s.state.queue)) {
           const model = models.find((m) => m.id === modelId);
@@ -312,7 +353,8 @@ export function createVoicePanel(deps: Dependencies) {
                 'voice.deploy',
                 'deploy',
                 '0',
-                queueSize(s.state.queue) === 0,
+                queueSize(s.state.queue) === 0 ||
+                  queueSize(s.state.queue) > deploymentCapacity,
                 true,
               ),
               label: c.t('voice.deployCount', {
@@ -412,6 +454,7 @@ export function createVoicePanel(deps: Dependencies) {
         value: string,
         submit: string,
         arg = '0',
+        maximum?: number,
       ): Reply => ({
         kind: 'modal',
         customId: id(s, submit, arg),
@@ -423,7 +466,8 @@ export function createVoicePanel(deps: Dependencies) {
             style: 'short',
             required: true,
             value,
-            maxLength: 80,
+            maxLength: maximum === undefined ? 80 : String(maximum).length,
+            ...(maximum === undefined ? {} : { placeholder: `0–${maximum}` }),
           },
         ],
       });
@@ -450,21 +494,20 @@ export function createVoicePanel(deps: Dependencies) {
           String(await deps.service.limit(c.guildId)),
           'saveLimit',
         );
-      if (!officer && isSelect && action === 'quantity' && pick === 'other')
-        return modal(
-          'voice.quantity',
-          'quantity',
-          String(s.state.quantity),
-          'saveQuantity',
-        );
       if (!officer && isSelect && action === 'editQueue') {
         if (!pick || !s.state.queue[pick]) throw new VoiceError('invalid');
+        const [limit, channels] = await Promise.all([
+          deps.service.limit(c.guildId),
+          deps.service.channels(c.guildId),
+        ]);
+        const maximum = quantityLimit(s, limit, channels.length, pick);
         return modal(
           'voice.editQuantity',
           'quantity',
-          String(s.state.queue[pick]!.quantity),
+          String(Math.min(s.state.queue[pick]!.quantity, maximum)),
           'saveQueue',
           pick,
+          maximum,
         );
       }
       return {
@@ -476,6 +519,28 @@ export function createVoicePanel(deps: Dependencies) {
             await guard(c, officer);
             const models = await deps.service.templates(i, officer),
               selected = models.find((m) => m.id === arg.split('-')[0]);
+            const checkedQuantity = async (
+              value: string,
+              min: number,
+              replacing?: string,
+            ) => {
+              const quantity = integer(value, min, 6);
+              const [limit, channels] = await Promise.all([
+                deps.service.limit(c.guildId),
+                deps.service.channels(c.guildId),
+              ]);
+              const requested =
+                queueSize(s.state.queue) -
+                (replacing ? (s.state.queue[replacing]?.quantity ?? 0) : 0) +
+                quantity;
+              if (quantity > 0 && channels.length + requested > MAX_CHANNELS)
+                throw new VoiceQuotaError(channels.length, requested);
+              return integer(
+                value,
+                min,
+                quantityLimit(s, limit, channels.length, replacing),
+              );
+            };
             let state = { ...s.state, queue: { ...s.state.queue } };
             let notice: string | undefined;
             if (isButton && action === 'cancel') {
@@ -490,38 +555,31 @@ export function createVoicePanel(deps: Dependencies) {
                 throw new VoiceError('access');
               state.selected = pick!;
             } else if (!officer && isSelect && action === 'quantity')
-              state.quantity = integer(pick ?? '', 1, 10);
+              state.quantity = await checkedQuantity(pick ?? '', 1);
             else if (!officer && isModal && action === 'saveQuantity')
-              state.quantity = integer(
-                c.interaction.fields.quantity ?? '',
-                1,
-                10,
-              );
+              throw new VoiceError('expired');
             else if (!officer && isButton && action === 'addQueue') {
               const m = models.find((m) => m.id === state.selected);
               if (!m) throw new VoiceError('access');
               const old = state.queue[m.id];
               if (old && old.revision !== m.revision)
                 throw new VoiceError('changed');
+              await checkedQuantity(String(state.quantity), 1);
               state.queue[m.id] = {
                 quantity: (old?.quantity ?? 0) + state.quantity,
                 revision: m.revision,
               };
-              if (
-                queueSize(state.queue) > (await deps.service.limit(c.guildId))
-              )
-                throw new VoiceError('limit');
               state.selected = null;
               state.quantity = 1;
             } else if (!officer && isModal && action === 'saveQueue') {
               if (!state.queue[arg]) throw new VoiceError('invalid');
-              const n = integer(c.interaction.fields.quantity ?? '', 0, 10);
+              const n = await checkedQuantity(
+                c.interaction.fields.quantity ?? '',
+                0,
+                arg,
+              );
               if (n === 0) delete state.queue[arg];
               else state.queue[arg] = { ...state.queue[arg]!, quantity: n };
-              if (
-                queueSize(state.queue) > (await deps.service.limit(c.guildId))
-              )
-                throw new VoiceError('limit');
             } else if (!officer && isButton && action === 'clear')
               state.queue = {};
             else if (!officer && isButton && action === 'deploy')
@@ -631,15 +689,14 @@ export function createVoicePanel(deps: Dependencies) {
     }
   }
   function failure(c: CommandContext, error: unknown): Reply {
+    if (error instanceof VoiceQuotaError)
+      return ephemeral(quotaMessage(c, error));
     if (error instanceof VoiceError)
       return ephemeral(c.t(`voice.errors.${error.reason}`));
     c.logger.warn({ err: error }, 'voice panel failed');
     return ephemeral(c.t('voice.errors.unavailable'));
   }
-  async function open(
-    c: CommandContext,
-    settings = false,
-  ): Promise<Reply> {
+  async function open(c: CommandContext, settings = false): Promise<Reply> {
     const run = async (): Promise<Reply> => {
       try {
         await guard(c, settings);

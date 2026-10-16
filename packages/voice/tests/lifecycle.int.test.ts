@@ -174,12 +174,47 @@ describe('durable ephemeral voice lifecycle', () => {
     ]);
     expect(result.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
     expect(await service.channels(guildId)).toHaveLength(8);
+    const refused = result.find(
+      (r) => r.status === 'rejected',
+    ) as PromiseRejectedResult;
+    expect(refused.reason).toMatchObject({
+      reason: 'full',
+      maximum: 15,
+      current: 8,
+      requested: 8,
+      excess: 1,
+    });
     const success = result.find(
       (r) => r.status === 'fulfilled',
     ) as PromiseFulfilledResult<VoiceSession>;
     await expect(service.deploy(identity, success.value)).rejects.toMatchObject(
       { reason: 'expired' },
     );
+  });
+  it('reports pending reservations in quota refusals and leaves rejected drafts intact', async () => {
+    await deploy(6);
+    await deploy(6);
+    const request = await draft(4);
+    await expect(service.deploy(identity, request)).rejects.toMatchObject({
+      reason: 'full',
+      maximum: 15,
+      current: 12,
+      requested: 4,
+      excess: 1,
+    });
+    expect(await service.readSession(identity, request.id)).toEqual(request);
+    expect(await service.channels(guildId)).toHaveLength(12);
+    expect(discord.create).not.toHaveBeenCalled();
+    await deploy(3);
+    expect(await service.channels(guildId)).toHaveLength(15);
+    await expect(deploy(1)).rejects.toMatchObject({
+      reason: 'full',
+      maximum: 15,
+      current: 15,
+      requested: 1,
+      excess: 1,
+    });
+    expect(await service.channels(guildId)).toHaveLength(15);
   });
   it.each(['patch', 'lock'])(
     'retries a failed %s after restart without recreating saved channels',

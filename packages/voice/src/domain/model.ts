@@ -61,6 +61,17 @@ export class VoiceError extends Error {
     super(reason);
   }
 }
+export class VoiceQuotaError extends VoiceError {
+  readonly maximum = MAX_CHANNELS;
+  readonly excess: number;
+  constructor(
+    readonly current: number,
+    readonly requested: number,
+  ) {
+    super('full');
+    this.excess = current + requested - MAX_CHANNELS;
+  }
+}
 export function integer(value: string, min: number, max: number): number {
   if (!/^\d+$/.test(value.trim())) throw new VoiceError('invalid');
   const n = Number(value.trim());

@@ -688,6 +688,7 @@
       "invalid": "Check the fields: capacity 1–99, inactivity 1–30 min, and a unique template name.",
       "limit": "Limit reached: at most 10 templates per server; respect the deployment limit shown in the panel.",
       "full": "The server already has too many open or reserved voice channels (maximum 15).",
+      "serverQuota": "Server limit: {{maximum}} temporary voice channels. Already open or reserved: {{current}}. Requested in this deployment: {{requested}}. Over the limit by: {{excess}}. Reduce your queue or wait for channels to be removed.",
       "changed": "A template or channel changed. Refresh and rebuild the affected queue entries.",
       "expired": "This preparation expired or changed. Run /voice create again, or reopen settings.",
       "access": "The destination or action is unavailable with the current permissions.",

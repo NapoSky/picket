@@ -688,6 +688,7 @@
       "invalid": "Verifique os campos: capacidade 1–99, inatividade 1–30 min e nome único.",
       "limit": "Limite atingido: até 10 modelos por servidor; respeite o limite de criação indicado.",
       "full": "Há muitos canais abertos ou reservados no servidor (máximo 15).",
+      "serverQuota": "Limite do servidor: {{maximum}} canais de voz temporários. Já abertos ou reservados: {{current}}. Solicitados nesta implantação: {{requested}}. Acima do limite: {{excess}}. Reduza a fila ou aguarde a remoção de canais.",
       "changed": "Um modelo ou canal mudou. Atualize e adicione novamente os itens afetados.",
       "expired": "Esta preparação expirou ou mudou. Abra /voice create ou as configurações novamente.",
       "access": "As permissões atuais não permitem este destino ou ação.",
