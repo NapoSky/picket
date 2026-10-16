@@ -160,7 +160,7 @@ const translations = {
     inactiveServerGroup: 'Inactive servers',
     unknownServer: 'Unknown server',
     inactiveHelp: 'PICKET is inactive on this server. Its retained history remains available until expiry or erasure.',
-    gap: 'Some presence segments include a collection interruption. Unobserved time has been excluded.',
+    recovering: 'Voice collection is interrupted or recovering for one or more servers. Waiting for a new confirmation.',
     late: 'Collection has not been confirmed recently. The figures may be delayed.',
     peopleTitle: 'Recorded activity',
     peopleDescription: 'Only the people you are authorized to view.',
@@ -347,7 +347,7 @@ const translations = {
     inactiveServerGroup: 'Serveurs inactifs',
     unknownServer: 'Serveur inconnu',
     inactiveHelp: 'PICKET est inactif sur ce serveur. L’historique conservé reste consultable jusqu’à son expiration ou son effacement.',
-    gap: 'Certains segments de présence comprennent une interruption de collecte. Le temps non observé a été exclu.',
+    recovering: 'La collecte vocale est interrompue ou en cours de reprise pour un ou plusieurs serveurs. En attente d’une nouvelle confirmation.',
     late: 'La collecte n’a pas été confirmée récemment. Les chiffres peuvent être en retard.',
     peopleTitle: 'Activité enregistrée',
     peopleDescription: 'Uniquement les personnes que vous êtes autorisé à consulter.',
@@ -992,9 +992,8 @@ function render(data) {
   const warnings = [];
   if (selected?.inactive) warnings.push(t('inactiveHelp'));
   else if (selected && !selected.enabled) warnings.push(t('paused'));
-  if (data.interruptedSegments > 0) warnings.push(t('gap'));
-  if (!data.snapshotAt && data.updatedAt && Date.now() - Date.parse(data.updatedAt) > 180000 && selected?.enabled)
-    warnings.push(t('late'));
+  if (data.collection?.recovering) warnings.push(t('recovering'));
+  else if (data.collection?.delayed) warnings.push(t('late'));
   notice(warnings.join(' '));
 }
 async function load({ refreshPrivacy = false } = {}) {

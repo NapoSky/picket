@@ -112,7 +112,11 @@ compris. La vue globale d'instance utilise UTC. **Temps vocal signifie présence
 en jeu.** Mute, sourdine, vidéo et partage d'écran ne créent pas de segment supplémentaire.
 
 Le dashboard s'actualise chaque minute, avec une fraîcheur normale visée sous deux minutes. L'heure de dernière
-confirmation reste visible. Une interruption est signalée et le temps non observé n'est pas ajouté automatiquement.
+confirmation reste visible. Le bandeau d'interruption disparaît après le rejeu des observations en attente, la
+réconciliation des présences et l'enregistrement d'une nouvelle confirmation de collecte. Les interruptions passées
+restent dans le détail des présences ; le temps non observé n'est pas ajouté automatiquement. Cet état est lu en direct,
+indépendamment de la période sélectionnée et de l'instantané planifié d'Administration. Les collectes désactivées et les
+serveurs quittés sont exclus. Une absence de confirmation pendant plus de trois minutes déclenche un avertissement de retard.
 
 ### Consulter votre activité ou celle du régiment
 

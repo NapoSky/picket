@@ -4,23 +4,23 @@ Les commandes commencent par `/picket`, `/todolist`, `/timers`, `/warlog`, `/sta
 
 | Commande | Niveau | Effet |
 | --- | --- | --- |
-| `/picket status` | membre | Consulte la configuration, les modules disponibles, les rôles autorisés et ton niveau d’accès. |
-| `/voice create` | membre | Composer une file privée de modèles et quantités, puis déployer des vocaux éphémères. Voir [Vocaux éphémères](./voice). |
-| `/voice settings` | officier | Gérer les modèles vocaux, la limite par déploiement et les canaux ouverts. Comprend un bouton de retour aux réglages PICKET. |
 | `/picket settings` | officier | Ouvre le panneau privé de configuration, sans argument. Les permissions et données sont modifiables uniquement par les administrateurs. |
-| `/todolist create` | membre | Ouvre un formulaire et publie une todolist dans le canal. Voir [Todolists](./todolists). |
-| `/timers create` | officier | Crée le tableau de timers du canal. Voir [Timers](./timers). |
-| `/timers add` | membre | Ajoute un timer au tableau : type et lieu (suggestions pendant la frappe), puis un formulaire. |
-| `/timers strike` | membre | Barre un timer du tableau. |
-| `/timers cleanup` | officier | Retire les timers barrés du tableau. |
-| `/timers repair` | officier | Republie les messages du tableau depuis les timers enregistrés. |
-| `/timers settings` | officier | Ouvre le panneau privé du tableau de ce canal, sans argument : alertes, rôles, droits et nettoyage. |
-| `/warlog settings` | officier | Choisit un salon textuel classique, une à trois zones et l’activation pour la guerre actuelle. Voir [Journal de guerre](./warlog). |
+| `/stats export` | officier | Exporter exclusivement les statistiques de ce serveur (CSV/JSON, 1–60 jours). |
 | `/stats settings` | officier | Activer explicitement la collecte et exclure des salons ; changer les rôles membres exige un administrateur. |
 | `/stats status` | officier | Afficher les réglages et la rétention. |
-| `/stats export` | officier | Exporter exclusivement les statistiques de ce serveur (CSV/JSON, 1–60 jours). |
+| `/timers cleanup` | officier | Retire les timers barrés du tableau. |
+| `/timers create` | officier | Crée le tableau de timers du canal. Voir [Timers](./timers). |
+| `/timers repair` | officier | Republie les messages du tableau depuis les timers enregistrés. |
+| `/timers settings` | officier | Ouvre le panneau privé du tableau de ce canal, sans argument : alertes, rôles, droits et nettoyage. |
+| `/voice settings` | officier | Gérer les modèles vocaux, la limite par déploiement et les canaux ouverts. Comprend un bouton de retour aux réglages PICKET. |
+| `/warlog settings` | officier | Choisit un salon textuel classique, une à trois zones et l’activation pour la guerre actuelle. Voir [Journal de guerre](./warlog). |
+| `/picket status` | membre | Consulte la configuration, les modules disponibles, les rôles autorisés et ton niveau d’accès. |
 | `/stats link` | membre | Ouvre [le dashboard officiel](https://stats.picket-foxhole.com). |
 | `/stats privacy` | membre | Refuser le suivi ou effacer votre historique vocal. |
+| `/timers add` | membre | Ajoute un timer au tableau : type et lieu (suggestions pendant la frappe), puis un formulaire. |
+| `/timers strike` | membre | Barre un timer du tableau. |
+| `/todolist create` | membre | Ouvre un formulaire et publie une todolist dans le canal. Voir [Todolists](./todolists). |
+| `/voice create` | membre | Composer une file privée de modèles et quantités, puis déployer des vocaux éphémères. Voir [Vocaux éphémères](./voice). |
 
 Voir [Statistiques vocales](./stats) pour les accès, la confidentialité et les métriques.
 

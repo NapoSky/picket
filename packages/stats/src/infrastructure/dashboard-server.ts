@@ -382,7 +382,7 @@ export function createDashboardServer(options: DashboardOptions) {
       const report = await options.store.report({ ...selected, kind: 'guild' }, requested, {
         includeUsers: false,
       });
-      return { ...report, users: [], scope: 'overview', accessLevel: selected.accessLevel };
+      return { ...report, collection: await options.store.collectionStatus(selected), users: [], scope: 'overview', accessLevel: selected.accessLevel };
     }
     const offset = typeof query.offset === 'string' && /^\d+$/.test(query.offset) ? Number(query.offset) : 0;
     if (offset > 1_000_000) throw Object.assign(new Error('invalid_offset'), { statusCode: 400 });
@@ -391,7 +391,7 @@ export function createDashboardServer(options: DashboardOptions) {
       : await options.store.report(selected, requested, { offset });
     const guildFeatures = selected.accessLevel === 'instance_admin' && selected.guildId !== null
       ? await options.store.guildFeatures(selected.guildId) : undefined;
-    return { ...report, scope: selected.kind, accessLevel: selected.accessLevel, offset,
+    return { ...report, collection: await options.store.collectionStatus(selected), scope: selected.kind, accessLevel: selected.accessLevel, offset,
       ...(guildFeatures ? { guildFeatures } : {}) };
   });
   app.get('/api/export', async (request, reply) => {

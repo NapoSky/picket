@@ -132,7 +132,7 @@ export function createStatsDevServer(role: PreviewRole = 'admin', now = new Date
           activeUsers: new Set(items.map((s) => s.userId)).size, sessions: items.length, inVoice: 0,
           daily: dailyFor(items) };
       }),
-      updatedAt: now.toISOString(), interruptedAt: null, interruptedSegments: 0, truncated: false, offset: 0,
+      updatedAt: now.toISOString(), interruptedAt: null, interruptedSegments: 0, collection: { recovering: false, delayed: false }, truncated: false, offset: 0,
       daily: dailyFor(visible),
       channels: channels.map((c) => ({ ...c, seconds: visible.filter((s) => s.channelId === c.id).reduce((sum, s) => sum + s.seconds, 0) })),
       hourly,

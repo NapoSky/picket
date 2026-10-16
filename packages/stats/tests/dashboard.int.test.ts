@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { GuildId, noopLogger } from '@picket/kernel';
 import { PostgresGuildSettingsRepository } from '@picket/guild';
 import { sql } from '@picket/persistence';
+import { PostgresLeaseStore } from '@picket/coordination';
 import { createTestDatabase, queryAsAdmin, type TestDatabase } from '@picket/testing';
 import {
   createDashboardServer,
@@ -139,6 +140,22 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
         ...extra,
       },
     });
+  it('serves live recovery flags alongside the unchanged scheduled Administration snapshot', async () => {
+    team = true;
+    const url = '/api/activity?guild=all';
+    const initial = (await get(url)).json();
+    await store.interrupt(A);
+    const interrupted = (await get(url)).json();
+    expect(interrupted.snapshotAt).toBe(initial.snapshotAt);
+    expect(interrupted.collection.recovering).toBe(true);
+    expect((await get(`/api/activity?guild=${B}`)).json().collection.recovering).toBe(false);
+    expect((await get(`/api/activity?guild=${A}&mode=overview`)).json().collection.recovering).toBe(true);
+    const lease = (await new PostgresLeaseStore(database.handle.db).acquire('dashboard-recovery', 'holder', 60_000))!;
+    await store.checkpoint(A, lease, new Date());
+    const recovered = (await get(url)).json();
+    expect(recovered.snapshotAt).toBe(initial.snapshotAt);
+    expect(recovered.collection.recovering).toBe(false);
+  });
   it('uses opaque Secure cookies, encrypted tokens and one-use OAuth state', async () => {
     const row = (
       await queryAsAdmin(database, 'SELECT encrypted_token,token_hash FROM stats_web_sessions')

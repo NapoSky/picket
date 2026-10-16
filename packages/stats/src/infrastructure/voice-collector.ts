@@ -187,8 +187,8 @@ export class VoiceCollector implements GatewayEventHandler {
         await this.store.interrupt(event.guildId, delivery.lease);
         return;
       case 'guild_available': {
-        this.#unavailable.delete(event.guildId);
         if (!event.voiceSnapshot) return;
+        this.#unavailable.add(event.guildId);
         const old = await this.hydrate(event.guildId);
         this.#channels.set(event.guildId, { ...this.#channels.get(event.guildId), ...event.voiceSnapshot.channels });
         await this.store.rememberChannelNames(event.guildId, event.voiceSnapshot.channels, delivery.lease);
@@ -207,6 +207,7 @@ export class VoiceCollector implements GatewayEventHandler {
           if (!people.has(person.userId))
             await this.observe(event.guildId, { ...person, channelId: null }, delivery, 'snapshot');
         for (const person of people.values()) await this.observe(event.guildId, person, delivery, 'snapshot');
+        this.#unavailable.delete(event.guildId);
         return;
       }
       case 'guild_voice_metadata':
@@ -284,6 +285,9 @@ export class VoiceCollector implements GatewayEventHandler {
         this.#config.delete(event.guildId);
         return;
       case 'ready':
+        // A fresh IDENTIFY must wait for each guild snapshot. RESUMED instead
+        // keeps the hydrated state, updated by the replayed Gateway events.
+        for (const guildId of event.guildIds) this.#unavailable.add(guildId);
         return;
     }
   }

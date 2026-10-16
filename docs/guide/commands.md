@@ -4,23 +4,23 @@ Commands start with `/picket`, `/todolist`, `/timers`, `/warlog`, `/stats` or `/
 
 | Command | Level | What it does |
 | --- | --- | --- |
-| `/picket status` | member | Shows settings, available modules, configured access roles and your access level. |
-| `/voice create` | member | Build a private queue of templates and quantities, then deploy temporary voice channels. See [Temporary voice channels](./voice). |
-| `/voice settings` | officer | Manage voice templates, deployment limits and open channels. Includes a button to return to PICKET settings. |
 | `/picket settings` | officer | Opens the private settings panel with no arguments. Only administrators can edit permissions and manage data. |
-| `/todolist create` | member | Opens a form and posts a todo list in the channel. See [Todo lists](./todolists). |
-| `/timers create` | officer | Creates the timer board of the channel. See [Timers](./timers). |
-| `/timers add` | member | Adds a timer to the board: type and place (suggestions as you type), then a form. |
-| `/timers strike` | member | Strikes a timer off the board. |
-| `/timers cleanup` | officer | Removes the struck timers from the board. |
-| `/timers repair` | officer | Reposts the board messages from the saved timers. |
-| `/timers settings` | officer | Opens this channel’s private board panel with no arguments: alerts, roles, access and cleanup. |
-| `/warlog settings` | officer | Chooses a regular text channel, one to three zones and activation for the current war. See [War log](./warlog). |
+| `/stats export` | officer | Export statistics exclusively for this server (CSV/JSON, 1–60 days). |
 | `/stats settings` | officer | Configure explicit activation and excluded channels; member role changes require an administrator. |
 | `/stats status` | officer | Show collection settings and retention. |
-| `/stats export` | officer | Export statistics exclusively for this server (CSV/JSON, 1–60 days). |
+| `/timers cleanup` | officer | Removes the struck timers from the board. |
+| `/timers create` | officer | Creates the timer board of the channel. See [Timers](./timers). |
+| `/timers repair` | officer | Reposts the board messages from the saved timers. |
+| `/timers settings` | officer | Opens this channel’s private board panel with no arguments: alerts, roles, access and cleanup. |
+| `/voice settings` | officer | Manage voice templates, deployment limits and open channels. Includes a button to return to PICKET settings. |
+| `/warlog settings` | officer | Chooses a regular text channel, one to three zones and activation for the current war. See [War log](./warlog). |
+| `/picket status` | member | Shows settings, available modules, configured access roles and your access level. |
 | `/stats link` | member | Open [the official dashboard](https://stats.picket-foxhole.com). |
 | `/stats privacy` | member | Opt out or erase your voice history. |
+| `/timers add` | member | Adds a timer to the board: type and place (suggestions as you type), then a form. |
+| `/timers strike` | member | Strikes a timer off the board. |
+| `/todolist create` | member | Opens a form and posts a todo list in the channel. See [Todo lists](./todolists). |
+| `/voice create` | member | Build a private queue of templates and quantities, then deploy temporary voice channels. See [Temporary voice channels](./voice). |
 
 See [Voice statistics](./stats) for scope, privacy and metric definitions.
 

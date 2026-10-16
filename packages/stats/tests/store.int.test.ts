@@ -188,6 +188,76 @@ describe('voice facts, RLS, erasure and recovery (PostgreSQL)', () => {
     await store.observe(observation({ key: 'after-optout', at: new Date(Date.now() - 1).toISOString() }));
     expect(await queryAsAdmin(database, 'SELECT * FROM stats_users')).toHaveLength(0);
   });
+  it('reads collection status per active enabled guild, independently of historical interruptions', async () => {
+    const global = { kind: 'global', guildId: null, userId: U } as const;
+    const own = { kind: 'self', guildId: A, userId: U } as const;
+    const lease = (await new PostgresLeaseStore(database.handle.db).acquire('stats-recovery-status', 'holder', 60_000))!;
+    await store.checkpoint(A, lease, now());
+    await store.checkpoint(B, lease, now());
+    await store.observe(observation());
+    await store.interrupt(A);
+    expect(await store.collectionStatus(global)).toEqual({ recovering: true, delayed: false });
+    expect(await store.collectionStatus({ ...own, guildId: B })).toEqual({ recovering: false, delayed: false });
+    await store.checkpoint(A, lease, now());
+    expect(await store.collectionStatus(global)).toEqual({ recovering: false, delayed: false });
+    expect((await store.report(own, { from: new Date(Date.now() - 7200_000), to: now() })).interruptedSegments).toBe(1);
+    await queryAsAdmin(database,"UPDATE stats_settings SET observed_through=now()-interval '181 seconds' WHERE guild_id=$1",[B]);
+    expect(await store.collectionStatus(global)).toEqual({ recovering: false, delayed: true });
+    expect(await store.collectionStatus(own)).toEqual({ recovering: false, delayed: false });
+    await store.interrupt(B);
+    await store.configure(B, U, { enabled: false });
+    expect(await store.collectionStatus(global)).toEqual({ recovering: false, delayed: false });
+    await store.configure(B, U, { enabled: true });
+    await queryAsAdmin(database,"UPDATE guild_registry SET inactive_since=now(),inactive_reason='left' WHERE guild_id=$1",[B]);
+    expect(await store.collectionStatus(global)).toEqual({ recovering: false, delayed: false });
+    // The definer function must not expose another tenant or global state without scope.
+    await expect(sql`SELECT * FROM picket_stats_collection_status(NULL,now())`.execute(database.handle.db)).rejects.toThrow(/scope denied/);
+    await expect(withStatsScope(database.handle.db, own, trx =>
+      sql`SELECT * FROM picket_stats_collection_status(${B},now())`.execute(trx))).rejects.toThrow(/scope denied/);
+    await new PostgresLeaseStore(database.handle.db).release(lease);
+    await expect(store.checkpoint(A, lease, now())).rejects.toThrow(/lease lost/);
+  });
+  it('confirms an empty guild only after its fresh snapshot, backlog replay and a successful checkpoint', async () => {
+    let instant = new Date(Date.now() - 120_000);
+    const clock = () => instant;
+    const clocked = new PostgresStatsStore(database.handle.db, clock);
+    const lease = (await new PostgresLeaseStore(database.handle.db).acquire('stats-empty-recovery', 'holder', 60_000))!;
+    const replay = jest.fn(async () => 0);
+    const buffer: DurableVoiceBuffer = { append: async () => undefined, replay, erase: async () => undefined,
+      status: async () => ({ bytes: 0, count: 0, oldest: null }) };
+    const collector = new VoiceCollector(clocked, buffer, noopLogger, clock);
+    const scope = { kind: 'guild', guildId: A, userId: U } as const;
+    await collector.connectionChanged(0, false, lease);
+    await collector.handle({ type: 'ready', shardId: 0, shardCount: 1, guildIds: [GuildId.assert(A), GuildId.assert(B)] },
+      { key: 'fresh-ready', shardId: 0, at: clock(), replayed: false, lease });
+    await collector.connectionChanged(0, true, lease);
+    await collector.tick();
+    expect((await clocked.collectionStatus(scope)).recovering).toBe(true);
+    await collector.handle({ type: 'guild_available', guildId: GuildId.assert(A),
+      voiceSnapshot: { name: 'Empty guild', afkChannelId: null, people: [], channels: {} } },
+      { key: 'empty-snapshot', shardId: 0, at: clock(), replayed: false, lease });
+    replay.mockResolvedValueOnce(100);
+    await collector.tick();
+    expect((await clocked.collectionStatus(scope)).recovering).toBe(true);
+    replay.mockRejectedValueOnce(new Error('disk replay unavailable'));
+    await collector.tick();
+    expect((await clocked.collectionStatus(scope)).recovering).toBe(true);
+    instant = new Date(instant.getTime() + 31_000);
+    const checkpoint = jest.spyOn(clocked, 'checkpoint').mockRejectedValueOnce(new Error('SQL unavailable'));
+    await expect(collector.tick()).rejects.toThrow('SQL unavailable');
+    expect((await clocked.collectionStatus(scope)).recovering).toBe(true);
+    await collector.tick();
+    expect(checkpoint).toHaveBeenCalledWith(A, lease, instant);
+    expect(await clocked.collectionStatus(scope)).toEqual({ recovering: false, delayed: false });
+    expect((await clocked.collectionStatus({ ...scope, guildId: B })).recovering).toBe(true);
+    expect(await clocked.openUserIds(A)).toEqual(new Set());
+    // A resumed process can hydrate an empty guild without a new voice event.
+    const resumed = new VoiceCollector(clocked, buffer, noopLogger, clock);
+    await resumed.connectionChanged(0, false, lease);
+    await resumed.connectionChanged(0, true, lease);
+    await resumed.tick();
+    expect(await clocked.collectionStatus(scope)).toEqual({ recovering: false, delayed: false });
+  });
   it('rejects a writer after its shard lease was replaced', async () => {
     const leases = new PostgresLeaseStore(database.handle.db);
     const old = (await leases.acquire('gateway:shard:0', 'old', 1000))!;

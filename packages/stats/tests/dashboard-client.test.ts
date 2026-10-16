@@ -63,6 +63,7 @@ async function client(language = 'en', administrator = false) {
   const requests: string[] = [];
   const intervals = new Map<number, () => unknown>();
   let failure: Failure | null = null;
+  const activityPatch: Record<string, unknown> = {};
   const features = new Map([A, B].map(id => [id, [
     { feature: 'timers', enabled: id === A }, { feature: 'todolists', enabled: true },
     { feature: 'warlog', enabled: id === B }, { feature: 'stats', enabled: false },
@@ -94,7 +95,8 @@ async function client(language = 'en', administrator = false) {
           ...(administrator && query.get('mode') !== 'overview' && features.has(query.get('guild')!)
             ? { guildFeatures: features.get(query.get('guild')!) } : {}),
           accessLevel: administrator ? 'instance_admin' : query.get('guild') === A ? 'officer' : 'member', seconds: 7200, activeUsers: 2, sessions: 3, inVoice: 1,
-          daily: [], hourly: [], channels: [], users: [], timezone: 'UTC', peakConcurrency: 2, updatedAt: new Date(instant).toISOString() });
+          daily: [], hourly: [], channels: [], users: [], timezone: 'UTC', peakConcurrency: 2, updatedAt: new Date(instant).toISOString(),
+          collection: { recovering: false, delayed: false }, ...activityPatch });
       }
       if (path.startsWith('/api/privacy')) return response({ optedOut: false });
       throw new Error(`Unexpected request: ${path}`);
@@ -114,8 +116,27 @@ async function client(language = 'en', administrator = false) {
     intervals.get(60000)!(); intervals.get(1000)!();
     await settle();
   };
-  return { get, requests, count, change, refresh, click, advance, features, fail: (value: Failure | null) => { failure = value; } };
+  return { get, requests, count, change, refresh, click, advance, features, activityPatch, fail: (value: Failure | null) => { failure = value; } };
 }
+
+it('clears the live collection warning after recovery while retaining historical interruptions and snapshot time', async () => {
+  const c = await client('en', true);
+  await c.click('nav:admin');
+  Object.assign(c.activityPatch, { snapshotAt: '2026-10-14T12:00:00Z', updatedAt: '2026-10-14T12:00:00Z',
+    interruptedSegments: 7, collection: { recovering: true, delayed: true } });
+  await c.refresh();
+  expect(c.get('notice').textContent).toContain('interrupted or recovering');
+  await c.change('language', 'fr');
+  expect(c.get('notice').textContent).toContain('interrompue ou en cours de reprise');
+  c.activityPatch.collection = { recovering: false, delayed: false };
+  await c.advance(60000);
+  expect(c.get('notice').hidden).toBe(true);
+  c.activityPatch.collection = { recovering: false, delayed: true };
+  await c.refresh();
+  expect(c.get('notice').textContent).toContain('confirmée récemment');
+  await c.change('language', 'en');
+  expect(c.get('notice').textContent).toContain('not been confirmed recently');
+});
 
 it('shows current server feature states only in Administration and refreshes and translates them', async () => {
   const c = await client('en', true);

@@ -67,6 +67,10 @@ export interface InstanceOverview {
   readonly features: readonly { feature: Feature; enabledGuilds: number }[];
   readonly updatedAt: string;
 }
+export interface CollectionStatus {
+  readonly recovering: boolean;
+  readonly delayed: boolean;
+}
 
 export async function withStatsScope<T>(
   db: Db,
@@ -435,7 +439,7 @@ export class PostgresStatsStore {
       await sql`UPDATE stats_voice_segments SET ended_at=confirmed_through,end_reason='recovery',quality='interrupted' WHERE guild_id=${guildId} AND ended_at IS NULL`.execute(
         trx,
       );
-      await sql`UPDATE stats_settings SET interrupted_at=${this.now()} WHERE guild_id=${guildId} AND observed_through IS NOT NULL`.execute(
+      await sql`UPDATE stats_settings SET interrupted_at=${this.now()} WHERE guild_id=${guildId}`.execute(
         trx,
       );
     });
@@ -443,21 +447,25 @@ export class PostgresStatsStore {
 
   async checkpoint(guildId: string, lease: Lease, at: Date): Promise<void> {
     await withTenant(this.db, GuildId.assert(guildId), async (trx) => {
-      if (
-        !(
-          await sql`SELECT name FROM leases WHERE name=${lease.name} AND holder=${lease.holder} AND token=${lease.token.toString()}::bigint AND expires_at>clock_timestamp() FOR SHARE`.execute(
-            trx,
-          )
-        ).rows.length
-      )
-        return;
+      await fence(trx, lease);
+      // Serialize the successful cycle with interruptions and settings changes.
+      await sql`SELECT guild_id FROM guild_settings WHERE guild_id=${guildId} FOR UPDATE`.execute(trx);
       await sql`UPDATE stats_voice_segments SET confirmed_through=GREATEST(confirmed_through,${at}) WHERE guild_id=${guildId} AND ended_at IS NULL`.execute(
         trx,
       );
       await sql`UPDATE stats_users SET last_seen_at=${at} WHERE guild_id=${guildId} AND user_id IN (SELECT user_id FROM stats_voice_segments WHERE guild_id=${guildId} AND ended_at IS NULL)`.execute(
         trx,
       );
-      await sql`UPDATE stats_settings SET observed_through=${at} WHERE guild_id=${guildId}`.execute(trx);
+      await sql`UPDATE stats_settings SET observed_through=${at},interrupted_at=NULL WHERE guild_id=${guildId}`.execute(trx);
+    });
+  }
+
+  /** Operational state is live, independent of historical filters and admin snapshots. */
+  async collectionStatus(scope: StatsScope): Promise<CollectionStatus> {
+    return withStatsScope(this.db, scope, async trx => {
+      const row = (await sql<CollectionStatus>`SELECT * FROM picket_stats_collection_status(
+        ${scope.guildId},${new Date(this.now().getTime() - 180_000)})`.execute(trx)).rows[0]!;
+      return row;
     });
   }
 

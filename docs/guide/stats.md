@@ -260,7 +260,11 @@ removes your contribution from totals, and deletes pending records too.*
 | Dashboard refresh | Every minute; **Refresh** button available |
 
 Discord or bot interruptions can leave gaps. Already received observations can be recovered, but an unknown duration
-is not reconstructed. There is no complete member directory or ranking that proves a member's inactivity.
+is not reconstructed. The collection warning clears after pending observations have been replayed, presences reconciled
+and a new collection checkpoint saved. Past interruptions remain in presence details. This live status is independent
+of the selected period and the scheduled Administration snapshot; paused collection and departed servers are excluded.
+A separate warning appears when collection has not been confirmed for more than three minutes. The dashboard refreshes
+each minute. There is no complete member directory or ranking that proves a member's inactivity.
 
 ## If something goes wrong
 
