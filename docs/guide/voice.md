@@ -1,54 +1,175 @@
 # Temporary voice channels
 
-PICKET 1.1 lets members build a private queue of officer-defined templates and deploy one or several voice channels with `/picket voice`. No dedicated request channel is needed. The module is enabled by default; an officer must first create a template.
+A briefing, two combat squads and a logistics team: create the voice channels your group needs, then let PICKET
+remove them once they stay empty. An occupied channel remains available even after the person who requested it leaves.
 
-## Configure templates
+An officer prepares **templates** with a destination category, channel name, capacity and cleanup delay. Members then
+use **`/picket voice`** to choose templates and quantities, build a private queue and deploy everything together.
+The module is **enabled by default**; no dedicated request channel is needed.
 
-Open `/picket settings` → **Temporary voice channels** → **Configure**. Officers can add, edit, duplicate or remove templates, up to **10 per server**. Each template has:
+## Who can do what?
 
-- A template name shown to members.
-- A Discord destination category.
-- A voice channel name; PICKET appends a number automatically.
-- A capacity of **1–99 people**, default **99**. Unlimited capacity is not supported.
-- A continuously empty interval of **1, 5, 10, 15, 20 or 30 minutes**, default **15**.
+The levels below are the **PICKET** access levels configured for your server, not your in-game ranks.
 
-The modal uses native category and delay selectors. A removed or modified template does not change existing channels. Removing a template asks for confirmation.
+| Access | What you can do |
+| --- | --- |
+| **Member** | Prepare a queue and deploy one or several voice channels from the available templates. |
+| **Officer** | Everything a member can do, plus manage templates, set the deployment limit, inspect open channels and request their removal when empty. Enable or disable the module in `/picket settings`. |
+| **Discord administrator** | Everything an officer can do, plus manage access roles and export or delete server data. |
 
-The deployment limit defaults to **6 channels total**, adjustable by officers from 1 to **10**. The server may have at most **15 open or reserved channels**, including requests in progress or awaiting verification. Concurrent requests share that quota.
+By default, every server member can request channels and administrators can configure templates. An administrator
+can delegate configuration to an officer role in `/picket settings` → **Permissions**.
+See the [permissions guide](./permissions) for details.
 
-## Prepare and deploy
+## Your first voice channels
 
-1. Run `/picket voice`. The private queue starts empty.
-2. Select a template. Its category, capacity and cleanup interval appear.
-3. Choose a quantity, then **Add**. The selection resets for the next entry.
-4. Repeat for other templates. Adding the same template increases its quantity.
-5. Use the queue selector to edit an entry; a quantity of 0 removes that queue entry. This does not allow voice capacity 0.
-6. Choose **Deploy N channels** once the queue is ready.
+Suppose your group needs two combat channels and one logistics channel for an operation.
 
-Search filters the template selector. Only destinations the member can view and join are offered. **Clear queue** resets the selection; **Cancel** abandons preparation. Draft controls expire after 15 minutes of inactivity. Each draft is bound to its server and owner; stale controls cannot replay a deployment.
+1. **An officer prepares the templates**: open `/picket settings` → **Temporary voice channels** → **Configure**,
+   then **Add**. Create a `Combat` template, choose the `Operations` category, enter `Combat` as the channel name,
+   set capacity to `10` people and the delay to `15 min`. Create a `Logistics` template in the same way.
+2. **A member runs `/picket voice`** from any server channel. The panel is private and its queue starts empty.
+3. **Choose `Combat`, then quantity `2`** and click **Add × 2**. Two channels enter the queue; nothing is created yet.
+4. **Choose `Logistics`, then quantity `1`** and click **Add × 1**. The queue now contains three channels across
+   the two templates.
+5. Click **Deploy 3 channels**. Deployment status appears; **Refresh** shows results and links to created channels.
+   Channel names receive a number automatically.
 
-Deployment is queued durably. **Refresh** shows each channel as queued, creating, open, not created or awaiting verification, with links to created channels. **New deployment** starts another empty queue. A changed template or lost destination access blocks confirmation; rebuild affected entries.
+The bot needs **View Channel** and **Manage Channels** in the chosen categories and the channels it creates.
+Channels inherit category permissions. On an existing installation, an administrator must grant **Manage Channels**
+to the bot role if needed; changing application installation permissions does not update existing roles.
 
-## Cleanup and recovery
+This feature does not require **Connect**, **Speak**, **Move Members**, **View Audit Log** or **Administrator**.
+PICKET does not join the call or receive its audio.
 
-An unused new channel starts its timer at creation. Any occupant, including a bot, cancels the timer. The last departure starts a full new interval. The creator leaving does not remove a channel occupied by others.
+## Prepare channels for your group
 
-Officers can inspect **Open channels** and request **Delete if empty**. Disabling the module blocks new deployments and cancels queued creations while existing channels keep their cleanup lifecycle.
+### Build the queue
 
-Tracking and confirmed deployment requests are stored in PostgreSQL. After a restart, PICKET checks recorded channels and rebuilds reliable occupancy before cleanup. A confirmed missing channel releases its quota slot. Permission errors and Discord outages suspend cleanup. When continuity cannot be established, an empty channel receives a full new interval; outages may therefore extend its lifetime.
+The panel shows available templates, the quantity to add and your current queue. Channels are created only after
+you click **Deploy**: prepare a single entry or combine several templates.
 
-A creation may succeed at Discord just before PICKET loses both the response and the opportunity to persist its identifier. That operation is marked **awaiting verification** and is not automatically repeated. PICKET does not identify channels by name alone. An officer may need to resolve this exceptional case. There is no audit-log access.
+![Private voice preparation panel in English: Logistics selected, quantity 1, a queue containing two Combat and one Logistics channels, and a button to deploy all three.](/images/voice-queue-example.png)
 
-Discord offers no atomic “delete only if empty” API: PICKET rechecks its reliable occupancy immediately before deletion, but an exactly simultaneous join remains a platform race.
+*Illustration using the bot's English text and fictitious templates. The queue contains three channels; they have
+not been created yet. Layout may vary with your Discord client.*
 
-## Permissions and privacy
+| You want to… | Do this |
+| --- | --- |
+| Request one channel | Choose a template, keep quantity 1, add it to the queue and deploy. |
+| Combine several templates | Choose each template and quantity, then add them before deploying. |
+| Increase an existing entry | Add the same template again: its quantity increases. |
+| Change or remove an entry | Select it under **Choose an entry to change or remove**, then enter the new quantity. `0` removes that entry. |
+| Find a template | Use **Search templates** to filter the names offered. |
+| Start preparation again | Choose **Clear queue**. **Cancel** abandons preparation without creating channels. |
 
-PICKET needs **Manage Channels** and **View Channel** on the destinations. Existing server administrators must grant Manage Channels to the bot role; changing installation defaults does not update existing roles. Channels inherit category permissions. If effective permissions prevent managing a voice channel, its destination is unavailable.
+Only destinations you can view and join are offered. The panel belongs to the person who opens it and expires
+after **15 minutes of inactivity**. Run `/picket voice` again to start over. An old button cannot repeat a confirmed
+deployment.
 
-This feature requests no **Connect**, **Speak**, **Move Members**, **View Audit Log**, **Administrator**, or new Gateway intents. It uses the existing `Guilds` and `GuildVoiceStates` event stream independently of the optional Stats module. PICKET never joins the voice call or receives its audio.
+### Find your created channels
 
-Operational presence contains identifiers needed to recognize arrivals and departures, with no additional member movement history. Drafts expire after 15 minutes; completed operational channel records are eligible for cleanup after 24 hours. Uncertain creations retain their quota reservation until resolved. All feature data follows the server deletion lifecycle.
+After confirmation, **Refresh** shows each channel as queued, creating, open, not created or creation to verify with
+an officer. Created channels include a link to join them. **New deployment** starts another empty queue.
 
-The server data export includes **only the names of current templates** for this feature. Template options, drafts, deployments, presence, verification timestamps and cleanup state are excluded. It is an informational export, not a template backup.
+If an officer changes a template while you are preparing your queue, or your access changes, PICKET blocks
+confirmation: refresh the panel and rebuild the affected entries.
 
-An officer can select an uncertain creation in **Open channels**, then use **Close tracking** after checking Discord. Confirmation releases the reservation and does not delete any Discord channel.
+### Let channels clean themselves up
+
+A new channel that nobody joins starts its cleanup delay at creation. Any occupant, including a bot, cancels the
+countdown. The last departure starts **a full new delay**. With a 15-minute setting, joining after 10 empty minutes
+therefore cancels those 10 elapsed minutes.
+
+The creator leaving does not remove a channel occupied by others. After a bot interruption, an empty channel gets
+a full new delay if tracking continuity cannot be established: cleanup may then take longer.
+
+## Adapt channels to your organisation
+
+An officer opens `/picket settings` → **Temporary voice channels** → **Configure**. This private panel brings
+together templates, the limit per request and tracked channels.
+
+| Screen or action | What you can configure |
+| --- | --- |
+| **Home** | Check templates, the deployment limit and open or reserved channel count. Select a template to see its options. |
+| **Add / Edit / Duplicate** | Fill in a form: template name, destination category, channel name, capacity and cleanup delay. Category and delay use selectors. |
+| **Remove** | Remove the template after confirmation. Existing channels keep their settings and cleanup schedule. |
+| **Deployment limit (1–10)** | Choose how many channels a person can deploy in one request. |
+| **Open channels** | Check tracked channels and their occupants. Select a channel, then **Delete if empty** to request early removal. |
+
+Template changes apply to future creations; they do not change channels already open. Early removal is refused
+while a channel has any occupants.
+
+::: details Available settings and defaults
+
+| Setting | Choices | Default |
+| --- | --- | --- |
+| Template name | Unique within the server, up to 80 characters. | Required |
+| Destination category | An accessible Discord category. | Choose one |
+| Channel name | Up to 90 characters; PICKET appends a number. | Required |
+| Capacity | From 1 to 99 people. `0` and unlimited capacity are refused. | 99 |
+| Continuously empty delay before removal | 1, 5, 10, 15, 20 or 30 minutes. | 15 min |
+| Channels per deployment, across all templates | From 1 to 10. | 6 |
+
+:::
+
+To stop new requests, use `/picket settings`. Queued creations are cancelled; **existing channels keep their
+automatic cleanup**. Templates remain saved for a later reactivation.
+
+## Limits
+
+| Limit | Value |
+| --- | --- |
+| Templates per server, including duplicates | 10 |
+| Channels per deployment, across all templates | 6 by default; adjustable up to 10 |
+| Open or reserved channels on the server | 15, shared by all members' requests |
+| Capacity per channel | From 1 to 99 people |
+| Cleanup delay | At most 30 minutes after the last departure, except when tracking is interrupted |
+| Private preparation lifetime | 15 minutes of inactivity |
+
+**Two Combat channels and one Logistics channel count as three**, both in the request and in the server limit.
+Queued, creating and uncertain channels also reserve a slot. Concurrent requests share this limit; a request that
+exceeds the remaining slots is refused before creation is queued.
+
+## If something goes wrong
+
+| Situation | What to do |
+| --- | --- |
+| No templates are offered | Ask an officer to create a template, then check that you can view and join its destination and that the bot can manage it. |
+| A command or button is refused | Check your PICKET roles, whether the module is enabled and destination permissions in Discord. |
+| Preparation expired or changed | Run `/picket voice` again, or reopen settings. If a template changed, rebuild the affected entries. |
+| The server reached its limit | Wait for empty channels to clean up, or ask an officer to inspect **Open channels**. Reserved creations count too. |
+| An empty channel is still present | Check that its delay elapsed and no bot is connected. Outages or lost permissions suspend cleanup; recovery may grant a full new delay. |
+| A channel was deleted manually | PICKET releases its slot after confirming its absence. No database intervention is needed. |
+| A creation needs verification | An officer checks channels in Discord, then can select the entry in **Open channels** and **Close tracking** after confirmation. This releases the reservation without deleting a Discord channel. |
+
+::: details How PICKET recovers after a restart
+
+Confirmed requests and channel tracking are persistent. After restarting, PICKET checks known channels and rebuilds
+occupancy before cleanup. A permission error is not treated as an absent channel.
+
+A creation may succeed at Discord just before PICKET loses its response and cannot save the channel identifier.
+It is then marked **to verify**, without an automatic retry that could create a duplicate. PICKET does not identify
+a channel by name alone and does not access Discord's audit log.
+
+Discord offers no atomic “delete only if empty” API. PICKET rechecks occupancy immediately before deletion; an
+exactly simultaneous join remains a possible platform race.
+
+:::
+
+## What PICKET stores
+
+PICKET stores templates and their settings, private preparations, confirmed requests and the information needed
+for cleanup: channel identifiers, current occupants, deadlines and last verifications. This tracking works
+independently of [voice statistics](./stats), even when statistics collection is disabled. It adds no movement
+history and contains no audio.
+
+Preparations expire after **15 minutes of inactivity**. Completed operational records become eligible for cleanup
+after **24 hours**; uncertain creations keep their reservation until resolved. Templates remain saved until removed
+or until server data is deleted.
+
+An administrator can export server data or request its deletion in `/picket settings` → **Data**. For this feature,
+the export includes **only current template names**. Template options, preparations, deployments, presence and
+verification timestamps are excluded: the export explains which templates are saved and cannot restore them.
+All module data follows the server deletion lifecycle.
+See the [Privacy Policy](../legal/privacy) for the general retention framework.

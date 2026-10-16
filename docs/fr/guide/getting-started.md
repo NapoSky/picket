@@ -19,6 +19,13 @@ données restent réservées aux administrateurs. Utilisez `/picket status` pour
 Consultez [Permissions](./permissions) pour les détails.
 
 
+## Demander des vocaux éphémères
+
+Un officier prépare les modèles dans `/picket settings` → **Vocaux éphémères** → **Configurer**.
+Les membres lancent ensuite `/picket voice`, choisissent leurs modèles et quantités, puis déploient leur file ensemble.
+Les canaux vides se nettoient après le délai configuré. Voir [Vocaux éphémères](./voice) pour un premier déploiement,
+les réglages et les permissions.
+
 ## Ouvrir le dashboard de statistiques
 
 Rendez-vous sur **[stats.picket-foxhole.com](https://stats.picket-foxhole.com)** et connectez-vous avec Discord, ou

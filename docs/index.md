@@ -41,6 +41,9 @@ landing:
       - name: Voice statistics
         text: Explore voice presence across 60 days, with personal and officer views in the Discord-authenticated dashboard.
         link: /guide/stats
+      - name: Temporary voice channels
+        text: Choose officer-defined templates and quantities, deploy your voice channels together, and let empty channels clean themselves up.
+        link: /guide/voice
   steps:
     title: Up and running in three steps
     items:
@@ -67,7 +70,7 @@ landing:
     text: Learn how to use PICKET, run your own instance, or read the terms that apply.
     cards:
       - title: User guide
-        text: Commands, timers, todo lists, war log, voice statistics and permissions.
+        text: Commands, timers, todo lists, war log, voice statistics, temporary voice channels and permissions.
         link: /guide/getting-started
       - title: Self-hosting
         text: Install and configure your own instance.

@@ -41,6 +41,9 @@ landing:
       - name: Statistiques vocales
         text: Consultez les présences sur 60 jours, avec vues personnelles et officiers dans le dashboard connecté à Discord.
         link: /fr/guide/stats
+      - name: Vocaux éphémères
+        text: Choisissez les modèles et quantités préparés par vos officiers, déployez vos vocaux ensemble et laissez les canaux vides se nettoyer.
+        link: /fr/guide/voice
   steps:
     title: Opérationnel en trois étapes
     items:
@@ -67,7 +70,7 @@ landing:
     text: Apprenez à utiliser PICKET, hébergez votre propre instance ou consultez les conditions qui s'appliquent.
     cards:
       - title: Guide d'utilisation
-        text: Commandes, timers, todolists, war-log, statistiques vocales et permissions.
+        text: Commandes, timers, todolists, war-log, statistiques vocales, vocaux éphémères et permissions.
         link: /fr/guide/getting-started
       - title: Auto-hébergement
         text: Installer et configurer votre propre instance.

@@ -74,7 +74,7 @@ ci-dessus ne donne pas accès aux données des autres instances. Les réglages t
 ### Voir le déploiement de PICKET
 
 Ouvrez **Vue d’ensemble** → **PICKET** pour consulter le nombre de Discords actuellement actifs sur
-cette instance et ceux où **Timers**, **TodoLists**, **Warlog** ou les **Statistiques vocales** sont activés. Les cartes
+cette instance et ceux où **Timers**, **TodoLists**, **Warlog**, les **Statistiques vocales** ou les **Vocaux éphémères** sont activés. Les cartes
 et les barres d'adoption montrent les effectifs et leur proportion parmi les serveurs actifs. Cette vue est accessible
 à toute personne connectée et s'actualise chaque minute ; **Actualiser** permet de la rafraîchir immédiatement.
 

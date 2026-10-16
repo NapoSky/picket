@@ -73,7 +73,7 @@ does not provide access to other instances' data. Technical setup is covered in 
 ### Seeing PICKET's deployment
 
 Open **Overview** → **PICKET** to see how many Discord servers are currently active on this instance,
-and how many have **Timers**, **TodoLists**, **Warlog** or **Voice stats** enabled. Feature cards and adoption bars
+and how many have **Timers**, **TodoLists**, **Warlog**, **Voice stats** or **Temporary voice channels** enabled. Feature cards and adoption bars
 show counts and percentages of active servers. This shared overview is available to every signed-in user and refreshes
 each minute; **Refresh** updates it immediately.
 
