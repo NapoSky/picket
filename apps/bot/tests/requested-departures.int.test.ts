@@ -90,9 +90,10 @@ describe('administrator removal and data deletion (PostgreSQL)', () => {
 
   it('works without a configured support channel and dispatches only once across replicas', async () => {
     const run = buildRequestedDepartures(database.handle.db, { ...options(), supportGuildEventsChannelId: null });
+    const otherReplica = buildRequestedDepartures(database.handle.db, { ...options(), supportGuildEventsChannelId: null });
     await lifecycle().markInactive(guildId, actor, 'guild.deletion_requested', now, 'requested');
     await acknowledge();
-    await Promise.all([run.execute(guildId), executor().execute(guildId), run.recover()]);
+    await Promise.all([run.execute(guildId), otherReplica.execute(guildId), run.recover()]);
     expect(leave).toHaveBeenCalledTimes(1);
     expect((await state())!.status).toBe('left');
     expect(await queryAsAdmin(database, 'SELECT id FROM support_guild_deliveries')).toEqual([]);
