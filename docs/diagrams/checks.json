@@ -30,6 +30,36 @@
     }
   },
   {
+    "input": "docs/diagrams/guild-data-export.fr.json",
+    "output": "docs/public/diagrams/fr/guild-data-export.html",
+    "generatorVersion": "3.1.0",
+    "type": "dataflow",
+    "revision": "bd8682e7c23fea05bcf73c9ddd7f9234d88f574c",
+    "specificationSha256": "e972e3909f4f54a1387e182a583be22d4a4f6cb3aa595c9417e1bf04a1099d5f",
+    "artifactSha256": "88e65b8b0ca24a3306c46fcbb4c858d2d3891a3d82081d179ee54305afaa2cf7",
+    "gates": {
+      "validate": "pass",
+      "deliver": "pass",
+      "check": "pass",
+      "browser-check": "pass"
+    }
+  },
+  {
+    "input": "docs/diagrams/guild-data-retention.fr.json",
+    "output": "docs/public/diagrams/fr/guild-data-retention.html",
+    "generatorVersion": "3.1.0",
+    "type": "workflow",
+    "revision": "bd8682e7c23fea05bcf73c9ddd7f9234d88f574c",
+    "specificationSha256": "ae04a97a30026dde65f69d6f103f61795bb92446cbc56a1d9c761a63c55867de",
+    "artifactSha256": "f12f7e36346b2ea09696f22733fb93b601bf77bed36130f28f2497fa36a7eec8",
+    "gates": {
+      "validate": "pass",
+      "deliver": "pass",
+      "check": "pass",
+      "browser-check": "pass"
+    }
+  },
+  {
     "input": "docs/diagrams/self-hosted.en.json",
     "output": "docs/public/diagrams/en/self-hosted.html",
     "generatorVersion": "3.1.0",
@@ -52,6 +82,36 @@
     "revision": "155e6e94b1786ea5dae79f23055e207e423a3012",
     "specificationSha256": "2ad109d138d1e81afe0e7e6e1a77d5ee21bff3fc13ff4ff6d4f10c81f21c4503",
     "artifactSha256": "e662187d3c9d5b3452b13d1ce96adf2e8153a7c733ae40b9dc13e85930a9fbb1",
+    "gates": {
+      "validate": "pass",
+      "deliver": "pass",
+      "check": "pass",
+      "browser-check": "pass"
+    }
+  },
+  {
+    "input": "docs/diagrams/guild-data-export.en.json",
+    "output": "docs/public/diagrams/en/guild-data-export.html",
+    "generatorVersion": "3.1.0",
+    "type": "dataflow",
+    "revision": "bd8682e7c23fea05bcf73c9ddd7f9234d88f574c",
+    "specificationSha256": "64add7bd19a1a07766484f821e4fb5f06b59291cc716f4f8e206d5a08b311493",
+    "artifactSha256": "400c85128026d40e3b5d192d6b29bce1e131f8d04926bf142a28309739940b9a",
+    "gates": {
+      "validate": "pass",
+      "deliver": "pass",
+      "check": "pass",
+      "browser-check": "pass"
+    }
+  },
+  {
+    "input": "docs/diagrams/guild-data-retention.en.json",
+    "output": "docs/public/diagrams/en/guild-data-retention.html",
+    "generatorVersion": "3.1.0",
+    "type": "workflow",
+    "revision": "bd8682e7c23fea05bcf73c9ddd7f9234d88f574c",
+    "specificationSha256": "b9acf8efa3788b7c201fdbf6e02aed0578bd475f25f921a3d64fd0898b1499c1",
+    "artifactSha256": "b90ddc6dfe06403a4d052f10e9f8523dcbcce4df5133f1f9705cddbda24d8847",
     "gates": {
       "validate": "pass",
       "deliver": "pass",

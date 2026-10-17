@@ -1,0 +1,522 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Your server · What retains or erases data",
+    "output": "docs/public/diagrams/en/guild-data-retention.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "translations": {
+      "viewer.kind.frontend": "User request",
+      "legend.workflow.frontend": "User request",
+      "viewer.kind.backend": "PICKET processing",
+      "legend.workflow.backend": "PICKET processing",
+      "viewer.kind.database": "Data state",
+      "legend.workflow.database": "Data state",
+      "viewer.kind.external": "Event",
+      "legend.workflow.external": "Event",
+      "viewer.kind.security": "Privacy",
+      "legend.workflow.security": "Privacy"
+    },
+    "repository": {
+      "url": "git@github.com:NapoSky/picket.git",
+      "revision": "bd8682e7c23fea05bcf73c9ddd7f9234d88f574c",
+      "link_mode": "local-only"
+    }
+  },
+  "lanes": [
+    {
+      "id": "automatic",
+      "label": "Age and end of use"
+    },
+    {
+      "id": "refusal",
+      "label": "A member opts out of tracking"
+    },
+    {
+      "id": "erasure",
+      "label": "A member erases their activity"
+    },
+    {
+      "id": "removed",
+      "label": "The bot is removed from the server"
+    },
+    {
+      "id": "requested",
+      "label": "An administrator requests deletion"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "expiry",
+      "lane": "automatic",
+      "col": 0,
+      "type": "external",
+      "label": "Data reaches its deadline",
+      "sublabel": "Age or end of use",
+      "sources": [
+        {
+          "path": "apps/bot/src/composition.ts",
+          "line": 387,
+          "end_line": 400
+        },
+        {
+          "path": "packages/stats/src/infrastructure/postgres-stats-store.ts",
+          "line": 567,
+          "end_line": 587
+        },
+        {
+          "path": "packages/persistence/migrations/020_ephemeral_voice.sql",
+          "line": 92,
+          "end_line": 114
+        }
+      ]
+    },
+    {
+      "id": "cleanup",
+      "lane": "automatic",
+      "col": 1,
+      "type": "backend",
+      "label": "Targeted cleanup",
+      "sublabel": "By data type and settings",
+      "sources": [
+        {
+          "path": "packages/persistence/migrations/008_journal_retention.sql",
+          "line": 35,
+          "end_line": 48
+        },
+        {
+          "path": "packages/timers/src/application/board-maintenance.ts",
+          "line": 73,
+          "end_line": 90
+        },
+        {
+          "path": "packages/persistence/migrations/020_ephemeral_voice.sql",
+          "line": 92,
+          "end_line": 114
+        }
+      ]
+    },
+    {
+      "id": "useful",
+      "lane": "automatic",
+      "col": 3,
+      "type": "database",
+      "label": "Other data remains",
+      "sublabel": "Settings and preferences included",
+      "sources": [
+        {
+          "path": "packages/persistence/migrations/008_journal_retention.sql",
+          "line": 35,
+          "end_line": 48
+        },
+        {
+          "path": "packages/stats/src/infrastructure/postgres-stats-store.ts",
+          "line": 567,
+          "end_line": 587
+        },
+        {
+          "path": "packages/persistence/migrations/020_ephemeral_voice.sql",
+          "line": 92,
+          "end_line": 114
+        }
+      ]
+    },
+    {
+      "id": "optout",
+      "lane": "refusal",
+      "col": 0,
+      "type": "frontend",
+      "label": "Opt out of voice tracking",
+      "sublabel": "Member’s choice",
+      "sources": [
+        {
+          "path": "packages/stats/src/infrastructure/postgres-stats-store.ts",
+          "line": 485,
+          "end_line": 510
+        }
+      ]
+    },
+    {
+      "id": "stop",
+      "lane": "refusal",
+      "col": 1,
+      "type": "security",
+      "label": "Stop future collection",
+      "sublabel": "Close current presence",
+      "sources": [
+        {
+          "path": "packages/stats/src/infrastructure/postgres-stats-store.ts",
+          "line": 485,
+          "end_line": 510
+        }
+      ]
+    },
+    {
+      "id": "history",
+      "lane": "refusal",
+      "col": 3,
+      "type": "database",
+      "label": "History is retained",
+      "sublabel": "Existing history · usual retention",
+      "sources": [
+        {
+          "path": "packages/stats/src/infrastructure/postgres-stats-store.ts",
+          "line": 493,
+          "end_line": 510
+        },
+        {
+          "path": "packages/stats/src/infrastructure/postgres-stats-store.ts",
+          "line": 567,
+          "end_line": 587
+        }
+      ]
+    },
+    {
+      "id": "erase",
+      "lane": "erasure",
+      "col": 0,
+      "type": "frontend",
+      "label": "Request erasure",
+      "sublabel": "The member’s voice activity",
+      "sources": [
+        {
+          "path": "packages/stats/src/infrastructure/postgres-stats-store.ts",
+          "line": 485,
+          "end_line": 502
+        }
+      ]
+    },
+    {
+      "id": "erase-facts",
+      "lane": "erasure",
+      "col": 1,
+      "type": "security",
+      "label": "Erase activity and name",
+      "sublabel": "Private summaries invalidated",
+      "sources": [
+        {
+          "path": "packages/stats/src/infrastructure/postgres-stats-store.ts",
+          "line": 485,
+          "end_line": 502
+        },
+        {
+          "path": "packages/persistence/migrations/014_stats_admin_snapshot.sql",
+          "line": 80,
+          "end_line": 94
+        }
+      ]
+    },
+    {
+      "id": "privacy",
+      "lane": "erasure",
+      "col": 3,
+      "type": "database",
+      "label": "ID and choices retained",
+      "sublabel": "Prevent erased activity returning",
+      "sources": [
+        {
+          "path": "packages/stats/src/infrastructure/postgres-stats-store.ts",
+          "line": 485,
+          "end_line": 502
+        },
+        {
+          "path": "packages/stats/src/infrastructure/postgres-stats-store.ts",
+          "line": 273,
+          "end_line": 307
+        }
+      ]
+    },
+    {
+      "id": "bot-removed",
+      "lane": "removed",
+      "col": 0,
+      "type": "external",
+      "label": "Remove PICKET",
+      "sublabel": "Removal without a deletion request",
+      "sources": [
+        {
+          "path": "packages/guild/src/application/guild-events-use-cases.ts",
+          "line": 22,
+          "end_line": 35
+        }
+      ]
+    },
+    {
+      "id": "left-wait",
+      "lane": "removed",
+      "col": 1,
+      "type": "database",
+      "label": "Retain before purge",
+      "sublabel": "Inactive server · announced delay",
+      "sources": [
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-lifecycle-repository.ts",
+          "line": 61,
+          "end_line": 86
+        },
+        {
+          "path": "packages/guild/src/application/guild-lifecycle-use-cases.ts",
+          "line": 91,
+          "end_line": 105
+        }
+      ],
+      "tag": "Usual retention still applies"
+    },
+    {
+      "id": "left-back",
+      "lane": "removed",
+      "col": 2,
+      "type": "backend",
+      "label": "Reactivate retained data",
+      "sublabel": "Bot returns before the deadline",
+      "sources": [
+        {
+          "path": "packages/guild/src/application/guild-events-use-cases.ts",
+          "line": 5,
+          "end_line": 19
+        },
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-lifecycle-repository.ts",
+          "line": 89,
+          "end_line": 114
+        }
+      ]
+    },
+    {
+      "id": "left-purge",
+      "lane": "removed",
+      "col": 3,
+      "type": "backend",
+      "label": "Purge server data",
+      "sublabel": "Private summaries invalidated",
+      "sources": [
+        {
+          "path": "packages/guild/src/application/guild-lifecycle-use-cases.ts",
+          "line": 91,
+          "end_line": 105
+        },
+        {
+          "path": "packages/persistence/migrations/003_guild_lifecycle.sql",
+          "line": 15,
+          "end_line": 36
+        },
+        {
+          "path": "packages/persistence/migrations/014_stats_admin_snapshot.sql",
+          "line": 80,
+          "end_line": 94
+        }
+      ]
+    },
+    {
+      "id": "request",
+      "lane": "requested",
+      "col": 0,
+      "type": "frontend",
+      "label": "Confirm deletion",
+      "sublabel": "In PICKET settings",
+      "sources": [
+        {
+          "path": "packages/guild/src/presentation/discord/settings-panel.ts",
+          "line": 306,
+          "end_line": 316
+        },
+        {
+          "path": "packages/guild/src/application/guild-lifecycle-use-cases.ts",
+          "line": 28,
+          "end_line": 50
+        }
+      ]
+    },
+    {
+      "id": "request-wait",
+      "lane": "requested",
+      "col": 1,
+      "type": "database",
+      "label": "Retain before purge",
+      "sublabel": "Returning the bot is insufficient",
+      "sources": [
+        {
+          "path": "packages/guild/src/application/guild-lifecycle-use-cases.ts",
+          "line": 28,
+          "end_line": 55
+        },
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-lifecycle-repository.ts",
+          "line": 61,
+          "end_line": 86
+        }
+      ],
+      "tag": "Returning the bot is insufficient"
+    },
+    {
+      "id": "request-back",
+      "lane": "requested",
+      "col": 2,
+      "type": "backend",
+      "label": "Cancel deletion",
+      "sublabel": "Invite back, then cancel in time",
+      "sources": [
+        {
+          "path": "packages/guild/src/presentation/discord/settings-panel.ts",
+          "line": 318,
+          "end_line": 320
+        },
+        {
+          "path": "packages/guild/src/application/guild-lifecycle-use-cases.ts",
+          "line": 59,
+          "end_line": 69
+        },
+        {
+          "path": "packages/guild/src/application/guild-events-use-cases.ts",
+          "line": 5,
+          "end_line": 19
+        }
+      ]
+    },
+    {
+      "id": "request-purge",
+      "lane": "requested",
+      "col": 3,
+      "type": "backend",
+      "label": "Purge server data",
+      "sublabel": "Private summaries invalidated",
+      "sources": [
+        {
+          "path": "packages/guild/src/application/guild-lifecycle-use-cases.ts",
+          "line": 91,
+          "end_line": 105
+        },
+        {
+          "path": "packages/persistence/migrations/003_guild_lifecycle.sql",
+          "line": 15,
+          "end_line": 36
+        },
+        {
+          "path": "packages/persistence/migrations/014_stats_admin_snapshot.sql",
+          "line": 80,
+          "end_line": 94
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "automatic-cleanup",
+      "from": "expiry",
+      "to": "cleanup",
+      "label": "Deadline reached"
+    },
+    {
+      "id": "automatic-remaining",
+      "from": "cleanup",
+      "to": "useful",
+      "label": "Targeted cleanup"
+    },
+    {
+      "id": "refuse-collection",
+      "from": "optout",
+      "to": "stop",
+      "variant": "security"
+    },
+    {
+      "id": "refuse-history",
+      "from": "stop",
+      "to": "history",
+      "label": "Without erasure"
+    },
+    {
+      "id": "erase-history",
+      "from": "erase",
+      "to": "erase-facts",
+      "variant": "security"
+    },
+    {
+      "id": "erase-preferences",
+      "from": "erase-facts",
+      "to": "privacy",
+      "label": "Protection retained"
+    },
+    {
+      "id": "removal-wait",
+      "from": "bot-removed",
+      "to": "left-wait"
+    },
+    {
+      "id": "return-before-purge",
+      "from": "left-wait",
+      "to": "left-back",
+      "label": "Return before deadline"
+    },
+    {
+      "id": "removed-deadline",
+      "from": "left-wait",
+      "to": "left-purge",
+      "label": "Deadline without return",
+      "role": "branch"
+    },
+    {
+      "id": "request-waiting",
+      "from": "request",
+      "to": "request-wait"
+    },
+    {
+      "id": "cancel-before-purge",
+      "from": "request-wait",
+      "to": "request-back",
+      "label": "Explicit cancellation",
+      "role": "branch"
+    },
+    {
+      "id": "request-deadline",
+      "from": "request-wait",
+      "to": "request-purge",
+      "label": "Deadline without cancellation",
+      "role": "branch"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Different retention rules, one principle",
+      "items": [
+        "Receipts preventing duplicates expire after 7 days; administration, usage and timer-action journals after 30 days.",
+        "Voice activity and observed member/channel names follow a 60-day window. Reports enforce it when read; maintenance deletes old rows and clips periods crossing the cutoff.",
+        "Expired or struck timers are cleaned after the delay selected for the board, unless that cleanup is disabled. Empty inactive boards expire separately.",
+        "Temporary-voice drafts expire; old records for deleted or failed channels are cleaned, along with obsolete presence records.",
+        "Some completed or obsolete war-log notification records are also cleaned. Delays and triggers depend on the family; no single duration applies to the whole database.",
+        "Targeted cleanup leaves other information in place. Settings and preferences do not disappear simply because a log entry or voice period has aged."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Opt-out and erasure are separate choices",
+      "items": [
+        "Opting out stops future observations and closes current presence. It does not delete existing history.",
+        "Erasure removes the member’s events, voice periods, current presence and name. Their Discord ID, tracking choice and a protection date remain to prevent old facts from returning.",
+        "Private summaries become immediately unavailable when erasure invalidates them; their physical copies are cleaned during rebuilding.",
+        "Future collection depends on the member’s tracking choice: erasure alone is not a permanent opt-out."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Bot removal and requested deletion have different return rules",
+      "items": [
+        "Ordinary removal makes the server inactive. Returning the bot before purge reactivates the data that remains.",
+        "Deletion confirmed in settings schedules purge and makes the bot leave. Returning it is insufficient: after inviting it back, an administrator must explicitly cancel deletion.",
+        "The server purge delay defaults to 30 days and depends on instance configuration. Repeated events do not postpone the original deadline.",
+        "Usual retention continues during the waiting period: returning before purge does not restore data that has already expired."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Scope of the erasure shown here",
+      "items": [
+        "Purge removes server-scoped database rows, including settings, preferences, feature data and journals.",
+        "Private summaries are invalidated and then rebuilt; the diagram does not promise immediate physical deletion of all their copies.",
+        "The diagram describes database records. Backups, downloaded files and content stored only in Discord are outside its scope.",
+        "Automatic jobs execute cleanup and retry failures. An outage may delay physical erasure."
+      ]
+    }
+  ]
+}

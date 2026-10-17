@@ -1,0 +1,327 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Your server · Stored and exported data",
+    "output": "docs/public/diagrams/en/guild-data-export.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "translations": {
+      "legend.dataflow.emphasis": "Export contents",
+      "legend.dataflow.default": "Source data",
+      "legend.dataflow.database": "Stored database records",
+      "viewer.kind.database": "Stored database records",
+      "viewer.kind.backend": "Export preparation",
+      "viewer.kind.frontend": "Exported file"
+    },
+    "repository": {
+      "url": "git@github.com:NapoSky/picket.git",
+      "revision": "bd8682e7c23fea05bcf73c9ddd7f9234d88f574c",
+      "link_mode": "local-only"
+    }
+  },
+  "stages": [
+    {
+      "label": "Stored in the database"
+    },
+    {
+      "label": "Selection and summaries"
+    },
+    {
+      "label": "Server export"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "settings",
+      "type": "database",
+      "label": "Settings and access",
+      "sublabel": "Language · roles · tracking",
+      "stage": 0,
+      "row": 0,
+      "sources": [
+        {
+          "path": "packages/persistence/src/schema.ts",
+          "line": 6,
+          "end_line": 53
+        },
+        {
+          "path": "packages/persistence/src/schema.ts",
+          "line": 193,
+          "end_line": 210
+        },
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-data-export-repository.ts",
+          "line": 54,
+          "end_line": 74
+        }
+      ]
+    },
+    {
+      "id": "features",
+      "type": "database",
+      "label": "Timers and war log",
+      "sublabel": "Boards · alerts · subscriptions",
+      "stage": 0,
+      "row": 1,
+      "sources": [
+        {
+          "path": "packages/persistence/src/schema.ts",
+          "line": 72,
+          "end_line": 144
+        },
+        {
+          "path": "packages/persistence/src/schema.ts",
+          "line": 217,
+          "end_line": 237
+        },
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-data-export-repository.ts",
+          "line": 54,
+          "end_line": 74
+        }
+      ]
+    },
+    {
+      "id": "ephemeral",
+      "type": "database",
+      "label": "Temporary voice",
+      "sublabel": "Templates · options · channels",
+      "stage": 0,
+      "row": 2,
+      "sources": [
+        {
+          "path": "packages/persistence/migrations/020_ephemeral_voice.sql",
+          "line": 14,
+          "end_line": 49
+        }
+      ],
+      "tag": "Drafts and presence"
+    },
+    {
+      "id": "activity",
+      "type": "database",
+      "label": "Voice activity",
+      "sublabel": "Members · channels · history",
+      "stage": 0,
+      "row": 3,
+      "sources": [
+        {
+          "path": "packages/persistence/src/schema.ts",
+          "line": 211,
+          "end_line": 215
+        },
+        {
+          "path": "packages/persistence/migrations/014_stats_admin_snapshot.sql",
+          "line": 19,
+          "end_line": 78
+        },
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-data-export-repository.ts",
+          "line": 78,
+          "end_line": 88
+        }
+      ],
+      "tag": "Stored private summaries"
+    },
+    {
+      "id": "journals",
+      "type": "database",
+      "label": "Logs and tracking",
+      "sublabel": "Departure requests excluded",
+      "stage": 0,
+      "row": 4,
+      "sources": [
+        {
+          "path": "packages/persistence/src/schema.ts",
+          "line": 37,
+          "end_line": 70
+        },
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-lifecycle-repository.ts",
+          "line": 79,
+          "end_line": 86
+        },
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-data-export-repository.ts",
+          "line": 44,
+          "end_line": 74
+        }
+      ]
+    },
+    {
+      "id": "names",
+      "type": "backend",
+      "label": "Keep template names",
+      "sublabel": "Options and tracking excluded",
+      "stage": 1,
+      "row": 2,
+      "sources": [
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-data-export-repository.ts",
+          "line": 33,
+          "end_line": 34
+        },
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-data-export-repository.ts",
+          "line": 109,
+          "end_line": 110
+        }
+      ],
+      "tag": "Options and tracking excluded"
+    },
+    {
+      "id": "summary",
+      "type": "backend",
+      "label": "Summarize members",
+      "sublabel": "No details or channels",
+      "stage": 1,
+      "row": 3,
+      "sources": [
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-data-export-repository.ts",
+          "line": 75,
+          "end_line": 88
+        },
+        {
+          "path": "packages/guild/src/infrastructure/postgres-guild-data-export-repository.ts",
+          "line": 111,
+          "end_line": 116
+        }
+      ],
+      "tag": "No details or channels"
+    },
+    {
+      "id": "file",
+      "type": "frontend",
+      "label": "Your JSON file",
+      "sublabel": "Administrator · private",
+      "stage": 2,
+      "row": 2,
+      "sources": [
+        {
+          "path": "packages/guild/src/application/export-guild-data.ts",
+          "line": 20,
+          "end_line": 38
+        },
+        {
+          "path": "packages/guild/src/presentation/discord/settings-panel.ts",
+          "line": 230,
+          "end_line": 238
+        }
+      ],
+      "tag": "Administrator · private"
+    }
+  ],
+  "flows": [
+    {
+      "id": "templates-read",
+      "from": "ephemeral",
+      "to": "names",
+      "label": "Templates"
+    },
+    {
+      "id": "activity-read",
+      "from": "activity",
+      "to": "summary",
+      "label": "Observed activity"
+    },
+    {
+      "id": "settings-export",
+      "from": "settings",
+      "to": "file",
+      "label": "Settings",
+      "variant": "emphasis"
+    },
+    {
+      "id": "features-export",
+      "from": "features",
+      "to": "file",
+      "label": "Timers / war log",
+      "variant": "emphasis"
+    },
+    {
+      "id": "templates-export",
+      "from": "names",
+      "to": "file",
+      "label": "Names",
+      "variant": "emphasis"
+    },
+    {
+      "id": "activity-export",
+      "from": "summary",
+      "to": "file",
+      "label": "Time / members",
+      "variant": "emphasis"
+    },
+    {
+      "id": "journals-export",
+      "from": "journals",
+      "to": "file",
+      "label": "Actions / receipts",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Settings and access: what the data means",
+      "items": [
+        "Discord server ID and name, language, time zone, enabled features and custom emoji settings.",
+        "Discord roles allowed to use bot features and the channel selected for audit messages.",
+        "Stats settings: excluded voice channels, AFK channel, collection status and individual tracking preferences.",
+        "Installation dates, active/inactive server status and bot presence status. Old technical Stats observation timestamps are filtered in the export."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Timers and war log: retained state and processing",
+      "items": [
+        "Timer boards, associated channels and messages, settings, tracked assets, names, locations, owners and deadlines.",
+        "Alerts, acknowledgements, scheduled tasks, timer action history and synchronization status.",
+        "Server war-log subscriptions: faction, regions, destination channel, language, pause status and confirmed war.",
+        "Pending or delivered war-log notifications and board reset processing. Currently retained rows are copied into the file."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Temporary voice: names only",
+      "items": [
+        "PICKET stores template names, the destination Discord category, channel naming settings, capacity and idle timeout.",
+        "It also stores the deployment limit, private drafts, created channels, their occupants and verification/cleanup status.",
+        "The file contains only current template names. All options and operational data in this family are excluded."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Stats: from observed members to their summaries",
+      "items": [
+        "In the database: Discord IDs and names of observed members, plus IDs and names of observed voice channels.",
+        "Current presence, roles associated with voice periods, joins, moves, departures, presence periods and observation quality.",
+        "Private materialized summaries are also stored for service administration; they are excluded from the guild export.",
+        "In the file: Discord ID, name, accumulated voice time and last activity for each member represented in the last 60 days, plus a server summary.",
+        "Detailed events, individual periods, connected presence and the voice-channel list are not attached. Tracking settings and preferences belong to Settings and access.",
+        "The file also adds counts of events awaiting storage from the disk journal. This supplement is outside the database inventory shown here; its duration is not credited until processing."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Logs and tracking: included records and one omission",
+      "items": [
+        "Administration actions with their author and before/after values, server usage records and receipts preventing duplicate interaction processing.",
+        "Pending audit messages and their scheduling: these records are exported while retained.",
+        "Internal bot-departure request state is retained to execute or reconcile removal. It is excluded from the file; active/inactive status and audit records remain exported."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Reading this comparison",
+      "items": [
+        "The five families on the left form a functional inventory of server-scoped database records. Ordinary copies go straight to the file; only name selection and summary calculation need their own processing step.",
+        "The export is a snapshot of currently retained data, not a complete history or a backup that can restore everything.",
+        "The drawing follows the representation of database records. The supplement of pending voice-event counts is described in the Stats card.",
+        "An administrator requests the file under /picket settings → Data → Export. PICKET builds it in memory and sends it privately without retaining a copy. Exceeding the size limit produces no partial file."
+      ]
+    }
+  ]
+}

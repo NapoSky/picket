@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useData, withBase } from 'vitepress';
 
 const props = defineProps<{
-  diagram: 'self-hosted' | 'data-lifecycle';
+  diagram: 'self-hosted' | 'data-lifecycle' | 'guild-data-export' | 'guild-data-retention';
   title: string;
 }>();
 const { lang } = useData();

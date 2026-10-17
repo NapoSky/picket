@@ -21,7 +21,7 @@ const checks = [];
 const artifacts = [];
 let updateNotice;
 for (const locale of ['fr', 'en']) {
-  for (const name of ['self-hosted', 'data-lifecycle']) {
+  for (const name of ['self-hosted', 'data-lifecycle', 'guild-data-export', 'guild-data-retention']) {
     const input = `docs/diagrams/${name}.${locale}.json`;
     const specification = JSON.parse(readFileSync(join(root, input), 'utf8'));
     const output = `docs/public/diagrams/${locale}/${name}.html`;
