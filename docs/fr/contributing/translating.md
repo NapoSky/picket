@@ -12,6 +12,7 @@ Pour ajouter une langue ou améliorer une traduction, soumettez une pull request
 | Espagnol | `es-ES.json` |
 | Portugais du Brésil | `pt-BR.json` |
 | Polonais | `pl.json` |
+| Chinois simplifié | `zh-CN.json` |
 
 Pour améliorer l’une de ces langues, modifiez son fichier existant. Il s’agit des traductions du bot ; la documentation
 est disponible en français et en anglais.

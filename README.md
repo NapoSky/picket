@@ -26,7 +26,7 @@ community project: it is **not** affiliated with, endorsed by or sponsored by Si
 | **Server settings** | Language, time zone, audit channel, per-feature switches |
 | **Multi-server** | Every server is isolated at the database level (row-level security) |
 | **Data management** | Administrator removal makes the bot leave and schedules data erasure; retention also applies after an external removal |
-| **Languages** | English, French, German, Spanish, Brazilian Portuguese and Polish; add one by dropping a JSON file in [`packages/i18n/locales`](packages/i18n/locales) |
+| **Languages** | English, French, German, Spanish, Brazilian Portuguese, Polish and Simplified Chinese; add one by dropping a JSON file in [`packages/i18n/locales`](packages/i18n/locales) |
 | **Operations** | Zero-downtime rolling updates, several identical replicas, signed requests only, secrets kept out of the repository and the logs; private owner-only server departures from the support server |
 | **Temporary voice channels** | Private deployment queue, up to 10 officer-defined templates, automatic empty-channel cleanup and restart recovery |
 | **Voice statistics** | Opt-in role-filtered presence, 60-day history, own-data erasure and custom EN/FR dashboards with Discord OAuth and Team administration |

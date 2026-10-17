@@ -241,6 +241,7 @@ describe('private server settings panel', () => {
     ['es-ES', 'es-419', 'Guardado.'],
     ['pt-BR', 'pt-PT', 'Salvo.'],
     ['pl', 'pl', 'Zapisano.'],
+    ['zh-CN', 'zh-CN', '已保存。'],
   ])('offers %s, applies it immediately and renders the server screens within Discord limits', async (locale, userLocale, saved) => {
     const env = setup();
     const home = await env.open({ locale: userLocale });
@@ -269,8 +270,8 @@ describe('private server settings panel', () => {
     view(await env.click(control(recovery, 'cancel')));
     expect(env.read().inactive).toBeNull();
     const payload = buildCommandsPayload(env.registry)[0];
-    expect(payload?.description_localizations?.[locale as 'de' | 'es-ES' | 'pt-BR' | 'pl']).toBe(testI18n.translator(locale).t('commands.picket.description'));
-    expect(payload?.options?.find((option) => option.name === 'settings')?.description_localizations?.[locale as 'de' | 'es-ES' | 'pt-BR' | 'pl']).toBe(testI18n.translator(locale).t('commands.picket.settings.description'));
+    expect(payload?.description_localizations?.[locale as 'de' | 'es-ES' | 'pt-BR' | 'pl' | 'zh-CN']).toBe(testI18n.translator(locale).t('commands.picket.description'));
+    expect(payload?.options?.find((option) => option.name === 'settings')?.description_localizations?.[locale as 'de' | 'es-ES' | 'pt-BR' | 'pl' | 'zh-CN']).toBe(testI18n.translator(locale).t('commands.picket.settings.description'));
   });
   it('opens a prefilled timezone modal and returns invalid input to the same panel without a write', async () => {
     const env = setup(); const advanced = await env.click(control(await env.open(), 'view', 'advanced'));

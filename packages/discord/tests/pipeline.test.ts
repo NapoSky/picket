@@ -318,6 +318,7 @@ describe('InteractionPipeline localization', () => {
     ['es-ES', 'No tienes acceso'],
     ['pt-BR', 'Você não tem acesso'],
     ['pl', 'Nie masz dostępu'],
+    ['zh-CN', '你无权使用此命令'],
   ])('falls back to the %s guild language when the user language is not supported', async (guildLocale, expected) => {
     const { pipeline } = pipelineWith(async () => ephemeral('ok'), denyAll);
     const reply = await pipeline.handle(makeInteraction({ locale: 'ja', guildLocale }));

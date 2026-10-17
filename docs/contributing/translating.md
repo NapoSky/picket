@@ -12,6 +12,7 @@ To add a language or improve a translation, submit a pull request with a **UTF-8
 | Spanish | `es-ES.json` |
 | Brazilian Portuguese | `pt-BR.json` |
 | Polish | `pl.json` |
+| Simplified Chinese | `zh-CN.json` |
 
 To improve one of these languages, edit its existing file. These are the bot’s translations; the documentation is
 available in English and French.

@@ -12,8 +12,8 @@ const discordLocales = Object.values(Locale) as string[];
 describe('shipped catalogs', () => {
   const catalogs = loadCatalogs();
 
-  it('ships English as the source, French, German, Spanish, Brazilian Portuguese and Polish', () => {
-    expect(Object.keys(catalogs)).toEqual(expect.arrayContaining(['en', 'fr', 'de', 'es-ES', 'pt-BR', 'pl']));
+  it('ships English as the source, French, German, Spanish, Brazilian Portuguese, Polish and Simplified Chinese', () => {
+    expect(Object.keys(catalogs)).toEqual(expect.arrayContaining(['en', 'fr', 'de', 'es-ES', 'pt-BR', 'pl', 'zh-CN']));
   });
 
   it('passes every CI check (known keys, placeholders, Discord limits, locale file names)', () => {
@@ -48,6 +48,9 @@ describe('shipped catalogs', () => {
     ['pt-PT', 'pt-BR', 'Salvo.'],
     ['pl', 'pl', 'Zapisano.'],
     ['pl-PL', 'pl', 'Zapisano.'],
+    ['zh-CN', 'zh-CN', '已保存。'],
+    ['zh-cn', 'zh-CN', '已保存。'],
+    ['zh', 'zh-CN', '已保存。'],
   ])('provides the %s user with the %s catalog', (candidate, locale, saved) => {
     const i18n = createI18n(catalogs);
     expect(i18n.resolve(candidate, 'fr')).toBe(locale);
@@ -98,6 +101,18 @@ describe('shipped catalogs', () => {
     expect(t('timers.alert.text', { icon: '⏱️', name: 'Alpha', place: 'Blemish', time: '<t:1791370800:R>' }))
       .toBe('⏱️ **Alpha** (Blemish) wygasa <t:1791370800:R>.');
     expect(t('panel.deletionDate', { timestamp: 1791370800 })).toContain('<t:1791370800:F> (<t:1791370800:R>)');
+  });
+
+  it('renders Chinese counts without singular or plural changes and preserves alert parameters', () => {
+    const t = createI18n(catalogs).translator('zh-CN').t;
+    for (const count of [0, 1, 2, 25, 1.5]) {
+      expect(t('panel.roleCount', { count })).toBe(`${count} 个获准身份组`);
+      expect(t('audit.pageCount', { count })).toBe(`${count} 页`);
+    }
+    expect(t('timers.alert.text', { icon: '⏱️', name: 'Alpha', place: 'Blemish', time: '<t:1791370800:R>' }))
+      .toBe('⏱️ **Alpha**（Blemish）将于 <t:1791370800:R> 到期。');
+    expect(t('panel.deletionDate', { timestamp: 1791370800 }))
+      .toBe('**删除日期**：<t:1791370800:F>（<t:1791370800:R>）。');
   });
 
   it('discovers every file of the locales directory', () => {

@@ -33,7 +33,7 @@ See [Voice statistics](./stats) for your first setup, access levels and privacy 
 
 ## Languages
 
-PICKET supports **English, French, German, Spanish, Brazilian Portuguese and Polish**. Keep **Automatic** to follow each
+PICKET supports **English, French, German, Spanish, Brazilian Portuguese, Polish and Simplified Chinese**. Keep **Automatic** to follow each
 person's Discord language, or choose a language for everyone in `/picket settings` → **Language**.
 
 Command names are always English; their descriptions follow your Discord language.
