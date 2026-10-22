@@ -24,7 +24,7 @@ hold a tracked role.
 | **Discord administrator** | Everything an officer can do, plus choose tracked member roles and manage general permissions. |
 | **Instance administrator** | View statistics across this instance's servers, including retained history for inactive servers until erasure. |
 
-**Tracked member roles are shared with general permissions**: replacing them in Stats settings also changes access
+**Tracked member roles are shared with general permissions**: adding or removing them in Stats settings also changes access
 to member commands. An administrator configures officer roles in `/picket settings` → **Permissions**.
 See the [permissions guide](./permissions) for details.
 
@@ -51,8 +51,9 @@ Suppose your group uses the **Member** and **Logistics** roles and wants to excl
 
 1. **An administrator opens `/stats settings`**, from any channel in the server. This panel is also available in
    `/picket settings` → **Statistics**.
-2. **Choose member roles**: select **Member** and **Logistics**. A person holding either role will be tracked.
-   This selection replaces PICKET's general member roles.
+2. **Add member roles**: use **Add a role** to add **Member**, then **Logistics**. Each addition keeps the roles
+   already configured. A person holding either role will be tracked. Use **Remove a role** to remove a specific
+   role, including `@everyone` if present. These roles also define PICKET's general member access.
 3. **Choose excluded channels**, such as **Break room**. Bots and the native AFK channel are already excluded.
 4. Click **Enable**. Eligible joins, leaves and channel changes begin contributing to statistics; earlier history
    is not imported.
@@ -60,8 +61,9 @@ Suppose your group uses the **Member** and **Logistics** roles and wants to excl
    then choose your server and a period.
 
 ::: warning Choose actual member roles
-An empty selection or **`@everyone`, even alongside other roles**, prevents activation. An administrator must replace
-that selection before enabling statistics. Inform members about tracking before activation.
+An empty list or **`@everyone`, even alongside other roles**, prevents activation. An administrator must add specific
+member roles and remove `@everyone` before enabling statistics. Removing the last role disables collection.
+Inform members about tracking before activation.
 :::
 
 For a self-hosted instance, `/stats link` points to its operator's configured dashboard. The official address above
@@ -166,7 +168,8 @@ to obtain unique people across the instance. Period and channel filters, the 60-
 ### Choosing people and channels
 
 An officer opens `/stats settings` to enable or disable collection and change excluded channels. Only a Discord
-administrator can replace tracked member roles. The panel is private, belongs to the person who opens it, and its
+administrator can add or remove tracked member roles, one at a time, just like in `/picket settings` → **Permissions**.
+The panel is private, belongs to the person who opens it, and its
 controls expire after fifteen minutes; run the command again if needed.
 
 You can also open the panel from `/picket settings`: **Enable** opens settings for an inactive module, and
@@ -251,7 +254,7 @@ removes your contribution from totals, and deletes pending records too.*
 | Limit | Value |
 | --- | --- |
 | Available history | Rolling maximum of 60 days |
-| Roles in the Stats selector | 1–25; several roles may be selected |
+| Tracked roles | Add or remove one at a time; at least one required to enable collection. Removal choices are paginated, 25 per page. |
 | Channels in the exclusions selector | Up to 25 |
 | People per table page | 1,000 |
 | Recent presences displayed | Latest 100 segments in the period |

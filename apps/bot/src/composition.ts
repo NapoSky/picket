@@ -170,14 +170,17 @@ function guildModule(db: Db, options: CompositionOptions, logger: Logger): Featu
     ...(options.discord?.guildRoles ? { guildRoles: options.discord.guildRoles } : {}),
   });
   const showPermissions = new ShowPermissions(permissions);
+  const updatePermissions = new UpdatePermissions(permissions);
   const statsStore=options.stats?.store ?? new PostgresStatsStore(db,()=>options.clock.now());
   const statsBuffer=options.stats?.buffer ?? new DiskVoiceBuffer('./data/voice-buffer');
-  const statsPanel=createStatsPanel({store:statsStore,buffer:statsBuffer,access,gate,clock:options.clock,dashboardUrl:options.stats?.dashboardUrl ?? null,settingsHome:context=>settingsHomeButton(context,options.clock)});
+  const statsPanel=createStatsPanel({store:statsStore,buffer:statsBuffer,access,gate,clock:options.clock,updatePermissions,
+    ...(options.discord?.guildRoles ? { guildRoles: options.discord.guildRoles } : {}),
+    dashboardUrl:options.stats?.dashboardUrl ?? null,settingsHome:context=>settingsHomeButton(context,options.clock)});
   const voice = options.voice ?? new PostgresVoice(db, {category:unavailable,create:unavailable,orderChannels:unavailable,exists:unavailable,remove:unavailable}, options.clock, logger, options.locks);
   const voicePanel=createVoicePanel({service:voice,access,gate,clock:options.clock,settingsHome:c=>settingsHomeButton(c,options.clock)});
   const panel = createSettingsPanel({
     settings: new GetGuildSettings(settings), update: new UpdateGuildSettings(settings, options.i18n.locales),
-    permissions: showPermissions, updatePermissions: new UpdatePermissions(permissions), access: new ResolveAccess(permissions),
+    permissions: showPermissions, updatePermissions, access: new ResolveAccess(permissions),
     suspension: new GetSuspension(lifecycle, options.guildRetentionDays),
     request: new RequestGuildDeletion(lifecycle, options.clock, options.guildRetentionDays, buildRequestedDepartures(db, options, logger)), cancel: new CancelGuildDeletion(lifecycle),
     ...(options.discord?.replies ? { replies: options.discord.replies } : {}),

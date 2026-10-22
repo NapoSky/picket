@@ -507,10 +507,11 @@
   "stats": {
     "title": "Voice statistics",
     "help": "Track eligible voice presence. Configure the shared member roles before enabling.",
-    "roles": "Target member roles",
+    "roles": "Erfasste Rollen",
     "sharedRoles": "These roles are shared with /picket settings. Changing them also changes member access to PICKET.",
     "invalidRoles": "Statistics cannot be enabled with no member roles or with @everyone. Ask an administrator to select specific roles.",
-    "chooseRoles": "Choose the member roles (replaces the current list)",
+    "rolesHelp": "Füge jeweils eine Rolle hinzu oder entferne sie. Das Entfernen der letzten Rolle deaktiviert die Erfassung.",
+    "unknownRole": "Nicht verfügbare Rolle",
     "adminRoles": "Only a server administrator can change the shared member roles.",
     "exclusions": "Excluded channels",
     "none": "None",

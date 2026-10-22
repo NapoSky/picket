@@ -507,10 +507,11 @@
   "stats": {
     "title": "Statistiques vocales",
     "help": "Suivez les présences vocales éligibles. Configurez les rôles membres partagés avant activation.",
-    "roles": "Rôles membres ciblés",
+    "roles": "Rôles suivis",
     "sharedRoles": "Ces rôles sont partagés avec /picket settings. Les changer modifie aussi les droits membres de PICKET.",
     "invalidRoles": "Activation impossible sans rôles membres ou en présence de @everyone. Un administrateur doit choisir des rôles précis.",
-    "chooseRoles": "Choisissez les rôles membres (remplace la liste actuelle)",
+    "rolesHelp": "Ajoutez ou retirez un rôle à la fois. Retirer le dernier rôle désactive la collecte.",
+    "unknownRole": "Rôle indisponible",
     "adminRoles": "Seul un administrateur du serveur peut modifier les rôles membres partagés.",
     "exclusions": "Salons exclus",
     "none": "Aucun",

@@ -511,10 +511,11 @@
   "stats": {
     "title": "Statystyki głosowe",
     "help": "Śledź obecność na kanałach głosowych spełniającą kryteria. Skonfiguruj wspólne role członków przed włączeniem.",
-    "roles": "Role członków do śledzenia",
+    "roles": "Śledzone role",
     "sharedRoles": "Te role są wspólne z /picket settings. Ich zmiana wpływa również na dostęp członków do PICKET.",
     "invalidRoles": "Nie można włączyć statystyk bez ról członków ani z @everyone. Poproś administratora o wybranie konkretnych ról.",
-    "chooseRoles": "Wybierz role członków (zastępuje obecną listę)",
+    "rolesHelp": "Dodawaj lub usuwaj po jednej roli. Usunięcie ostatniej roli wyłącza zbieranie danych.",
+    "unknownRole": "Niedostępna rola",
     "adminRoles": "Tylko administrator serwera może zmieniać wspólne role członków.",
     "exclusions": "Wykluczone kanały",
     "none": "Brak",

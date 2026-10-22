@@ -507,10 +507,11 @@
   "stats": {
     "title": "语音统计",
     "help": "记录符合条件的语音在线时长。启用前请先配置共用的成员身份组。",
-    "roles": "目标成员身份组",
+    "roles": "跟踪的身份组",
     "sharedRoles": "这些身份组与 /picket settings 共用。更改它们也会改变成员对 PICKET 的访问权限。",
     "invalidRoles": "未配置成员身份组或包含 @everyone 时，无法启用统计。请管理员选择具体的身份组。",
-    "chooseRoles": "选择成员身份组（替换当前列表）",
+    "rolesHelp": "每次添加或移除一个身份组。移除最后一个身份组会停用数据收集。",
+    "unknownRole": "不可用的身份组",
     "adminRoles": "只有服务器管理员可以更改共用的成员身份组。",
     "exclusions": "排除的频道",
     "none": "无",

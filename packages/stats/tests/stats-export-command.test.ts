@@ -14,7 +14,7 @@ describe('Discord statistics export attachment', () => {
     };
     const buffer: DurableVoiceBuffer = { append: async () => undefined, replay: async () => 0, erase: async () => undefined, status: async () => ({ bytes: 0, count: 0, oldest: null }) };
     const access = { levelOf: jest.fn(async (): Promise<'officer' | 'member'> => 'officer') };
-    const panel = createStatsPanel({ store, buffer, access, gate: { suspensionOf: async () => null }, clock: { now: () => now } });
+    const panel = createStatsPanel({ store, buffer, access, gate: { suspensionOf: async () => null }, clock: { now: () => now }, updatePermissions: { execute: jest.fn() } });
     const command = panel.entries.find((entry) => entry.path[1] === 'export')!;
     return { command, store, access };
   }

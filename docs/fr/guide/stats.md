@@ -24,7 +24,7 @@ même s'il ne fait pas partie des rôles suivis.
 | **Administrateur Discord** | Tout ce qu'un officier peut faire, plus choisir les rôles membres ciblés et gérer les permissions générales. |
 | **Administrateur d'instance** | Consulter les statistiques de tous les serveurs de cette instance, y compris l'historique encore conservé des serveurs inactifs. |
 
-Les **rôles membres ciblés sont partagés avec les permissions générales** : les remplacer dans les réglages Stats
+Les **rôles membres ciblés sont partagés avec les permissions générales** : en ajouter ou en retirer dans les réglages Stats
 modifie aussi l'accès aux commandes membres. Un administrateur configure les rôles officiers dans
 `/picket settings` → **Permissions**. Consultez le [guide des permissions](./permissions) pour les détails.
 
@@ -52,8 +52,10 @@ Supposons que votre groupe utilise les rôles **Membre** et **Logistique**, et s
 
 1. **Un administrateur ouvre `/stats settings`**, depuis n'importe quel salon du serveur. Ce panneau est aussi
    accessible dans `/picket settings` → **Statistiques**.
-2. **Choisissez les rôles membres** : sélectionnez **Membre** et **Logistique**. Une personne possédant au moins un
-   des deux rôles sera suivie. Cette sélection remplace les rôles membres généraux de PICKET.
+2. **Ajoutez les rôles membres** : utilisez **Ajouter un rôle** pour ajouter **Membre**, puis **Logistique**. Chaque
+   ajout conserve les rôles déjà configurés. Une personne possédant au moins un des deux rôles sera suivie.
+   Utilisez **Retirer un rôle** pour retirer un rôle précis, y compris `@everyone` s'il est présent.
+   Ces rôles définissent aussi l'accès membre général à PICKET.
 3. **Choisissez les salons exclus**, par exemple **Pause**. Les bots et le salon AFK natif sont déjà exclus.
 4. Cliquez sur **Activer**. Les connexions, déconnexions et changements de salon éligibles commencent à alimenter
    les statistiques ; aucun historique antérieur n'est importé.
@@ -61,8 +63,9 @@ Supposons que votre groupe utilise les rôles **Membre** et **Logistique**, et s
    Discord**, puis choisissez votre serveur et une période.
 
 ::: warning Choisir de vrais rôles membres
-Une sélection vide ou contenant **`@everyone`, même avec d'autres rôles**, empêche l'activation. Un administrateur
-doit remplacer cette sélection avant de pouvoir activer les statistiques. Informez les membres du suivi avant activation.
+Une liste vide ou contenant **`@everyone`, même avec d'autres rôles**, empêche l'activation. Un administrateur
+doit ajouter des rôles membres précis et retirer `@everyone` avant de pouvoir activer les statistiques.
+Retirer le dernier rôle désactive la collecte. Informez les membres du suivi avant activation.
 :::
 
 Pour une instance auto-hébergée, `/stats link` pointe vers le dashboard configuré par son opérateur. L'adresse officielle
@@ -175,7 +178,8 @@ le serveur inactif.
 ### Choisir les personnes et les salons
 
 Un officier ouvre `/stats settings` pour activer ou désactiver la collecte et changer les salons exclus. Seul un
-administrateur Discord peut remplacer les rôles membres ciblés. Le panneau est privé, appartient à la personne qui
+administrateur Discord peut ajouter ou retirer les rôles membres suivis, un par un, comme dans `/picket settings` →
+**Permissions**. Le panneau est privé, appartient à la personne qui
 l'ouvre et ses contrôles expirent après quinze minutes ; relancez la commande si nécessaire.
 
 Le panneau est aussi accessible depuis `/picket settings` : **Activer** ouvre les réglages du module désactivé,
@@ -263,7 +267,7 @@ retire aussi votre contribution des totaux et supprime les événements encore e
 | Limite | Valeur |
 | --- | --- |
 | Historique consultable | 60 jours glissants maximum |
-| Rôles dans le sélecteur Stats | 1 à 25 ; plusieurs rôles possibles |
+| Rôles suivis | Ajout ou retrait un par un ; au moins un rôle requis pour activer la collecte. Les choix de retrait sont paginés, 25 par page. |
 | Salons dans le sélecteur d'exclusions | Jusqu'à 25 |
 | Personnes par page de tableau | 1 000 |
 | Présences récentes affichées | 100 derniers segments de la période |

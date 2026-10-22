@@ -1,5 +1,5 @@
-import { GuildId, noopLogger } from '@picket/kernel';
-import { PostgresGuildSettingsRepository } from '@picket/guild';
+import { GuildId, RoleId, UserId, noopLogger } from '@picket/kernel';
+import { PostgresGuildSettingsRepository, PostgresPermissionRepository, UpdatePermissions } from '@picket/guild';
 import { PostgresLeaseStore } from '@picket/coordination';
 import { createDiscordBotRest, normalizeDispatch } from '@picket/discord';
 import { Secret } from '@picket/kernel';
@@ -77,6 +77,26 @@ describe('voice facts, RLS, erasure and recovery (PostgreSQL)', () => {
         [A],
       ),
     ).rejects.toThrow(/explicit member roles/);
+  });
+  it('shares cumulative role edits with permissions and stops collection when the last role is removed', async () => {
+    const update = new UpdatePermissions(new PostgresPermissionRepository(database.handle.db));
+    const change = (roleId: string, action: 'add' | 'remove') => update.execute({
+      guildId: GuildId.assert(A), actorId: UserId.assert(U),
+      change: { level: 'member', roleId: RoleId.assert(roleId), action, confirmed: false },
+    });
+    const second = '400000000000000002', third = '400000000000000003';
+    await store.observe(observation());
+    await Promise.all([change(second, 'add'), change(third, 'add')]);
+    expect(new Set((await store.config(A)).roles)).toEqual(new Set([R, second, third]));
+    await change(second, 'remove');
+    expect(new Set((await store.config(A)).roles)).toEqual(new Set([R, third]));
+    expect(await store.openUserIds(A)).toEqual(new Set([U]));
+    await change(R, 'remove');
+    expect(await store.openUserIds(A)).toEqual(new Set());
+    expect((await store.config(A)).enabled).toBe(true);
+    await change(third, 'remove');
+    expect(await store.config(A)).toMatchObject({ roles: [], enabled: false });
+    expect(await store.config(B)).toMatchObject({ roles: [R], enabled: true });
   });
   it('replays join/move/leave without duplicates and sums precise clipped durations', async () => {
     const base = Date.now() - 3600_000;

@@ -8,12 +8,14 @@ import {
   type ComponentContext,
   type ComponentFamily,
   type GuildGate,
+  type GuildRoles,
   type PanelButton,
   type PanelContent,
   type Reply,
   type RootDescriptor,
 } from '@picket/discord';
-import type { Clock } from '@picket/kernel';
+import { RoleId, type Clock } from '@picket/kernel';
+import type { UpdatePermissions } from '@picket/guild';
 import type { MessageKey } from '@picket/i18n';
 import { exportActivity } from '../../application/activity-export';
 import { validTargets } from '../../domain/model';
@@ -26,6 +28,8 @@ export interface StatsPanelDependencies {
   readonly access: AccessPolicy;
   readonly gate: GuildGate;
   readonly clock: Clock;
+  readonly updatePermissions: Pick<UpdatePermissions, 'execute'>;
+  readonly guildRoles?: GuildRoles;
   readonly dashboardUrl?: string | null;
   readonly settingsHome?: (context: CommandContext) => PanelButton;
 }
@@ -52,27 +56,51 @@ export function createStatsPanel(deps: StatsPanelDependencies) {
     label: context.t(label),
     style,
   });
-  async function settings(context: CommandContext, notice?: MessageKey, fromSettings = false): Promise<Reply> {
+  async function settings(context: CommandContext, notice?: MessageKey, fromSettings = false, rolePage = 0): Promise<Reply> {
     const config = await deps.store.config(context.guildId);
     const valid = validTargets(context.guildId, config.roles);
+    const pages = Math.max(1, Math.ceil(config.roles.length / 25));
+    const page = Math.min(rolePage, pages - 1);
+    const visibleRoles = [...config.roles].sort().slice(page * 25, (page + 1) * 25);
     const components: PanelContent[] = [
       { kind: 'text', text: `## 📊 ${context.t('stats.title')}\n${context.t('stats.help')}` },
       {
         kind: 'text',
-        text: `${config.enabled ? '🟢' : '⚪'} **${context.t(config.enabled ? 'panel.enabled' : 'panel.disabled')}**\n${context.t('stats.roles')}: ${config.roles.map((r) => (r === context.guildId ? '@everyone' : `<@&${r}>`)).join(', ') || context.t('panel.rolesEmpty')}`,
+        text: `${config.enabled ? '🟢' : '⚪'} **${context.t(config.enabled ? 'panel.enabled' : 'panel.disabled')}**\n${context.t('stats.roles')}: ${visibleRoles.map((r) => (r === context.guildId ? '@everyone' : `<@&${r}>`)).join(', ') || context.t('panel.rolesEmpty')}`,
       },
     ];
     if (notice) components.push({ kind: 'text', text: context.t(notice) });
     if (!valid) components.push({ kind: 'text', text: context.t('stats.invalidRoles') });
     components.push({ kind: 'text', text: context.t('stats.sharedRoles') });
-    if (context.level === 'admin')
+    if (context.level === 'admin') {
+      components.push({ kind: 'text', text: context.t('stats.rolesHelp') });
       components.push({
         kind: 'roleSelect',
-        customId: id(context, 'ssroles', 'replace', fromSettings),
-        placeholder: context.t('stats.chooseRoles'),
-        maxValues: 25,
+        customId: id(context, 'ssroles', 'add', fromSettings),
+        placeholder: context.t('panel.addRole'),
       });
-    else components.push({ kind: 'text', text: context.t('stats.adminRoles') });
+      if (visibleRoles.length) {
+        let names: Readonly<Record<string, string>> = {};
+        try { names = await deps.guildRoles?.names(context.guildId) ?? {}; }
+        catch (error) { context.logger.warn({ err: error }, 'stats role names unavailable'); }
+        components.push({
+          kind: 'stringSelect',
+          customId: id(context, 'ssroles', 'remove', fromSettings),
+          placeholder: context.t('panel.removeRole'),
+          options: visibleRoles.map((role, index) => ({
+            label: role === context.guildId ? '@everyone' : names[role] || `${context.t('stats.unknownRole')} ${page * 25 + index + 1}`,
+            value: role,
+          })),
+        });
+      }
+    } else components.push({ kind: 'text', text: context.t('stats.adminRoles') });
+    if (pages > 1) {
+      components.push({ kind: 'text', text: context.t('panel.page', { page: page + 1, total: pages }) });
+      components.push({ kind: 'buttons', buttons: [
+        { ...button(context, 'panel.previous', 'ssnav', `roles${Math.max(0, page - 1)}`, 'secondary', fromSettings), disabled: page === 0 },
+        { ...button(context, 'panel.next', 'ssnav', `roles${Math.min(pages - 1, page + 1)}`, 'secondary', fromSettings), disabled: page === pages - 1 },
+      ] });
+    }
     components.push(
       {
         kind: 'text',
@@ -198,22 +226,29 @@ export function createStatsPanel(deps: StatsPanelDependencies) {
             }
             return privacy(context);
           }
-          if (
-            namespace === 'ssroles' &&
-            action === 'replace' &&
-            context.interaction.componentKind === 'roleSelect'
-          ) {
-            const roles = context.interaction.selectedValues;
-            if (
-              !roles.length ||
-              roles.length > 25 ||
-              roles.some((r) => r === context.guildId || !context.interaction.resolvedRoles[r])
-            )
+          if (namespace === 'ssroles') {
+            const selected = context.interaction.selectedValues;
+            const role = RoleId.parse(selected[0]);
+            const adding = action === 'add' && context.interaction.componentKind === 'roleSelect';
+            const removing = action === 'remove' && context.interaction.componentKind === 'stringSelect';
+            if (selected.length !== 1 || !role.ok || (!adding && !removing))
+              return settings(context, 'settings.invalidOption', fromSettings);
+            if (adding && (String(role.value) === context.guildId || !context.interaction.resolvedRoles[role.value]))
               return settings(context, 'stats.invalidRoles', fromSettings);
-            await deps.store.configure(context.guildId, owner, { memberRoles: roles });
-            return settings(context, 'panel.saved', fromSettings);
+            if (removing && !(await deps.store.config(context.guildId)).roles.includes(role.value))
+              return settings(context, 'panel.unchanged', fromSettings);
+            const result = await deps.updatePermissions.execute({
+              guildId: context.guildId,
+              actorId: context.interaction.userId,
+              change: { level: 'member', roleId: role.value, action: adding ? 'add' : 'remove', confirmed: false },
+            });
+            return settings(context, result.kind === 'apply' ? 'panel.saved' : result.kind === 'unchanged' ? 'panel.unchanged' : 'stats.invalidRoles', fromSettings);
           }
           if (namespace === 'ssnav') {
+            if (/^roles(0|[1-9]\d*)$/.test(action) && context.interaction.componentKind === 'button') {
+              const page = Number(action.slice(5));
+              if (Number.isSafeInteger(page)) return settings(context, undefined, fromSettings, page);
+            }
             if (action === 'exclude' && context.interaction.componentKind === 'channelSelect') {
               const channels = context.interaction.selectedValues;
               if (
