@@ -224,7 +224,7 @@
       "purgeHelp": "Entfernt durchgestrichene oder abgelaufene Timer nach der gewählten Frist endgültig. 0 deaktiviert diese Bereinigung.",
       "purgeInput": "Frist in Stunden (0 = nie)",
       "purgeConfirm": "Durchgestrichene oder abgelaufene Timer nach {{hours}} h löschen? Timer, die diese Frist bereits überschritten haben, werden sofort gelöscht. Diese Löschung ist endgültig.",
-      "war": "Neuer Krieg — Demnächst",
+      "war": "Neuer Krieg",
       "warHelp": "Setze dieses Board bei jedem neuen Krieg zurück. Danach erstellte Timer bleiben erhalten.",
       "disableTitle": "Warnungen deaktivieren?",
       "disableHelp": "PICKET sendet keine neuen Warnungen für diese Übersicht mehr. Timer werden weiter überwacht, und vorhandene Warnmeldungen können weiterhin bestätigt werden.",

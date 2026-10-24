@@ -224,7 +224,7 @@
       "purgeHelp": "Permanently removes struck or expired timers after the chosen delay. 0 disables this cleanup.",
       "purgeInput": "Delay in hours (0 = never)",
       "purgeConfirm": "Delete struck or expired timers after {{hours}} h? Those already past this delay will be deleted as soon as the setting is applied. This deletion is permanent.",
-      "war": "New war — Coming soon",
+      "war": "New war",
       "warHelp": "Reset this board for each new war. Timers created after the war begins are preserved.",
       "disableTitle": "Disable alerts?",
       "disableHelp": "PICKET will stop sending new alerts for this board. Timers remain tracked, and existing alert messages can still be acknowledged.",

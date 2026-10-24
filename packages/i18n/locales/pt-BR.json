@@ -224,7 +224,7 @@
       "purgeHelp": "Remove permanentemente os temporizadores riscados ou expirados após o prazo escolhido. 0 desativa esta limpeza.",
       "purgeInput": "Prazo em horas (0 = nunca)",
       "purgeConfirm": "Excluir temporizadores riscados ou expirados após {{hours}} h? Os que já passaram desse prazo serão excluídos assim que a configuração for aplicada. Esta exclusão é permanente.",
-      "war": "Nova guerra — Em breve",
+      "war": "Nova guerra",
       "warHelp": "Reinicie o quadro a cada guerra. Timers criados após o início são preservados.",
       "disableTitle": "Desativar os alertas?",
       "disableHelp": "O PICKET deixará de enviar novos alertas para este painel. Os temporizadores continuarão sendo acompanhados e os alertas existentes ainda poderão ser confirmados.",

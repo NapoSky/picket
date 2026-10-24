@@ -224,7 +224,7 @@
       "purgeHelp": "Trwale usuwa skreślone lub wygasłe liczniki po wybranym czasie. 0 wyłącza to usuwanie.",
       "purgeInput": "Opóźnienie w godzinach (0 = nigdy)",
       "purgeConfirm": "Usunąć skreślone lub wygasłe liczniki po {{hours}} godz.? Liczniki, które już przekroczyły ten czas, zostaną usunięte po zastosowaniu ustawienia. Usunięcie jest trwałe.",
-      "war": "Nowa wojna — Wkrótce",
+      "war": "Nowa wojna",
       "warHelp": "Resetuj tę tablicę przy każdej nowej wojnie. Liczniki utworzone po rozpoczęciu wojny zostają zachowane.",
       "disableTitle": "Wyłączyć alerty?",
       "disableHelp": "PICKET przestanie wysyłać nowe alerty dla tej tablicy. Liczniki będą nadal śledzone, a istniejące wiadomości z alertami nadal można potwierdzać.",

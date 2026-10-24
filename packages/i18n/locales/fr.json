@@ -224,7 +224,7 @@
       "purgeHelp": "Retire définitivement les timers barrés ou expirés après le délai choisi. 0 désactive ce nettoyage.",
       "purgeInput": "Délai en heures (0 = jamais)",
       "purgeConfirm": "Supprimer les timers barrés ou expirés après {{hours}} h ? Ceux qui ont déjà dépassé ce délai seront supprimés dès l’application du réglage. Cette suppression est définitive.",
-      "war": "Nouvelle guerre — À venir",
+      "war": "Nouvelle guerre",
       "warHelp": "Remettre ce tableau à zéro à chaque nouvelle guerre. Les timers créés après son début sont conservés.",
       "disableTitle": "Désactiver les alertes ?",
       "disableHelp": "PICKET n’enverra plus de nouvelles alertes pour ce tableau. Les timers restent suivis et les alertes déjà publiées peuvent toujours être acquittées.",

@@ -383,7 +383,8 @@ describe('/timers settings panel', () => {
     expect(ui.panelText()).toContain('Roles to notify');
     expect(ui.replies.replies.every((reply) => reply.action === 'editOriginal')).toBe(true);
     await ui.click(ui.control('view', 'manage'));
-    expect(ui.panelText()).toContain('Coming soon');
+    expect(ui.panelText()).toContain('New war');
+    expect(ui.panelText()).not.toContain('Coming soon');
     expect(ui.panelText()).not.toContain('max-active');
   });
 

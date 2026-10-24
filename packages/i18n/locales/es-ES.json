@@ -224,7 +224,7 @@
       "purgeHelp": "Elimina permanentemente los temporizadores tachados o vencidos tras el plazo elegido. 0 desactiva esta limpieza.",
       "purgeInput": "Plazo en horas (0 = nunca)",
       "purgeConfirm": "¿Eliminar los temporizadores tachados o vencidos después de {{hours}} h? Los que ya hayan superado este plazo se eliminarán al aplicar el ajuste. Esta eliminación es permanente.",
-      "war": "Nueva guerra — Próximamente",
+      "war": "Nueva guerra",
       "warHelp": "Reinicia el tablero en cada guerra. Se conservan los timers creados después de su inicio.",
       "disableTitle": "¿Desactivar las alertas?",
       "disableHelp": "PICKET dejará de enviar nuevas alertas para este tablero. Los temporizadores seguirán activos y las alertas existentes podrán seguir confirmándose.",
