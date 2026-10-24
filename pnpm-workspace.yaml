@@ -14,3 +14,8 @@ allowBuilds:
 
 # Block releases less than 48 h old (supply chain protection).
 minimumReleaseAge: 2880
+
+# VitePress 1.x still requires Vite 5; Vite 6 also supports its Vue plugin.
+# Remove when a stable VitePress release includes the security fixes.
+overrides:
+  'vitepress@1>vite': ^6.4.5

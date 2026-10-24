@@ -6,7 +6,7 @@
   "license": "PolyForm-Noncommercial-1.0.0",
   "packageManager": "pnpm@12.6.0",
   "engines": {
-    "node": ">=24"
+    "node": ">=24.22.1"
   },
   "scripts": {
     "build": "tsc -b",
@@ -30,12 +30,12 @@
   },
   "devDependencies": {
     "@picket/testing": "workspace:*",
-    "@swc/core": "^1.16.18",
+    "@swc/core": "^1.16.20",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.5",
     "jest": "^30.5.2",
     "typescript": "^7.0.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.5"
   }
 }

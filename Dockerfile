@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM node:24-alpine AS base
+FROM node:24.22.1-alpine AS base
 WORKDIR /app
 RUN corepack enable
 
@@ -29,7 +29,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 RUN rm -rf node_modules/.pnpm/typescript@* node_modules/.pnpm/@typescript+*
 
 # Final image: no pnpm, no source files, and an unprivileged user.
-FROM node:24-alpine AS runtime
+FROM node:24.22.1-alpine AS runtime
 ARG PICKET_VERSION=unknown
 ENV NODE_ENV=production PICKET_VERSION=${PICKET_VERSION}
 LABEL org.opencontainers.image.revision=${PICKET_VERSION}

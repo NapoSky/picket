@@ -21,7 +21,7 @@
     "@picket/i18n": "workspace:*",
     "@picket/kernel": "workspace:*",
     "@picket/persistence": "workspace:*",
-    "discord-api-types": "^0.38.56",
+    "discord-api-types": "^0.38.57",
     "fastify": "^5.12.7"
   }
 }

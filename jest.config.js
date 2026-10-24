@@ -16,8 +16,9 @@ const common = {
       },
     ],
   },
-  // ESM-only dependencies (Node 24 supports `require`, but the Jest runtime does not).
-  transformIgnorePatterns: ['/node_modules/(?!\\.pnpm/kysely@|kysely/)'],
+  // ESM-only dependencies used by Kysely and Fastify's HTTP injection helper.
+  // Node 24 supports `require`, but the Jest runtime needs a CommonJS transform.
+  transformIgnorePatterns: ['/node_modules/(?!\\.pnpm/(?:kysely|cookie)@|(?:kysely|cookie)/)'],
   // Tests read sources, not dist (equivalent to the @picket/source condition).
   moduleNameMapper: {
     '^@picket/([^/]+)$': '<rootDir>/packages/$1/src/index.ts',
