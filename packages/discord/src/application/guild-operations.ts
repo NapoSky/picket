@@ -12,6 +12,6 @@ export interface OperatorScope {
 export interface GuildOperationsDiscord {
   scope(channelId: ChannelId, fresh?: boolean): Promise<OperatorScope>;
   /** Only Discord's explicit Unknown Guild response means absent; access/transport errors throw. */
-  guild(guildId: GuildId): Promise<{ readonly name: string } | null>;
+  guild(guildId: GuildId): Promise<{ readonly name: string; readonly locale?: string | null } | null>;
   leave(guildId: GuildId, notAfter?: Date): Promise<void>;
 }

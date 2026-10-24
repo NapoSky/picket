@@ -705,5 +705,17 @@
     "resolve": "Zakończ śledzenie",
     "resolveConfirm": "Potwierdź po sprawdzeniu niepewnego utworzenia w Discordzie. PICKET zwolni rezerwację; ta czynność nie usuwa kanału.",
     "settingsCommand": "Skonfiguruj tymczasowe kanały głosowe"
+  },
+  "supportGuild": {
+    "unknownName": "Nazwa serwera niedostępna",
+    "joined": "🟢 PICKET dołączył do {{name}}.",
+    "returned": "🔵 PICKET wrócił na {{name}}. {{retention}}",
+    "deletionStillRequested": "Żądane usunięcie danych nadal jest zaplanowane od {{date}}.",
+    "purgeCancelled": "Usunięcie danych związane z usunięciem bota zostało anulowane.",
+    "operatorLeft": "PICKET opuścił {{name}} na prośbę {{operator}}. Powód: {{reason}}.",
+    "leftOffline": "Usunięcie PICKET z {{name}} wykryto po ponownym połączeniu.",
+    "left": "PICKET został usunięty z {{name}}.",
+    "purgeRequested": "Usunięcie danych zaplanowano od {{date}}.",
+    "purgeUnlessReturn": "Usunięcie danych zaplanowano od {{date}}, chyba że PICKET wróci wcześniej."
   }
 }

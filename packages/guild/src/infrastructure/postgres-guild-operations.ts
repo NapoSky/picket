@@ -3,7 +3,6 @@ import type { OperatorScope } from '@picket/discord';
 import { GuildId, type ChannelId } from '@picket/kernel';
 import { sql, withTenant, type Db } from '@picket/persistence';
 import { OpsError, opsConfiguration, type GuildOperationsRepository, type OpsDetail, type OpsFailure, type OpsOperation, type OpsServer, type OpsSession, type OpsState, type OpsStatus } from '../application/guild-operations';
-import { supportGuildMessage } from '../application/support-guild-events';
 import { PostgresGuildLifecycleRepository } from './postgres-guild-lifecycle-repository';
 import { PostgresSupportGuildEventsRepository } from './postgres-support-guild-events-repository';
 
@@ -131,7 +130,7 @@ export class PostgresGuildOperationsRepository implements GuildOperationsReposit
           trx, op.targetId, 'system', 'guild.left', op.completedAt ?? now, 'left');
         purgeSince = result.inactiveSince;
         await new PostgresSupportGuildEventsRepository(this.db).observeInTransaction(trx, op.targetId, false, undefined, false,
-          this.channelId ? { channelId: this.channelId, format: change => supportGuildMessage(change, this.retentionDays) } : null);
+          this.channelId ? { channelId: this.channelId, retentionDays: this.retentionDays } : null);
       }
       await sql`UPDATE operator_departures SET synced_at=${now}, purge_since=${purgeSince} WHERE id=${op.id}`.execute(trx);
     });

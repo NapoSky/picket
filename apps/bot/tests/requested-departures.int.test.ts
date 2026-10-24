@@ -81,9 +81,9 @@ describe('administrator removal and data deletion (PostgreSQL)', () => {
     expect(await lifecycle().inactiveSince(guildId)).toEqual(now);
     expect(await withTenant(database.handle.db, guildId, trx => trx.selectFrom('guild_support_presence').select('present').executeTakeFirst())).toEqual({ present: false });
     expect(discord.scope).not.toHaveBeenCalled();
-    const queued = await queryAsAdmin<{ content: string }>(database, 'SELECT content FROM support_guild_deliveries');
+    const queued = await queryAsAdmin<{ event: { change: { deletionRequested: boolean } } }>(database, 'SELECT event FROM support_guild_deliveries');
     expect(queued).toHaveLength(1);
-    expect(queued[0]!.content).not.toContain('sauf retour');
+    expect(queued[0]!.event.change.deletionRequested).toBe(true);
     await gateway().handle({ type: 'guild_removed', guildId });
     expect(await queryAsAdmin(database, 'SELECT id FROM support_guild_deliveries')).toHaveLength(1);
   });

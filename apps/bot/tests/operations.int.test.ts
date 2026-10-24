@@ -1,7 +1,7 @@
 import type { GuildOperationsDiscord, IncomingInteraction, OperatorScope, PanelButton, Reply } from '@picket/discord';
 import { AccessCheckError, buildCommandsPayload, toWireResponse } from '@picket/discord';
 import { ChannelId, GuildId, InteractionId, UserId, noopLogger } from '@picket/kernel';
-import { HandleGuildAvailable, PostgresGuildLifecycleRepository, PostgresGuildOperationsRepository, PostgresGuildDataExportRepository, PostgresSupportGuildEventsRepository, OpsError } from '@picket/guild';
+import { supportGuildMessage, type SupportGuildChange, HandleGuildAvailable, PostgresGuildLifecycleRepository, PostgresGuildOperationsRepository, PostgresGuildDataExportRepository, PostgresSupportGuildEventsRepository, OpsError } from '@picket/guild';
 import { withTenant, sql } from '@picket/persistence';
 import { MAX_CHANNELS } from '@picket/voice';
 import { createTestDatabase, InMemoryInteractionReplies, InMemoryMessaging, makeInteraction, queryAsAdmin, recordingLogger, testI18n, type TestDatabase } from '@picket/testing';
@@ -35,7 +35,9 @@ describe('private service operations (PostgreSQL)', () => {
   const interaction = (changes: Partial<IncomingInteraction> = {}) => makeInteraction({ guildId: support, channelId: channel, userId: owner,
     id: InteractionId.assert(String(900000000000000000n + BigInt(sequence++))), commandPath: ['picket-ops', 'servers'], locale: 'fr', ...changes });
   const prepared = async () => { const ops = service(); const session = await ops.start(interaction()); return { ops, session, operation: await ops.prepare(session, target) }; };
-  const queued = () => queryAsAdmin<{ content: string }>(database, 'SELECT content FROM support_guild_deliveries ORDER BY id');
+  const queued = async () => (await queryAsAdmin<{ content: string | null; id: string; attempts: number; event: { change: Omit<SupportGuildChange, 'inactiveSince'> & { inactiveSince: string | null }; retentionDays: number } | null }>(database,
+    'SELECT id, content, attempts, event FROM support_guild_deliveries ORDER BY id')).map(row => ({ ...row,
+      content: row.event ? supportGuildMessage({ ...row.event.change, inactiveSince: row.event.change.inactiveSince ? new Date(row.event.change.inactiveSince) : null }, row.event.retentionDays, testI18n.translator('fr').t) : row.content! }));
   const finish = async (reply: Reply): Promise<Reply> => {
     if (reply.kind !== 'deferred') return reply;
     const result = await reply.run();

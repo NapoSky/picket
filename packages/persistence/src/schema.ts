@@ -200,7 +200,8 @@ export interface GuildSupportPresenceTable {
 export interface SupportGuildDeliveriesTable {
   id: Generated<string>;
   channel_id: string;
-  content: string;
+  content: Nullable<string>;
+  event: ColumnType<unknown, string | undefined, string>;
   next_attempt_at: Timestamp;
   attempts: Generated<number>;
   last_error: Nullable<string>;

@@ -701,5 +701,17 @@
     "resolve": "Clore le suivi",
     "resolveConfirm": "Confirme seulement après avoir vérifié cette création incertaine dans Discord. PICKET libère la réservation ; cette action ne supprime aucun canal Discord.",
     "settingsCommand": "Configurer les vocaux éphémères"
+  },
+  "supportGuild": {
+    "unknownName": "Serveur au nom inconnu",
+    "joined": "🟢 PICKET a rejoint {{name}}.",
+    "returned": "🔵 PICKET est de retour sur {{name}}. {{retention}}",
+    "deletionStillRequested": "La suppression demandée reste prévue à partir du {{date}}.",
+    "purgeCancelled": "Purge liée au retrait annulée.",
+    "operatorLeft": "PICKET a quitté {{name}} à la demande de {{operator}}. Motif : {{reason}}.",
+    "leftOffline": "Retrait de PICKET de {{name}} détecté après reconnexion.",
+    "left": "PICKET a été retiré de {{name}}.",
+    "purgeRequested": "Purge des données prévue à partir du {{date}}.",
+    "purgeUnlessReturn": "Purge des données prévue à partir du {{date}}, sauf retour avant cette échéance."
   }
 }

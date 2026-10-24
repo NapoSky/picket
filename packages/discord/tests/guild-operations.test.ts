@@ -39,6 +39,11 @@ describe('operator Discord adapters', () => {
     await expect(adapter().scope(channelId)).rejects.toThrow('Operator channel');
   });
 
+  it('exposes the Discord server language for automatic support notifications', async () => {
+    get.mockResolvedValue({ name: 'Support', preferred_locale: 'en-GB' });
+    expect(await adapter().guild(guildId)).toEqual({ name: 'Support', locale: 'en-GB' });
+  });
+
   it('does not treat missing permissions or network errors as an absent guild', async () => {
     const api = adapter();
     const failure = (code: number) => new DiscordAPIError({ code, message: 'test' }, code, 404, 'GET', 'https://discord.com/api/v10/guilds/test', { body: undefined, files: undefined } as never);

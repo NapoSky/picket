@@ -701,5 +701,17 @@
     "resolve": "Cerrar seguimiento",
     "resolveConfirm": "Confirma tras revisar esta creación incierta en Discord. PICKET libera la reserva; esta acción no elimina ningún canal.",
     "settingsCommand": "Configurar canales de voz temporales"
+  },
+  "supportGuild": {
+    "unknownName": "Nombre del servidor no disponible",
+    "joined": "🟢 PICKET se ha unido a {{name}}.",
+    "returned": "🔵 PICKET ha vuelto a {{name}}. {{retention}}",
+    "deletionStillRequested": "La eliminación solicitada sigue prevista a partir del {{date}}.",
+    "purgeCancelled": "Se ha cancelado la eliminación de datos asociada a la expulsión.",
+    "operatorLeft": "PICKET ha abandonado {{name}} a petición de {{operator}}. Motivo: {{reason}}.",
+    "leftOffline": "Se ha detectado la expulsión de PICKET de {{name}} tras la reconexión.",
+    "left": "PICKET ha sido expulsado de {{name}}.",
+    "purgeRequested": "Eliminación de datos prevista a partir del {{date}}.",
+    "purgeUnlessReturn": "Eliminación de datos prevista a partir del {{date}}, salvo que PICKET vuelva antes."
   }
 }

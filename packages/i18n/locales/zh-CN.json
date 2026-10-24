@@ -701,5 +701,17 @@
     "resolve": "结束跟踪",
     "resolveConfirm": "请先在 Discord 中核实此创建结果不确定的频道，再确认。PICKET 将释放预留名额；此操作不会删除任何 Discord 频道。",
     "settingsCommand": "配置临时语音频道"
+  },
+  "supportGuild": {
+    "unknownName": "服务器名称不可用",
+    "joined": "🟢 PICKET 已加入 {{name}}。",
+    "returned": "🔵 PICKET 已返回 {{name}}。{{retention}}",
+    "deletionStillRequested": "请求的数据删除仍计划从 {{date}} 起执行。",
+    "purgeCancelled": "已取消因移除机器人而安排的数据清理。",
+    "operatorLeft": "PICKET 应 {{operator}} 的请求离开了 {{name}}。原因：{{reason}}。",
+    "leftOffline": "重新连接后检测到 PICKET 已被移出 {{name}}。",
+    "left": "PICKET 已被移出 {{name}}。",
+    "purgeRequested": "数据清理计划从 {{date}} 起执行。",
+    "purgeUnlessReturn": "数据清理计划从 {{date}} 起执行，除非 PICKET 在此之前返回。"
   }
 }

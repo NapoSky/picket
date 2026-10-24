@@ -26,12 +26,12 @@ export class PostgresSupportGuildEventsRepository implements SupportGuildEventsR
   }
 
   observe(guildId: GuildId, present: boolean, name: string | undefined, offline: boolean,
-    notification: { readonly channelId: ChannelId; readonly format: (change: SupportGuildChange) => string } | null): Promise<void> {
+    notification: { readonly channelId: ChannelId; readonly retentionDays: number } | null): Promise<void> {
     return withTenant(this.db, guildId, trx => this.observeInTransaction(trx, guildId, present, name, offline, notification));
   }
 
   async observeInTransaction(trx: Tx, guildId: GuildId, present: boolean, name: string | undefined, offline: boolean,
-    notification: { readonly channelId: ChannelId; readonly format: (change: SupportGuildChange) => string } | null): Promise<void> {
+    notification: { readonly channelId: ChannelId; readonly retentionDays: number } | null): Promise<void> {
     // Lifecycle and purge use this row too; unknown/deleted guilds must never be recreated by a departure.
     const guild = await trx.selectFrom('guild_registry').select(['inactive_since', 'inactive_reason'])
       .where('guild_id', '=', guildId).forUpdate().executeTakeFirst();
@@ -51,7 +51,7 @@ export class PostgresSupportGuildEventsRepository implements SupportGuildEventsR
       ...(operator ? { operator: { name: operator.actor_name, reason: operator.reason } } : {}),
     };
     // State transition and delivery are committed together, so repeats cannot enqueue twice.
-    await trx.insertInto('support_guild_deliveries').values({ channel_id: notification.channelId, content: notification.format(change) }).execute();
+    await trx.insertInto('support_guild_deliveries').values({ channel_id: notification.channelId, content: null, event: JSON.stringify({ change, retentionDays: notification.retentionDays }) }).execute();
   }
 
   deliver(channelId: ChannelId, now: Date, publish: (delivery: SupportDelivery) => Promise<string | null>): Promise<boolean> {
@@ -64,7 +64,9 @@ export class PostgresSupportGuildEventsRepository implements SupportGuildEventsR
       await trx.deleteFrom('support_guild_deliveries').where('channel_id', '!=', channelId).execute();
       const row = await trx.selectFrom('support_guild_deliveries').selectAll().orderBy('id').forUpdate().executeTakeFirst();
       if (!row || row.next_attempt_at > now) return false;
-      const reason = await publish({ id: row.id, content: row.content, attempts: row.attempts, lastError: row.last_error });
+      const event = row.event as { change: Omit<SupportGuildChange, 'inactiveSince'> & { inactiveSince: string | null }; retentionDays: number } | null;
+      const reason = await publish({ id: row.id, content: row.content, attempts: row.attempts, lastError: row.last_error,
+        event: event ? { ...event, change: { ...event.change, inactiveSince: event.change.inactiveSince === null ? null : new Date(event.change.inactiveSince) } } : null });
       if (reason === null) {
         await trx.deleteFrom('support_guild_deliveries').where('id', '=', row.id).execute();
         return true;

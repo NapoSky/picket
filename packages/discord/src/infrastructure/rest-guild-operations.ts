@@ -31,10 +31,10 @@ export class DiscordRestGuildOperations implements GuildOperationsDiscord {
     return scope;
   }
 
-  async guild(guildId: GuildId): Promise<{ name: string } | null> {
+  async guild(guildId: GuildId): Promise<{ name: string; locale: string | null } | null> {
     try {
       const guild = await this.rest.get(Routes.guild(guildId)) as APIGuild;
-      return { name: guild.name };
+      return { name: guild.name, locale: guild.preferred_locale ?? null };
     } catch (error) {
       if (error instanceof DiscordAPIError && error.code === 10004) return null;
       throw error;

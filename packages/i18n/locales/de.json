@@ -701,5 +701,17 @@
     "resolve": "Nachverfolgung beenden",
     "resolveConfirm": "Bestätige erst nach Prüfung dieser unklaren Erstellung in Discord. PICKET gibt den reservierten Platz frei; es wird kein Discord-Kanal gelöscht.",
     "settingsCommand": "Temporäre Sprachkanäle konfigurieren"
+  },
+  "supportGuild": {
+    "unknownName": "Servername nicht verfügbar",
+    "joined": "🟢 PICKET ist {{name}} beigetreten.",
+    "returned": "🔵 PICKET ist wieder auf {{name}}. {{retention}}",
+    "deletionStillRequested": "Die beantragte Löschung bleibt ab {{date}} geplant.",
+    "purgeCancelled": "Die durch die Entfernung ausgelöste Datenlöschung wurde abgebrochen.",
+    "operatorLeft": "PICKET hat {{name}} auf Wunsch von {{operator}} verlassen. Grund: {{reason}}.",
+    "leftOffline": "Die Entfernung von PICKET aus {{name}} wurde nach dem erneuten Verbinden erkannt.",
+    "left": "PICKET wurde aus {{name}} entfernt.",
+    "purgeRequested": "Datenlöschung ab {{date}} geplant.",
+    "purgeUnlessReturn": "Datenlöschung ab {{date}} geplant, sofern PICKET nicht vorher zurückkehrt."
   }
 }

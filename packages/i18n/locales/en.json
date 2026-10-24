@@ -701,5 +701,17 @@
     "resolve": "Close tracking",
     "resolveConfirm": "Confirm only after checking this uncertain creation in Discord. PICKET releases the reserved slot; this action does not delete any Discord channel.",
     "settingsCommand": "Configure temporary voice channels"
+  },
+  "supportGuild": {
+    "unknownName": "Server name unavailable",
+    "joined": "🟢 PICKET joined {{name}}.",
+    "returned": "🔵 PICKET is back on {{name}}. {{retention}}",
+    "deletionStillRequested": "The requested deletion remains scheduled from {{date}}.",
+    "purgeCancelled": "Removal-related data purge cancelled.",
+    "operatorLeft": "PICKET left {{name}} at the request of {{operator}}. Reason: {{reason}}.",
+    "leftOffline": "Removal of PICKET from {{name}} detected after reconnecting.",
+    "left": "PICKET was removed from {{name}}.",
+    "purgeRequested": "Data purge scheduled from {{date}}.",
+    "purgeUnlessReturn": "Data purge scheduled from {{date}}, unless PICKET returns before then."
   }
 }

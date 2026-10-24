@@ -1,8 +1,8 @@
-import { PostgresGuildLifecycleRepository, PostgresSupportGuildEventsRepository, PublishSupportGuildEvents } from '@picket/guild';
-import { ChannelId, GuildId, noopLogger } from '@picket/kernel';
+import { supportGuildMessage, type SupportGuildChange, PostgresGuildSettingsRepository, PostgresGuildLifecycleRepository, PostgresSupportGuildEventsRepository, PublishSupportGuildEvents } from '@picket/guild';
+import { ChannelId, GuildId, UserId, noopLogger } from '@picket/kernel';
 import { withTenant } from '@picket/persistence';
-import { createTestDatabase, InMemoryMessaging, queryAsAdmin, testI18n, type TestDatabase } from '@picket/testing';
-import { buildGatewayHandler } from '../src/composition';
+import { createTestDatabase, InMemoryInteractionReplies, InMemoryMessaging, queryAsAdmin, testI18n, type TestDatabase } from '@picket/testing';
+import { buildGatewayHandler, buildSupportGuildPublisher } from '../src/composition';
 
 const guildId = GuildId.assert('700000000000000061');
 const otherId = GuildId.assert('700000000000000062');
@@ -17,8 +17,10 @@ describe('support server notifications (integration)', () => {
   const options = () => ({ clock, guildRetentionDays: 7, i18n: testI18n, supportGuildEventsChannelId: channelId });
   const gateway = (enabled = true) => buildGatewayHandler(database.handle.db, noopLogger,
     { ...options(), supportGuildEventsChannelId: enabled ? channelId : null });
-  const publisher = (destination = channelId) => new PublishSupportGuildEvents(new PostgresSupportGuildEventsRepository(database.handle.db), destination, messaging, clock, noopLogger);
-  const queued = () => queryAsAdmin<{ content: string; id: string; attempts: number }>(database, 'SELECT id, content, attempts FROM support_guild_deliveries ORDER BY id');
+  const publisher = (destination = channelId) => new PublishSupportGuildEvents(new PostgresSupportGuildEventsRepository(database.handle.db), destination, messaging, clock, noopLogger, testI18n, async () => 'fr');
+  const queued = async () => (await queryAsAdmin<{ content: string | null; id: string; attempts: number; event: { change: Omit<SupportGuildChange, 'inactiveSince'> & { inactiveSince: string | null }; retentionDays: number } | null }>(database,
+    'SELECT id, content, attempts, event FROM support_guild_deliveries ORDER BY id')).map(row => ({ ...row,
+      content: row.event ? supportGuildMessage({ ...row.event.change, inactiveSince: row.event.change.inactiveSince ? new Date(row.event.change.inactiveSince) : null }, row.event.retentionDays, testI18n.translator('fr').t) : row.content! }));
   const arrive = (handler = gateway(), name = 'ABC') => handler.handle({ type: 'guild_available', guildId, name });
 
   beforeAll(async () => { database = await createTestDatabase(); });
@@ -27,6 +29,33 @@ describe('support server notifications (integration)', () => {
     await queryAsAdmin(database, 'TRUNCATE guild_registry, support_guild_deliveries CASCADE');
     messaging = new InMemoryMessaging();
     now = new Date(Date.now() + 60_000);
+  });
+
+  it.each([
+    ['en', 'fr', '🟢 PICKET joined **ABC**.'],
+    [null, 'en-GB', '🟢 PICKET joined **ABC**.'],
+    [null, 'fr', '🟢 PICKET a rejoint **ABC**.'],
+    [null, 'unsupported', '🟢 PICKET joined **ABC**.'],
+  ])('uses support settings %s before Discord language %s, independent of the source server', async (forced, discordLocale, expected) => {
+    const supportId = GuildId.assert('700000000000000063');
+    const settings = new PostgresGuildSettingsRepository(database.handle.db);
+    await settings.findOrCreate(supportId);
+    await settings.modify(supportId, UserId.assert('500000000000000061'), 'settings.language', current => ({ kind: 'apply', next: { ...current, locale: forced } }));
+    await arrive();
+    await settings.modify(guildId, UserId.assert('500000000000000061'), 'settings.language', current => ({ kind: 'apply', next: { ...current, locale: 'fr' } }));
+    const guild = jest.fn(async () => ({ name: 'Support', locale: discordLocale }));
+    const scope = jest.fn(async () => ({ guildId: supportId, channelId, ownerId: UserId.assert('500000000000000061'), ownerName: 'Owner' }));
+    await buildSupportGuildPublisher(database.handle.db, noopLogger, { ...options(), discord: { messaging, replies: new InMemoryInteractionReplies(), operations: { scope, guild, leave: async () => undefined } } })!.tick();
+    expect(messaging.list(channelId)[0]?.view.content).toBe(expected);
+    expect(scope).toHaveBeenCalledWith(channelId);
+    if (forced) expect(guild).not.toHaveBeenCalled();
+    else expect(guild).toHaveBeenCalledWith(supportId);
+  });
+
+  it('still delivers legacy text queued before the localization upgrade', async () => {
+    await queryAsAdmin(database, 'INSERT INTO support_guild_deliveries(channel_id, content) VALUES ($1, $2)', [channelId, '🟢 PICKET a rejoint **Legacy**.']);
+    await publisher().tick();
+    expect(messaging.list(channelId)[0]?.view.content).toBe('🟢 PICKET a rejoint **Legacy**.');
   });
 
   it('publishes join, departure and return once, without Stats or source IDs', async () => {

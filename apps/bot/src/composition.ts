@@ -337,6 +337,20 @@ const AUDIT_INTERVAL_MS = 5_000;
 const RETENTION_CHECK_INTERVAL_MS = 60_000;
 const RETENTION_SCHEDULE_KEY = 'retention:last_successful_schedule';
 
+export function buildSupportGuildPublisher(db: Db, logger: Logger, options: CompositionOptions): PublishSupportGuildEvents | null {
+  const channelId = options.supportGuildEventsChannelId;
+  return channelId
+    ? new PublishSupportGuildEvents(new PostgresSupportGuildEventsRepository(db), channelId,
+      (options.discord ?? offlineDiscordPorts).messaging, options.clock, logger, options.i18n, async () => {
+        const operations = options.discord?.operations;
+        if (!operations) return unavailable();
+        const { guildId } = await operations.scope(channelId);
+        const locale = await new GetGuildLocale(new PostgresGuildSettingsRepository(db)).execute(guildId);
+        return locale ?? (await operations.guild(guildId))?.locale ?? null;
+      })
+    : null;
+}
+
 /** The `job-runner` role: a single lease holder runs timer and retention passes. */
 export function buildJobRunner(
   db: Db,
@@ -347,10 +361,7 @@ export function buildJobRunner(
   const sweep = new TimerSweep({ store: timers.store, maintenance: timers.maintenance, features: timers.features, clock: options.clock, logger });
   const retention = buildNightlyRetentionJob(db, logger, options);
   const audit = buildAuditPublisher(db, logger, options);
-  const support = options.supportGuildEventsChannelId
-    ? new PublishSupportGuildEvents(new PostgresSupportGuildEventsRepository(db), options.supportGuildEventsChannelId,
-      (options.discord ?? offlineDiscordPorts).messaging, options.clock, logger)
-    : null;
+  const support = buildSupportGuildPublisher(db, logger, options);
   const operators = buildOperatorService(db, options, logger);
   const departures = buildRequestedDepartures(db, options, logger);
   return new LeaderElector({

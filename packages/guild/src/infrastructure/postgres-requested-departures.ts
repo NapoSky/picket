@@ -1,7 +1,6 @@
 import { GuildId, type ChannelId } from '@picket/kernel';
 import { sql, withTenant, type Db, type Tx } from '@picket/persistence';
 import type { RequestedDeparture, RequestedDepartureRepository } from '../application/requested-departures';
-import { supportGuildMessage } from '../application/support-guild-events';
 import { PostgresSupportGuildEventsRepository } from './postgres-support-guild-events-repository';
 
 interface Row {
@@ -61,7 +60,7 @@ export class PostgresRequestedDepartures implements RequestedDepartureRepository
       }
       if (status === 'left') {
         await new PostgresSupportGuildEventsRepository(this.db).observeInTransaction(trx, request.guildId, false, undefined, false,
-          this.channelId ? { channelId: this.channelId, format: change => supportGuildMessage(change, this.retentionDays) } : null);
+          this.channelId ? { channelId: this.channelId, retentionDays: this.retentionDays } : null);
       }
       await this.update(trx, request, status);
     });
