@@ -43,7 +43,7 @@ services:
   # Stack HTTPS entrypoint: port 443 only (no port 80; Cloudflare handles redirects), with Let's Encrypt certificates
   # obtained through the Cloudflare DNS-01 challenge. Reads Docker labels from the other services.
   traefik:
-    image: traefik:v3.7.15
+    image: traefik:v3.7.16
     restart: unless-stopped
     <<: *hardening
     cap_add:
