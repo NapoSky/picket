@@ -13,7 +13,7 @@
   },
   "files": ["dist", "locales"],
   "dependencies": {
-    "i18next": "^26.5.5"
+    "i18next": "^26.5.7"
   },
   "devDependencies": {
     "discord-api-types": "^0.38.57"
