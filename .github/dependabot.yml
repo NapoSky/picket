@@ -23,6 +23,10 @@ updates:
     directory: /deploy
     schedule:
       interval: weekly
+    groups:
+      docker-compose-minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
   - package-ecosystem: docker
     directory: /
     schedule:
