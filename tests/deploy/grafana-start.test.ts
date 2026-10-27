@@ -16,6 +16,15 @@ const boot = (webhook: string, host = 'monitoring.example.org') => execute('sh',
   env: { ...process.env, MONITORING_HOST: host, MONITORING_DISCORD_WEBHOOK_URL: webhook },
 });
 
+it('disables plugin preinstallation and automatic updates for the read-only Grafana image', async () => {
+  const compose = await readFile(resolve('deploy/compose.yml'), 'utf8');
+  const grafana = compose.split('\n  grafana:\n')[1]?.split(/\n  [a-z][a-z-]*:\n/)[0];
+
+  expect(grafana).toContain('<<: *hardening');
+  expect(grafana).toContain('GF_PLUGINS_PREINSTALL_DISABLED: "true"');
+  expect(grafana).toContain('GF_PLUGINS_PREINSTALL_AUTO_UPDATE: "false"');
+});
+
 it.each([
   'discord.com', 'canary.discord.com', 'ptb.discord.com',
   'discordapp.com', 'canary.discordapp.com', 'ptb.discordapp.com',
