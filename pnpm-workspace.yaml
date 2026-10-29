@@ -19,3 +19,12 @@ minimumReleaseAge: 2880
 # Remove when a stable VitePress release includes the security fixes.
 overrides:
   'vitepress@1>vite': ^6.4.5
+
+# Only this advisory is backported locally; see patches/README.md.
+# CI verifies the installed patch before honoring this version-based exception.
+audit:
+  ignore:
+    - GHSA-gcqx-w48m-w2h4
+
+patchedDependencies:
+  deepmerge@4.3.1: patches/deepmerge@4.3.1.patch

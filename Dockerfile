@@ -12,6 +12,7 @@ RUN pnpm build
 # Keep only runtime files: manifests, compiled output, and SQL migrations.
 RUN mkdir /out \
  && cp package.json pnpm-lock.yaml pnpm-workspace.yaml LICENSE NOTICE /out/ \
+ && cp -r patches /out/ \
  && for dir in apps/* packages/*; do \
       mkdir -p "/out/$dir"; \
       cp "$dir/package.json" "/out/$dir/"; \

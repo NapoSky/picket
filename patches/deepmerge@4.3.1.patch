@@ -1,0 +1,177 @@
+diff --git a/dist/cjs.js b/dist/cjs.js
+index 7c36cbdd06cc22c92d590be3f87a08a91ca06b40..c5ab8fc153fbdcebdceecbe69ba5936ef1cc6de5 100644
+--- a/dist/cjs.js
++++ b/dist/cjs.js
+@@ -62,16 +62,26 @@ function getKeys(target) {
+ }
+ 
+ function propertyIsOnObject(object, property) {
+-	try {
+-		return property in object
+-	} catch(_) {
++	if (object === null || (typeof object !== 'object' && typeof object !== 'function')) {
+ 		return false
+ 	}
++	// A throwing Proxy check must abort the merge rather than bypass the guard.
++	return property in object
++}
++
++function keyIsForbidden(key) {
++	return key === '__proto__' || key === 'constructor' || key === 'prototype'
++}
++
++function safeSet(object, key, value) {
++	Object.defineProperty(object, key, {
++		value: value, writable: true, enumerable: true, configurable: true
++	})
+ }
+ 
+ // Protects from prototype poisoning and unexpected merging up the prototype chain.
+ function propertyIsUnsafe(target, key) {
+-	return propertyIsOnObject(target, key) // Properties are safe to merge if they don't exist in the target yet,
++	return keyIsForbidden(key) || propertyIsOnObject(target, key) // Properties are safe to merge if they don't exist in the target yet,
+ 		&& !(Object.hasOwnProperty.call(target, key) // unsafe if they exist up the prototype chain,
+ 			&& Object.propertyIsEnumerable.call(target, key)) // and also unsafe if they're nonenumerable.
+ }
+@@ -80,7 +90,10 @@ function mergeObject(target, source, options) {
+ 	var destination = {};
+ 	if (options.isMergeableObject(target)) {
+ 		getKeys(target).forEach(function(key) {
+-			destination[key] = cloneUnlessOtherwiseSpecified(target[key], options);
++			if (propertyIsUnsafe(target, key)) {
++				return
++			}
++			safeSet(destination, key, cloneUnlessOtherwiseSpecified(target[key], options));
+ 		});
+ 	}
+ 	getKeys(source).forEach(function(key) {
+@@ -89,9 +102,9 @@ function mergeObject(target, source, options) {
+ 		}
+ 
+ 		if (propertyIsOnObject(target, key) && options.isMergeableObject(source[key])) {
+-			destination[key] = getMergeFunction(key, options)(target[key], source[key], options);
++			safeSet(destination, key, getMergeFunction(key, options)(target[key], source[key], options));
+ 		} else {
+-			destination[key] = cloneUnlessOtherwiseSpecified(source[key], options);
++			safeSet(destination, key, cloneUnlessOtherwiseSpecified(source[key], options));
+ 		}
+ 	});
+ 	return destination
+diff --git a/dist/umd.js b/dist/umd.js
+index 4071e7c56ec8e5273fe166f6e723ac460fab8b72..9f931d304571a8d8720c6c82f10db3fa4d2fb93b 100644
+--- a/dist/umd.js
++++ b/dist/umd.js
+@@ -66,16 +66,26 @@
+ 	}
+ 
+ 	function propertyIsOnObject(object, property) {
+-		try {
+-			return property in object
+-		} catch(_) {
++		if (object === null || (typeof object !== 'object' && typeof object !== 'function')) {
+ 			return false
+ 		}
++		// A throwing Proxy check must abort the merge rather than bypass the guard.
++		return property in object
++	}
++
++	function keyIsForbidden(key) {
++		return key === '__proto__' || key === 'constructor' || key === 'prototype'
++	}
++
++	function safeSet(object, key, value) {
++		Object.defineProperty(object, key, {
++			value: value, writable: true, enumerable: true, configurable: true
++		})
+ 	}
+ 
+ 	// Protects from prototype poisoning and unexpected merging up the prototype chain.
+ 	function propertyIsUnsafe(target, key) {
+-		return propertyIsOnObject(target, key) // Properties are safe to merge if they don't exist in the target yet,
++		return keyIsForbidden(key) || propertyIsOnObject(target, key) // Properties are safe to merge if they don't exist in the target yet,
+ 			&& !(Object.hasOwnProperty.call(target, key) // unsafe if they exist up the prototype chain,
+ 				&& Object.propertyIsEnumerable.call(target, key)) // and also unsafe if they're nonenumerable.
+ 	}
+@@ -84,7 +94,10 @@
+ 		var destination = {};
+ 		if (options.isMergeableObject(target)) {
+ 			getKeys(target).forEach(function(key) {
+-				destination[key] = cloneUnlessOtherwiseSpecified(target[key], options);
++				if (propertyIsUnsafe(target, key)) {
++					return
++				}
++				safeSet(destination, key, cloneUnlessOtherwiseSpecified(target[key], options));
+ 			});
+ 		}
+ 		getKeys(source).forEach(function(key) {
+@@ -93,9 +106,9 @@
+ 			}
+ 
+ 			if (propertyIsOnObject(target, key) && options.isMergeableObject(source[key])) {
+-				destination[key] = getMergeFunction(key, options)(target[key], source[key], options);
++				safeSet(destination, key, getMergeFunction(key, options)(target[key], source[key], options));
+ 			} else {
+-				destination[key] = cloneUnlessOtherwiseSpecified(source[key], options);
++				safeSet(destination, key, cloneUnlessOtherwiseSpecified(source[key], options));
+ 			}
+ 		});
+ 		return destination
+diff --git a/index.js b/index.js
+index 77968aed5d456cccc294f60912ef381fa1e52a7b..92a4f4ada8c68f0fb3fd86cc30559a97fd61f26f 100644
+--- a/index.js
++++ b/index.js
+@@ -37,16 +37,26 @@ function getKeys(target) {
+ }
+ 
+ function propertyIsOnObject(object, property) {
+-	try {
+-		return property in object
+-	} catch(_) {
++	if (object === null || (typeof object !== 'object' && typeof object !== 'function')) {
+ 		return false
+ 	}
++	// A throwing Proxy check must abort the merge rather than bypass the guard.
++	return property in object
++}
++
++function keyIsForbidden(key) {
++	return key === '__proto__' || key === 'constructor' || key === 'prototype'
++}
++
++function safeSet(object, key, value) {
++	Object.defineProperty(object, key, {
++		value: value, writable: true, enumerable: true, configurable: true
++	})
+ }
+ 
+ // Protects from prototype poisoning and unexpected merging up the prototype chain.
+ function propertyIsUnsafe(target, key) {
+-	return propertyIsOnObject(target, key) // Properties are safe to merge if they don't exist in the target yet,
++	return keyIsForbidden(key) || propertyIsOnObject(target, key) // Properties are safe to merge if they don't exist in the target yet,
+ 		&& !(Object.hasOwnProperty.call(target, key) // unsafe if they exist up the prototype chain,
+ 			&& Object.propertyIsEnumerable.call(target, key)) // and also unsafe if they're nonenumerable.
+ }
+@@ -55,7 +65,10 @@ function mergeObject(target, source, options) {
+ 	var destination = {}
+ 	if (options.isMergeableObject(target)) {
+ 		getKeys(target).forEach(function(key) {
+-			destination[key] = cloneUnlessOtherwiseSpecified(target[key], options)
++			if (propertyIsUnsafe(target, key)) {
++				return
++			}
++			safeSet(destination, key, cloneUnlessOtherwiseSpecified(target[key], options))
+ 		})
+ 	}
+ 	getKeys(source).forEach(function(key) {
+@@ -64,9 +77,9 @@ function mergeObject(target, source, options) {
+ 		}
+ 
+ 		if (propertyIsOnObject(target, key) && options.isMergeableObject(source[key])) {
+-			destination[key] = getMergeFunction(key, options)(target[key], source[key], options)
++			safeSet(destination, key, getMergeFunction(key, options)(target[key], source[key], options))
+ 		} else {
+-			destination[key] = cloneUnlessOtherwiseSpecified(source[key], options)
++			safeSet(destination, key, cloneUnlessOtherwiseSpecified(source[key], options))
+ 		}
+ 	})
+ 	return destination

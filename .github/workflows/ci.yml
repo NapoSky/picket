@@ -66,6 +66,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Verify dependency security patches
+        run: node scripts/check-dependency-patches.cjs
       - name: Audit all workspace dependencies
         run: pnpm audit
 
