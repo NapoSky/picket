@@ -92,13 +92,14 @@ export async function withStatsScope<T>(
 async function readConfig(trx: Tx, guildId: string): Promise<StatsConfig> {
   const row = (
     await sql<{
+      timezone: string;
       enabled: boolean;
       excluded_channels: string[];
       afk_channel_id: string | null;
       changed_at: Date;
       enabled_at: Date | null;
     }>`
-    SELECT COALESCE((g.features->>'stats')::boolean,false) AND r.inactive_since IS NULL AS enabled,
+    SELECT g.timezone,COALESCE((g.features->>'stats')::boolean,false) AND r.inactive_since IS NULL AS enabled,
       COALESCE(s.excluded_channels,'{}') AS excluded_channels,s.afk_channel_id,COALESCE(s.changed_at,g.installed_at) AS changed_at,s.enabled_at
     FROM guild_settings g JOIN guild_registry r USING(guild_id) LEFT JOIN stats_settings s USING(guild_id) WHERE g.guild_id=${guildId}`.execute(
       trx,
@@ -111,6 +112,7 @@ async function readConfig(trx: Tx, guildId: string): Promise<StatsConfig> {
   ).rows.map((r) => r.role_id);
   return {
     guildId,
+    timezone: row?.timezone ?? 'UTC',
     enabled: row?.enabled ?? false,
     roles,
     excludedChannels: row?.excluded_channels ?? [],
@@ -700,7 +702,7 @@ export class PostgresStatsStore {
           GROUP BY GROUPING SETS ((guild_id,d),(d))
         ), days AS (
           SELECT generate_series(date_trunc('day',${from}::timestamptz AT TIME ZONE ${timezone}),
-            date_trunc('day',${to}::timestamptz AT TIME ZONE ${timezone}),interval '1 day') AS d
+            date_trunc('day',${new Date(to.getTime() - 1)}::timestamptz AT TIME ZONE ${timezone}),interval '1 day') AS d
         ) SELECT NULL::text AS guild_id,to_char(days.d,'YYYY-MM-DD') AS day,
           COALESCE(a.seconds,0) AS seconds,COALESCE(a.users,0) AS users
         FROM days LEFT JOIN aggregate a ON a.guild_id IS NULL AND a.d=days.d

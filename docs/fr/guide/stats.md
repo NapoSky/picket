@@ -196,7 +196,7 @@ pas après une ouverture directe avec `/stats settings`, ni dans le panneau pers
 | Bots | Toujours exclus. | Exclus |
 | Salon AFK natif | Toujours exclu. | Exclu |
 | Autres salons exclus | Sélection de salons vocaux ou scène ; **Retirer les exclusions** retire la sélection. | Aucun |
-| Période du dashboard | 24 heures, 7, 14, 30 ou 60 jours. | 7 jours |
+| Période du dashboard | 24 heures, 7, 14, 30 ou 60 jours, ou dates personnalisées. | 7 jours |
 | Interface du dashboard | Français ou anglais ; thème clair, sombre ou système. | Langue du navigateur et thème système |
 
 :::
@@ -211,9 +211,30 @@ Dans **Activité vocale**, choisissez le serveur, la période, le salon et la vu
 ou **JSON**. Un membre exporte ses propres données ; un officier exporte celles du régiment uniquement sur les serveurs
 où il possède cet accès.
 
+Pour choisir vos dates, sélectionnez **Personnalisée…**, renseignez **Du** et **Au**, puis cliquez sur **Appliquer**.
+Les deux dates sont incluses dans le fuseau configuré du serveur ; la vue **Tous les serveurs** utilise UTC.
+Une journée peut donc durer 23 ou 25 heures lors d'un changement d'heure. Aujourd'hui couvre l'activité enregistrée
+jusqu'à maintenant. Les dates de début proposées correspondent aux journées intégralement conservées dans les
+60 jours glissants ; la première journée partiellement expirée n'est pas sélectionnable.
+La période réellement calculée est affichée avec ses heures et sa borne de fin exclue. Les champs modifiés sans
+application ne changent ni les chiffres ni les exports. Un export reprend les bornes du rapport affiché.
+Si une partie de ce rapport a expiré entre-temps à la limite des 60 jours, le fichier contient uniquement la partie
+encore conservée : un message indique les nouvelles bornes, également présentes dans son nom. Actualisez pour
+consulter les chiffres correspondants.
+
+La vue globale d'administration s'arrête au dernier instantané planifié : une période qui le dépasse est signalée
+comme partielle ; une période entièrement postérieure est annoncée comme pas encore disponible. Les indicateurs
+de personnes actuellement en vocal et d'état de collecte restent indépendants de la période historique choisie.
+
 Dans Discord, un officier peut utiliser **`/stats export days:7 format:csv`** pour obtenir les statistiques de ce
 serveur en réponse privée. `days` accepte de 1 à 60 ; `format` accepte CSV ou JSON. `/stats status` affiche les réglages
 et la durée de conservation.
+
+Pour une période personnalisée, utilisez par exemple **`/stats export start:2026-10-10 end:2026-10-15 format:csv`**.
+`start` et `end` sont obligatoires ensemble, au format `AAAA-MM-JJ`, et ne peuvent pas être combinés avec `days`.
+Les dates sont incluses dans le fuseau du serveur, avec les mêmes limites que dans le dashboard. Sans période,
+l'export conserve les 7 derniers jours. La réponse privée rappelle les bornes et le fuseau ; le nom du fichier
+contient les bornes exactes en UTC. Les colonnes CSV et la structure JSON restent identiques.
 
 Un export trop grand est refusé avec un message : réduisez la période ou choisissez un salon dans le dashboard.
 Les contrôles d'accès sont revérifiés avant export. La conservation des fichiers téléchargés relève de leur destinataire.

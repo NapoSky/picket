@@ -540,8 +540,12 @@
       "status": "显示语音数据采集状态",
       "export": "导出服务器的语音统计",
       "days": "天数，最多 60 天",
-      "format": "导出文件格式"
-    }
+      "format": "导出文件格式",
+      "start": "开始日期，YYYY-MM-DD（包含当天；使用服务器时区）",
+      "end": "结束日期，YYYY-MM-DD（包含当天；使用服务器时区）"
+    },
+    "invalidPeriod": "请同时填写 YYYY-MM-DD 格式的 start 和 end，不要使用 days。请选择 {{timezone}} 时区中 {{earliestStart}} 至 {{today}} 之间的日期（包含首尾两天）。结束日期不得早于开始日期。",
+    "exportPeriod": "统计时段：{{from}} → {{to}} · {{timezone}}（不含结束时刻）。"
   },
   "ops": {
     "command": "PICKET 私密服务管理",

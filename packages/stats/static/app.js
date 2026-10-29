@@ -1,7 +1,7 @@
 const translations = {
   en: {
     recentTitle: 'Recent presences',
-    recentHelp: 'Latest 100 observed segments in this period',
+    recentHelp: 'Latest 100 overlapping segments. Only time within this period counts toward totals.',
     joined: 'Joined',
     left: 'Left / confirmed until',
     quality: 'Observation',
@@ -64,6 +64,17 @@ const translations = {
     presenceNote: 'Presence, not speaking time.',
     server: 'Server',
     period: 'Period',
+    customPeriod: 'Custom…',
+    periodStart: 'From',
+    periodEnd: 'Through',
+    applyPeriod: 'Apply',
+    calendarHelp: 'Both dates are included, in the server time zone (UTC for all servers). Today covers activity recorded so far.',
+    calendarLimits: 'Available dates: {start} through {end} · {timezone}.',
+    periodPending: 'Changes have not been applied. Figures and exports still use the displayed period.',
+    appliedPeriod: 'Displayed period: {from} → {to} · {timezone} (end excluded).',
+    snapshotLimited: 'The end of this period is limited to the latest scheduled snapshot.',
+    periodUnavailable: 'This period is later than the latest scheduled snapshot. Choose an earlier period or wait for the next update.',
+    exportAdjusted: 'The available history changed since this report was displayed. Exported period: {from} → {to} · {timezone} (end excluded). Refresh to see the current figures.',
     last1: 'Last 24 hours',
     last7: 'Last 7 days',
     last14: 'Last 14 days',
@@ -82,7 +93,7 @@ const translations = {
     presences: 'Presence segments',
     presencesHelp: 'A new segment for each channel change',
     inVoice: 'Currently in voice',
-    inVoiceHelp: 'Last confirmed connected people',
+    inVoiceHelp: 'Current confirmed connections, independent of the selected period',
     dailyTitle: 'Activity over time',
     dailyHelp: 'Total voice presence by day',
     serverVoiceTitle: 'Voice activity by server',
@@ -148,7 +159,7 @@ const translations = {
     updated: 'Updated',
     snapshotAsOf: 'Data as of',
     snapshotVoice: 'In voice at snapshot',
-    snapshotVoiceHelp: 'Connected people at the last scheduled update',
+    snapshotVoiceHelp: 'Connections at the scheduled update, independent of the selected period',
     snapshotPending: 'The instance statistics are being updated. Please try again shortly.',
     notUpdated: 'Waiting for a first observation',
     timezone: 'Daily totals in',
@@ -176,7 +187,7 @@ const translations = {
     bufferEmpty: 'No pending records',
     error: 'The service is temporarily unavailable. Please try again.',
     forbidden: 'Your access has changed. Refresh or choose another server.',
-    invalidPeriod: 'Choose a period within the last 60 days.',
+    invalidPeriod: 'Choose valid start and end dates within the available dates. The end must be on or after the start.',
     exportTooLarge: 'This export is too large. Choose a shorter period.',
     confirmErase: 'Confirm your erasure request.',
     chartDescription: 'Voice hours per day',
@@ -184,7 +195,7 @@ const translations = {
   },
   fr: {
     recentTitle: 'Présences récentes',
-    recentHelp: '100 derniers segments observés sur cette période',
+    recentHelp: '100 derniers segments qui recoupent la période. Seul le temps compris dans cette période entre dans les totaux.',
     joined: 'Connexion',
     left: 'Déconnexion / confirmation jusqu’à',
     quality: 'Observation',
@@ -248,6 +259,17 @@ const translations = {
     presenceNote: 'Temps de présence, pas de parole.',
     server: 'Serveur',
     period: 'Période',
+    customPeriod: 'Personnalisée…',
+    periodStart: 'Du',
+    periodEnd: 'Au',
+    applyPeriod: 'Appliquer',
+    calendarHelp: 'Les deux dates sont incluses, dans le fuseau du serveur (UTC pour tous les serveurs). Aujourd’hui couvre l’activité enregistrée jusqu’à maintenant.',
+    calendarLimits: 'Dates disponibles : du {start} au {end} · {timezone}.',
+    periodPending: 'Les modifications ne sont pas appliquées. Les chiffres et exports utilisent toujours la période affichée.',
+    appliedPeriod: 'Période affichée : {from} → {to} · {timezone} (fin exclue).',
+    snapshotLimited: 'La fin de cette période est limitée au dernier instantané planifié.',
+    periodUnavailable: 'Cette période est postérieure au dernier instantané planifié. Choisissez une période antérieure ou attendez la prochaine actualisation.',
+    exportAdjusted: 'L’historique disponible a changé depuis l’affichage. Période exportée : {from} → {to} · {timezone} (fin exclue). Actualisez pour consulter les chiffres à jour.',
     last1: 'Dernières 24 heures',
     last7: '7 derniers jours',
     last14: '14 derniers jours',
@@ -267,7 +289,7 @@ const translations = {
     presences: 'Segments de présence',
     presencesHelp: 'Un nouveau segment à chaque changement de salon',
     inVoice: 'Actuellement en vocal',
-    inVoiceHelp: 'Dernières présences connectées confirmées',
+    inVoiceHelp: 'Connexions actuelles confirmées, indépendantes de la période choisie',
     dailyTitle: 'L’activité au fil des jours',
     dailyHelp: 'Présence vocale cumulée par jour',
     serverVoiceTitle: 'Activité vocale par serveur',
@@ -335,7 +357,7 @@ const translations = {
     updated: 'Actualisé',
     snapshotAsOf: 'Données arrêtées au',
     snapshotVoice: 'En vocal à cette date',
-    snapshotVoiceHelp: 'Personnes connectées lors de la dernière actualisation planifiée',
+    snapshotVoiceHelp: 'Connexions à l’actualisation planifiée, indépendantes de la période choisie',
     snapshotPending: 'Les statistiques de l’instance sont en cours d’actualisation. Réessayez dans quelques instants.',
     notUpdated: 'En attente d’une première observation',
     timezone: 'Totaux journaliers en',
@@ -363,7 +385,7 @@ const translations = {
     bufferEmpty: 'Aucun événement en attente',
     error: 'Le service est temporairement indisponible. Réessayez dans un instant.',
     forbidden: 'Vos droits ont changé. Actualisez ou choisissez un autre serveur.',
-    invalidPeriod: 'Choisissez une période dans les 60 derniers jours.',
+    invalidPeriod: 'Choisissez des dates de début et de fin valides parmi les dates disponibles. La fin doit être égale ou postérieure au début.',
     exportTooLarge: 'Cet export est trop volumineux. Choisissez une période plus courte.',
     confirmErase: 'Confirmez votre demande d’effacement.',
     chartDescription: 'Heures vocales par jour',
@@ -400,6 +422,8 @@ let loadFailure = null;
 let retryFailure = null;
 let retryAt = 0;
 let displayedReportKey = null;
+let appliedPeriod = { days: '7' };
+let reportQuery = null;
 const privacyCache = new Map();
 let overviewPage = 'overview';
 const t = (key) => translations[language][key] ?? translations.en[key] ?? key;
@@ -534,6 +558,7 @@ async function api(path, options = {}) {
 }
 function errorText(error) {
   if (error.message === 'stats_snapshot_pending') return t('snapshotPending');
+  if (error.message === 'period_unavailable') return t('periodUnavailable');
   if (['discord_rate_limited', 'rate_limited'].includes(error.message))
     return t(error.message === 'rate_limited' ? 'dashboardRateLimited' : 'discordRateLimited')
       .replace('{seconds}', number(Math.max(0, error.retryAt ? Math.ceil((error.retryAt - Date.now()) / 1000) : error.retryAfter || 60)));
@@ -555,12 +580,16 @@ function renderPrivacyStatus() {
 }
 function updateRetryState() {
   const waiting = Date.now() < retryAt;
-  for (const id of ['refresh', 'export-csv', 'export-json', 'startup-retry']) $(id).disabled = waiting;
+  for (const id of ['refresh', 'startup-retry', 'period-apply']) $(id).disabled = waiting;
+  for (const id of ['export-csv', 'export-json']) $(id).disabled = waiting || !report || !reportQuery || loading;
   $('instance-refresh').disabled = waiting && retryFailure?.message === 'rate_limited';
   if (waiting) for (const id of ['opt-out', 'save-privacy', 'erase']) $(id).disabled = true;
 }
 function clearReport() {
   report = null;
+  reportQuery = null;
+  $('period-summary').hidden = true;
+  $('period-snapshot-note').hidden = true;
   instanceReport = null;
   displayedReportKey = null;
   ['metric-hours', 'metric-users', 'metric-sessions', 'metric-live', 'instance-total'].forEach(id => text(id, '—'));
@@ -591,6 +620,7 @@ function endSession() {
   updateRetryState();
 }
 function setHeading() {
+  syncCalendarControls();
   const isOverview = page === 'overview' || page === 'picket';
   text('greeting', `${t('hello')} · ${current.user.name}`);
   text('page-title', t(isOverview ? 'overview' : page));
@@ -669,12 +699,57 @@ function query() {
           : $('access').value;
   const params = new URLSearchParams({
     guild: selected,
-    days: $('period').value,
+    ...appliedPeriod,
     mode,
     offset: String(offset),
   });
   if ($('channel').value) params.set('channel', $('channel').value);
   return params;
+}
+
+function selectedPeriodLimits() {
+  return ($('guild').value === 'all' ? current?.periodLimits :
+    guilds.find(g => g.id === $('guild').value)?.periodLimits) ?? { timezone: 'UTC' };
+}
+function syncCalendarControls() {
+  const custom = $('period').value === 'custom';
+  $('calendar-period').hidden = !custom;
+  const limits = selectedPeriodLimits();
+  for (const id of ['period-start', 'period-end']) {
+    $(id).min = limits.earliestStart ?? '';
+    $(id).max = limits.today ?? '';
+  }
+  text('calendar-limits', t('calendarLimits').replace('{start}', limits.earliestStart ?? '—')
+    .replace('{end}', limits.today ?? '—').replace('{timezone}', limits.timezone));
+  const pending = custom && (appliedPeriod.days !== undefined ||
+    $('period-start').value !== appliedPeriod.start || $('period-end').value !== appliedPeriod.end);
+  $('period-pending').hidden = !pending;
+  text('period-pending', t('periodPending'));
+}
+function periodDate(value, timezone) {
+  return new Intl.DateTimeFormat(language, { dateStyle: 'medium', timeStyle: 'medium', timeZone: timezone }).format(new Date(value));
+}
+function periodDay(value, timezone) {
+  const parts = new Intl.DateTimeFormat('en', { timeZone: timezone, calendar: 'iso8601', numberingSystem: 'latn',
+    year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(value));
+  return ['year', 'month', 'day'].map(type => parts.find(p => p.type === type).value).join('-');
+}
+function renderPeriod(data) {
+  const limits = data.periodLimits;
+  if (limits) {
+    if ($('guild').value === 'all') current.periodLimits = limits;
+    else {
+      const guild = guilds.find(g => g.id === $('guild').value);
+      if (guild) guild.periodLimits = limits;
+    }
+  }
+  if (data.from && data.to) {
+    text('period-summary', t('appliedPeriod').replace('{from}', periodDate(data.from, data.timezone))
+      .replace('{to}', periodDate(data.to, data.timezone)).replace('{timezone}', data.timezone));
+    $('period-summary').hidden = false;
+  }
+  $('period-snapshot-note').hidden = !data.periodLimitedBySnapshot;
+  syncCalendarControls();
 }
 function svgNode(tag, attrs = {}, content) {
   const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -879,6 +954,7 @@ function renderGuildFeatures(features) {
 }
 function render(data) {
   report = data;
+  renderPeriod(data);
   renderGuildFeatures(data.guildFeatures);
   text('metric-hours', number(data.seconds / 3600, 1));
   text('metric-users', number(data.activeUsers));
@@ -1006,6 +1082,7 @@ async function load({ refreshPrivacy = false } = {}) {
   loadFailure = null;
   $('workspace').setAttribute('aria-busy', 'true');
   text('updated', t('loading'));
+  updateRetryState();
   notice('');
   for (const id of ['opt-out', 'save-privacy', 'erase']) $(id).disabled = true;
   $('opt-out').checked = false;
@@ -1034,7 +1111,8 @@ async function load({ refreshPrivacy = false } = {}) {
       }
       return;
     }
-    const data = await (await api(`/api/activity?${query()}`)).json();
+    const requestedQuery = query();
+    const data = await (await api(`/api/activity?${requestedQuery}`)).json();
     if (ticket !== generation) return;
     const selectedGuild = guilds.find(guild => guild.id === $('guild').value);
     if (selectedGuild && data.accessLevel) {
@@ -1042,6 +1120,7 @@ async function load({ refreshPrivacy = false } = {}) {
       setHeading();
     }
     displayedReportKey = `${page}:${query()}`;
+    reportQuery = requestedQuery.toString();
     render(data);
     if (
       page !== 'admin' &&
@@ -1103,6 +1182,7 @@ async function load({ refreshPrivacy = false } = {}) {
     if (ticket === generation) {
       loading = false;
       $('workspace').removeAttribute('aria-busy');
+      updateRetryState();
     }
   }
 }
@@ -1160,12 +1240,47 @@ document.querySelectorAll('[data-overview-page]').forEach((tab) => {
 for (const id of ['guild', 'period', 'access', 'channel'])
   $(id).addEventListener('change', () => {
     offset = 0;
+    if (id === 'period') {
+      $('period-error').hidden = true;
+      if ($('period').value === 'custom') {
+        const limits = selectedPeriodLimits();
+        const fromDay = report?.from ? periodDay(report.from, limits.timezone) : '';
+        const toDay = report?.to ? periodDay(new Date(Date.parse(report.to) - 1), limits.timezone) : '';
+        $('period-start').value ||= appliedPeriod.start ?? (fromDay > limits.earliestStart ? fromDay : limits.earliestStart) ?? '';
+        $('period-end').value ||= appliedPeriod.end ?? (toDay || limits.today || '');
+        syncCalendarControls();
+        return;
+      }
+      appliedPeriod = { days: $('period').value };
+    }
     if (id === 'guild') {
       rememberGuildSelection();
       $('channel').replaceChildren(new Option(t('allChannels'), ''));
     }
     load();
   });
+for (const id of ['period-start', 'period-end']) $(id).addEventListener('input', () => {
+  $('period-error').hidden = true;
+  for (const field of ['period-start', 'period-end']) $(field).removeAttribute('aria-invalid');
+  syncCalendarControls();
+});
+$('period-apply').addEventListener('click', () => {
+  const start = $('period-start').value, end = $('period-end').value;
+  const valid = value => /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    Number.isFinite(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+  const limits = selectedPeriodLimits();
+  if (!valid(start) || !valid(end) || start > end || start < limits.earliestStart || end > limits.today) {
+    text('period-error', t('invalidPeriod'));
+    $('period-error').hidden = false;
+    for (const id of ['period-start', 'period-end']) $(id).setAttribute('aria-invalid', 'true');
+    return;
+  }
+  $('period-error').hidden = true;
+  appliedPeriod = { start, end };
+  offset = 0;
+  syncCalendarControls();
+  load();
+});
 $('next').addEventListener('click', () => {
   offset += 1000;
   load();
@@ -1187,14 +1302,25 @@ $('logout').addEventListener('click', async () => {
 for (const format of ['csv', 'json'])
   $(`export-${format}`).addEventListener('click', async () => {
     try {
-      const params = query();
+      if (!report || !reportQuery || loading) return;
+      const params = new URLSearchParams(reportQuery);
+      for (const key of ['days', 'start', 'end', 'offset']) params.delete(key);
+      params.set('from', report.from);
+      params.set('to', report.to);
+      const timezone = report.timezone;
       params.set('format', format);
       const response = await api(`/api/export?${params}`);
+      const from = response.headers.get('X-Picket-Period-From') ?? params.get('from');
+      const to = response.headers.get('X-Picket-Period-To') ?? params.get('to');
+      if (Date.parse(from) !== Date.parse(params.get('from')) || Date.parse(to) !== Date.parse(params.get('to')))
+        notice(t('exportAdjusted').replace('{from}', periodDate(from, timezone))
+          .replace('{to}', periodDate(to, timezone)).replace('{timezone}', timezone));
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `picket-voice-${$('guild').value}.${format}`;
+      const stamp = value => new Date(value).toISOString().replace(/[-:]/g, '').replace('.000', '');
+      a.download = `picket-voice-${params.get('guild') === 'all' ? 'instance' : params.get('guild')}-${stamp(from)}_${stamp(to)}.${format}`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
     } catch (error) {

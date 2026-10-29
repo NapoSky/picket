@@ -540,8 +540,12 @@
       "status": "Afficher l’état de la collecte vocale",
       "export": "Exporter les statistiques vocales du serveur",
       "days": "Nombre de jours, au maximum 60",
-      "format": "Format du fichier exporté"
-    }
+      "format": "Format du fichier exporté",
+      "start": "Date de début, AAAA-MM-JJ (incluse ; fuseau du serveur)",
+      "end": "Date de fin, AAAA-MM-JJ (incluse ; fuseau du serveur)"
+    },
+    "invalidPeriod": "Renseignez start et end au format AAAA-MM-JJ, sans days. Choisissez des dates entre le {{earliestStart}} et le {{today}} inclus, en {{timezone}}. La fin doit être égale ou postérieure au début.",
+    "exportPeriod": "Période : {{from}} → {{to}} · {{timezone}} (fin exclue)."
   },
   "ops": {
     "command": "Administration privée du service PICKET",

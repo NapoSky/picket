@@ -48,6 +48,14 @@ describe('native admin snapshots',()=>{
     await store.refreshAdminSnapshot();same(await store.adminReport(global,period()),await store.report(global,period()));
     same(await store.adminReport(global,{from:date(86400000-1000),to:date(86400000+1000)}),await store.report(global,{from:date(86400000-1000),to:date(86400000+1000)}));
   });
+  it('does not add a day after an exclusive midnight end',async()=>{
+    await store.refreshAdminSnapshot();
+    const p={from:date(86400000),to:date(2*86400000)};
+    const report=await store.adminReport(global,p);
+    expect(report.daily).toHaveLength(1);
+    expect(report.daily[0]!.day).toBe(date(86400000).toISOString().slice(0,10));
+    same(report,await store.report(global,p));
+  });
   it('freezes totals and recent facts until a concurrent refresh, and preserves pagination',async()=>{
     await store.refreshAdminSnapshot();const old=await store.adminReport(global,period());
     await segment('late-replayed',B,V,C,date(86400000+1000),date(86400000+61000),'replayed');

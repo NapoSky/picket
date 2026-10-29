@@ -1,4 +1,5 @@
 export * from './domain/model';
+export * from './domain/period';
 export * from './application/store';
 export * from './infrastructure/postgres-stats-store';
 export * from './infrastructure/disk-voice-buffer';

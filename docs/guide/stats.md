@@ -186,7 +186,7 @@ with `/stats settings` and is not part of the personal `/stats privacy` panel.
 | Bots | Always excluded. | Excluded |
 | Native AFK channel | Always excluded. | Excluded |
 | Other excluded channels | Select voice or stage channels; **Clear exclusions** removes the selection. | None |
-| Dashboard period | 24 hours, 7, 14, 30 or 60 days. | 7 days |
+| Dashboard period | 24 hours, 7, 14, 30 or 60 days, or custom dates. | 7 days |
 | Dashboard interface | English or French; light, dark or system theme. | Browser language and system theme |
 
 :::
@@ -200,8 +200,27 @@ empty or includes `@everyone`, collection stops automatically.
 In **Voice activity**, choose the server, period, channel and view, then click **Export CSV** or **JSON**. A member
 exports their own data; an officer exports regiment data only in servers where they hold that access.
 
+To choose dates, select **Custom…**, fill in **From** and **Through**, then click **Apply**. Both dates are included
+in the server's configured time zone; **All servers** uses UTC. A day can therefore last 23 or 25 hours across a
+daylight-saving transition. Today covers activity recorded so far. Available start dates are fully retained days
+within the rolling 60-day window; the first partially expired day cannot be selected.
+The effective period is displayed with times and an exclusive end. Unapplied field edits change neither figures
+nor exports. Downloads use the exact bounds of the displayed report.
+If part of that report has since expired at the 60-day boundary, the download contains only the retained portion:
+a message identifies the adjusted bounds, which also appear in its file name. Refresh to see the corresponding figures.
+
+The global Administration view stops at the latest scheduled snapshot: a period extending beyond it is marked as
+partial; a period entirely after it is reported as not yet available. Current voice connections and collection
+status remain independent of the historical period selected.
+
 In Discord, an officer can use **`/stats export days:7 format:csv`** to receive this server's statistics privately.
 `days` accepts 1–60; `format` accepts CSV or JSON. `/stats status` shows settings and retention.
+
+For custom dates, use **`/stats export start:2026-10-10 end:2026-10-15 format:csv`**, for example.
+`start` and `end` must be supplied together as `YYYY-MM-DD`, and cannot be combined with `days`. Dates are inclusive
+in the server's time zone, with the same limits as the dashboard. Without a period, the last 7 days remain the default.
+The private reply includes the bounds and time zone; the file name includes the exact UTC bounds.
+CSV columns and the JSON structure remain unchanged.
 
 Oversized exports return a message asking you to narrow the period or choose a channel in the dashboard. Access is
 rechecked before export. Recipients are responsible for retention of downloaded files.

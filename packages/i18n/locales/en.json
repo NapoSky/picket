@@ -540,8 +540,12 @@
       "status": "Show voice collection status",
       "export": "Export your server voice statistics",
       "days": "Number of days, up to 60",
-      "format": "Export file format"
-    }
+      "format": "Export file format",
+      "start": "Start date, YYYY-MM-DD (included; server time zone)",
+      "end": "End date, YYYY-MM-DD (included; server time zone)"
+    },
+    "invalidPeriod": "Provide both start and end as YYYY-MM-DD, without days. Choose dates from {{earliestStart}} through {{today}} inclusive, in {{timezone}}. The end must be on or after the start.",
+    "exportPeriod": "Period: {{from}} → {{to}} · {{timezone}} (end excluded)."
   },
   "ops": {
     "command": "Private PICKET service administration",

@@ -6,7 +6,8 @@ import { GuildId, RoleId, type Logger, type OperationalMetrics } from '@picket/k
 import { PostgresPermissionRepository, resolveAccessLevel } from '@picket/guild';
 import { sql, type Db } from '@picket/persistence';
 import { exportActivity } from '../application/activity-export';
-import { parsePeriod, type StatsScope } from '../domain/model';
+import type { StatsScope } from '../domain/model';
+import { activityFilename, calendarLimits, resolveStatsPeriod } from '../domain/period';
 import type { DurableVoiceBuffer } from '../application/store';
 import { DashboardDiscordError, type DashboardIdentityProvider } from './dashboard-discord';
 import { PostgresStatsStore } from './postgres-stats-store';
@@ -163,18 +164,12 @@ export function createDashboardServer(options: DashboardOptions) {
       accessLevel: global ? 'instance_admin' : member!.level,
     };
   }
-  function periodFor(query: Record<string, unknown>, snapshotAt?: Date | null) {
-    const instant = now();
-    if (snapshotAt && snapshotAt.getTime()<=instant.getTime()-60*86_400_000)
-      throw Object.assign(new Error('stats_snapshot_pending'), { statusCode:503 });
-    const end = snapshotAt ?? instant;
-    const days = typeof query.days === 'string' && /^\d+$/.test(query.days) ? Number(query.days) : 7;
-    if (days < 1 || days > 60) return null;
-    return parsePeriod(
-      query.from ?? new Date(Math.max(instant.getTime()-60*86_400_000,end.getTime() - days * 86_400_000)).toISOString(),
-      query.to ?? (snapshotAt ? end.toISOString() : undefined),
-      instant,
-    );
+  async function periodFor(query: Record<string, unknown>, selected: StatsScope, exporting = false) {
+    const timezone = selected.guildId ? (await options.store.config(selected.guildId)).timezone ?? 'UTC' : 'UTC';
+    const snapshotAt = selected.kind === 'global' ? (await options.store.adminSnapshotStatus()).snapshotAt : undefined;
+    const period = resolveStatsPeriod(query, timezone, now(), snapshotAt, { trimExpiredExportStart: exporting });
+    return { period, periodLimits: calendarLimits(timezone, now()),
+      periodLimitedBySnapshot: !!snapshotAt && period.to > snapshotAt };
   }
 
   app.addHook('onRequest', async (request, reply) => {
@@ -317,6 +312,7 @@ export function createDashboardServer(options: DashboardOptions) {
       administrator: await options.identity.teamMember(current.user_id),
       refreshSeconds: 60,
       retentionDays: 60,
+      periodLimits: calendarLimits('UTC', now()),
     };
   });
   app.post('/api/logout', async (request, reply) => {
@@ -358,6 +354,7 @@ export function createDashboardServer(options: DashboardOptions) {
         enabled: settings.enabled,
         isMember: membership !== undefined && active.has(guildId),
         inactive: !active.has(guildId),
+        periodLimits: calendarLimits(settings.timezone ?? 'UTC', now()),
       });
     }
     return { guilds: items };
@@ -370,8 +367,7 @@ export function createDashboardServer(options: DashboardOptions) {
     const current = await session(request);
     const query = request.query as Record<string, unknown>;
     const selected = await scope(current, query);
-    const period = periodFor(query, selected.kind === 'global' ? (await options.store.adminSnapshotStatus()).snapshotAt : undefined);
-    if (!period) throw Object.assign(new Error('invalid_period'), { statusCode: 400 });
+    const { period, ...periodDetails } = await periodFor(query, selected);
     if (query.channel !== undefined && !validId(query.channel))
       throw Object.assign(new Error('invalid_channel'), { statusCode: 400 });
     const requested = {
@@ -382,7 +378,7 @@ export function createDashboardServer(options: DashboardOptions) {
       const report = await options.store.report({ ...selected, kind: 'guild' }, requested, {
         includeUsers: false,
       });
-      return { ...report, collection: await options.store.collectionStatus(selected), users: [], scope: 'overview', accessLevel: selected.accessLevel };
+      return { ...report, ...periodDetails, collection: await options.store.collectionStatus(selected), users: [], scope: 'overview', accessLevel: selected.accessLevel };
     }
     const offset = typeof query.offset === 'string' && /^\d+$/.test(query.offset) ? Number(query.offset) : 0;
     if (offset > 1_000_000) throw Object.assign(new Error('invalid_offset'), { statusCode: 400 });
@@ -391,15 +387,15 @@ export function createDashboardServer(options: DashboardOptions) {
       : await options.store.report(selected, requested, { offset });
     const guildFeatures = selected.accessLevel === 'instance_admin' && selected.guildId !== null
       ? await options.store.guildFeatures(selected.guildId) : undefined;
-    return { ...report, collection: await options.store.collectionStatus(selected), scope: selected.kind, accessLevel: selected.accessLevel, offset,
+    return { ...report, ...periodDetails, collection: await options.store.collectionStatus(selected), scope: selected.kind, accessLevel: selected.accessLevel, offset,
       ...(guildFeatures ? { guildFeatures } : {}) };
   });
   app.get('/api/export', async (request, reply) => {
     const current = await session(request);
     const query = request.query as Record<string, unknown>;
     const selected = await scope(current, query, true);
-    const period = periodFor(query, selected.kind === 'global' ? (await options.store.adminSnapshotStatus()).snapshotAt : undefined);
-    if (!period || !['csv', 'json'].includes(String(query.format)))
+    const { period } = await periodFor(query, selected, true);
+    if (!['csv', 'json'].includes(String(query.format)))
       return reply.code(400).send({ error: 'invalid_export' });
     if (query.channel !== undefined && !validId(query.channel))
       return reply.code(400).send({ error: 'invalid_channel' });
@@ -412,8 +408,9 @@ export function createDashboardServer(options: DashboardOptions) {
       : await options.store.report(selected, requested, { limit: 10_000 });
     // Bound response memory; users can also select a channel or narrower period. Never silently truncate.
     if (report.truncated) return reply.code(413).send({ error: 'export_too_large' });
-    const filename = `picket-voice-${selected.guildId ?? 'instance'}-${now().toISOString().slice(0, 10)}.${query.format}`;
+    const filename = activityFilename(selected.guildId ?? 'instance', report.from, report.to, query.format as 'csv' | 'json');
     reply.header('Content-Disposition', `attachment; filename="${filename}"`);
+    reply.header('X-Picket-Period-From', report.from).header('X-Picket-Period-To', report.to);
     const format = query.format as 'json' | 'csv';
     return reply
       .type(format === 'json' ? 'application/json' : 'text/csv; charset=utf-8')

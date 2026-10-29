@@ -11,6 +11,7 @@ import {
   type DashboardIdentityProvider,
   type OAuthGuild,
   type DurableVoiceBuffer,
+  calendarDate, resolveStatsPeriod,
 } from '../src';
 const A = '700000000000000001',
   B = '700000000000000002',
@@ -411,6 +412,72 @@ describe('dashboard OAuth, scopes, revocations and erasure', () => {
     expect(response.body).toContain("'=SUM(A1:A2)");
     expect(response.body.split('\r\n')[0]).toBe('user_id,username,total_seconds,last_activity_date');
     expect((await get(`/api/export?guild=${A}&format=json&channel=invalid`)).statusCode).toBe(400);
+  });
+  it('uses the configured zone for inclusive calendar dates and exports the same clipped totals', async () => {
+    roles = [R, O];
+    await queryAsAdmin(database, "UPDATE guild_settings SET timezone='Europe/Paris' WHERE guild_id=$1", [A]);
+    const day = calendarDate(new Date(Date.now() - 3 * 86400_000), 'Europe/Paris');
+    const period = resolveStatsPeriod({ start: day, end: day }, 'Europe/Paris', new Date());
+    await queryAsAdmin(database, `INSERT INTO stats_voice_segments(id,guild_id,user_id,channel_id,shard_id,started_at,ended_at,confirmed_through,quality,end_reason)
+      VALUES('calendar-crossing',$1,$2,$3,0,$4,$5,$5,'observed','leave')`,
+      [A,U,C,new Date(period.from.getTime()-1800_000),new Date(period.to.getTime()+1800_000)]);
+    const filters = `guild=${A}&mode=guild&channel=${C}&start=${day}&end=${day}`;
+    const response = await get(`/api/activity?${filters}`);
+    expect(response.statusCode).toBe(200);
+    const report = response.json();
+    expect(report).toMatchObject({ from: period.from.toISOString(), to: period.to.toISOString(), timezone: 'Europe/Paris',
+      periodLimits: { timezone: 'Europe/Paris' }, seconds: (period.to.getTime()-period.from.getTime())/1000 });
+    expect(report.daily).toHaveLength(1);
+    const exported = await get(`/api/export?${filters}&format=json`);
+    expect(exported.statusCode).toBe(200);
+    expect(exported.json()).toEqual([{ userId: U, username: '=SUM(A1:A2)', totalSeconds: report.seconds,
+      lastActivityDate: period.to.toISOString().replace('.000Z', '+00:00') }]);
+    expect(exported.headers['content-disposition']).toContain(period.from.toISOString().replace(/[-:]/g, '').replace('.000', ''));
+    expect(exported.headers['x-picket-period-from']).toBe(report.from);
+    expect(exported.headers['x-picket-period-to']).toBe(report.to);
+    const frozen = new URLSearchParams({ guild: A, mode: 'guild', channel: C, from: report.from, to: report.to, format: 'json' });
+    expect((await get(`/api/export?${frozen}`)).json()).toEqual(exported.json());
+    const guilds = (await get('/api/guilds')).json().guilds;
+    expect(guilds.find((g: { id: string }) => g.id === A).periodLimits.timezone).toBe('Europe/Paris');
+  });
+  it.each([
+    'start=2026-10-10', 'end=2026-10-11', 'start=2026-09-31&end=2026-10-01',
+    'start=2000-01-01&end=2000-01-02', 'start=2999-01-01&end=2999-01-02',
+    'start=2026-10-11&end=2026-10-10', 'start=2026-10-10&end=2026-10-11&days=7',
+    'start=2026-10-10&end=2026-10-11&from=2026-10-10T00:00:00Z',
+  ])('rejects invalid dates consistently for reports and downloads: %s', async filters => {
+    for (const endpoint of ['activity', 'export']) {
+      const response = await get(`/api/${endpoint}?guild=${A}&${filters}&format=csv`);
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: 'invalid_period' });
+    }
+  });
+  it('exports the retained remainder of a frozen rolling window and reports the effective bounds', async () => {
+    const end = new Date(Date.now()-60_000), from = new Date(end.getTime()-60*86400_000);
+    const filters = new URLSearchParams({ guild: A, from: from.toISOString(), to: end.toISOString(), format: 'json' });
+    expect((await get(`/api/activity?${filters}`)).statusCode).toBe(400);
+    const response = await get(`/api/export?${filters}`);
+    expect(response.statusCode).toBe(200);
+    const effectiveFrom = new Date(String(response.headers['x-picket-period-from']));
+    expect(effectiveFrom.getTime()).toBeGreaterThan(from.getTime());
+    expect(Math.abs(effectiveFrom.getTime()-(Date.now()-60*86400_000))).toBeLessThan(5000);
+    expect(response.headers['x-picket-period-to']).toBe(end.toISOString());
+  });
+  it('marks snapshot-limited periods and refuses dates entirely after the snapshot', async () => {
+    team = true;
+    const today = calendarDate(new Date(), 'UTC');
+    const snapshot = new Date(`${today}T00:00:00Z`);
+    const yesterday = calendarDate(new Date(snapshot.getTime() - 86400_000), 'UTC');
+    await queryAsAdmin(database, 'UPDATE stats_admin_snapshot_state SET snapshot_at=$1', [snapshot]);
+    const partial = await get(`/api/activity?guild=all&start=${yesterday}&end=${today}`);
+    expect(partial.statusCode).toBe(200);
+    expect(partial.json()).toMatchObject({ periodLimitedBySnapshot: true, timezone: 'UTC' });
+    expect(new Date(partial.json().to)).toEqual(snapshot);
+    for (const endpoint of ['activity', 'export']) {
+      const response = await get(`/api/${endpoint}?guild=all&start=${today}&end=${today}&format=json`);
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: 'period_unavailable' });
+    }
   });
   it('fails closed on an altered encrypted session token', async () => {
     await queryAsAdmin(database, "UPDATE stats_web_sessions SET encrypted_token='invalid'");

@@ -19,6 +19,7 @@ import type { UpdatePermissions } from '@picket/guild';
 import type { MessageKey } from '@picket/i18n';
 import { exportActivity } from '../../application/activity-export';
 import { validTargets } from '../../domain/model';
+import { activityFilename, calendarLimits, resolveStatsPeriod, StatsPeriodError } from '../../domain/period';
 import type { DurableVoiceBuffer, StatsPanelStore } from '../../application/store';
 
 export const STATS_ROOT: RootDescriptor = { name: 'stats', description: 'stats.commands.root' };
@@ -335,6 +336,8 @@ export function createStatsPanel(deps: StatsPanelDependencies) {
       level: 'officer',
       options: [
         { type: 'integer', name: 'days', description: 'stats.commands.days', minValue: 1, maxValue: 60 },
+        { type: 'string', name: 'start', description: 'stats.commands.start' },
+        { type: 'string', name: 'end', description: 'stats.commands.end' },
         {
           type: 'string',
           name: 'format',
@@ -353,29 +356,34 @@ export function createStatsPanel(deps: StatsPanelDependencies) {
           const level = await deps.access.levelOf(context.interaction, context.guildId);
           if (level === null || ACCESS_RANK[level] < ACCESS_RANK.officer)
             return ephemeral(context.t('errors.denied', { level: context.t('levels.officer') }));
-          const days = context.interaction.options.days ?? 7;
           const format = context.interaction.options.format ?? 'csv';
-          if (
-            typeof days !== 'number' ||
-            days < 1 ||
-            days > 60 ||
-            !Number.isInteger(days) ||
-            !['csv', 'json'].includes(String(format))
-          )
+          if (!['csv', 'json'].includes(String(format)))
             return ephemeral(context.t('settings.invalidOption'));
-          const to = deps.clock.now();
+          const now = deps.clock.now();
+          const timezone = (await deps.store.config(context.guildId)).timezone ?? 'UTC';
+          let period;
+          try { period = resolveStatsPeriod(context.interaction.options, timezone, now); }
+          catch (error) {
+            if (!(error instanceof StatsPeriodError)) throw error;
+            const limits = calendarLimits(timezone, now);
+            return ephemeral(context.t('stats.invalidPeriod', { ...limits }));
+          }
           const data = await deps.store.report(
             { kind: 'guild', guildId: context.guildId, userId: context.interaction.userId },
-            { from: new Date(to.getTime() - days * 86_400_000), to },
+            period,
           );
           if (data.truncated) return ephemeral(context.t('stats.exportTooLarge'));
           const content = exportActivity(data.users, format as 'json' | 'csv');
           return {
             kind: 'file',
             ephemeral: true,
-            content: context.t('stats.exportReady'),
+            content: `${context.t('stats.exportReady')}\n${context.t('stats.exportPeriod', {
+              from: new Intl.DateTimeFormat(context.interaction.locale, { dateStyle: 'medium', timeStyle: 'medium', timeZone: timezone }).format(new Date(data.from)),
+              to: new Intl.DateTimeFormat(context.interaction.locale, { dateStyle: 'medium', timeStyle: 'medium', timeZone: timezone }).format(new Date(data.to)),
+              timezone,
+            })}`,
             file: {
-              filename: `picket-voice-${context.guildId}.${format}`,
+              filename: activityFilename(context.guildId, data.from, data.to, format as 'csv' | 'json'),
               bytes: new TextEncoder().encode(content),
             },
           };

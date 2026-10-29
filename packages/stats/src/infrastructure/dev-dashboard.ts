@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import Fastify from 'fastify';
 import { exportActivity } from '../application/activity-export';
-import { parsePeriod } from '../domain/model';
+import { activityFilename, calendarLimits, resolveStatsPeriod, StatsPeriodError } from '../domain/period';
 import { FEATURES } from '@picket/guild';
 
 export type PreviewRole = 'member' | 'officer' | 'admin';
@@ -23,6 +23,10 @@ export function createStatsDevServer(role: PreviewRole = 'admin', now = new Date
   const channels = [{ id: C, name: 'Operations' }, { id: D, name: 'Logistics' },
     { id: String(BigInt(C) + 2n), name: 'Training' }, { id: String(BigInt(C) + 3n), name: 'Briefing' }];
   let signedIn = true;
+  app.setErrorHandler((error, _request, reply) => {
+    if (error instanceof StatsPeriodError) return reply.code(error.statusCode).send({ error: error.message });
+    return reply.send(error);
+  });
   const excluded = new Set<string>();
   const names = ['Captain', 'Sage', 'Vesper', 'Rook', 'Ash', 'Flint', 'Beacon', 'Harrier', 'Atlas', 'Ember', 'Moss', 'Kestrel'];
   const peoplePerGuild = [36, 24, 18, 12, 8];
@@ -60,8 +64,8 @@ export function createStatsDevServer(role: PreviewRole = 'admin', now = new Date
     reply.header('Cache-Control', 'no-store');
     if (request.url.startsWith('/api/') && !signedIn) return reply.code(401).send({ error: 'unauthenticated' });
   });
-  app.get('/api/session', async () => ({ user: { id: U, name: 'Captain' }, csrf: 'preview', administrator: role === 'admin', refreshSeconds: 60, retentionDays: 60 }));
-  app.get('/api/guilds', async () => ({ guilds }));
+  app.get('/api/session', async () => ({ user: { id: U, name: 'Captain' }, csrf: 'preview', administrator: role === 'admin', refreshSeconds: 60, retentionDays: 60, periodLimits: calendarLimits('UTC', now) }));
+  app.get('/api/guilds', async () => ({ guilds: guilds.map(g => ({ ...g, periodLimits: calendarLimits('UTC', now) })) }));
   app.get('/api/instance', async () => ({ activeGuilds: guilds.length,
     features: [
       { feature: 'timers', enabledGuilds: 5 }, { feature: 'todolists', enabledGuilds: 4 },
@@ -74,10 +78,7 @@ export function createStatsDevServer(role: PreviewRole = 'admin', now = new Date
     const global = query.guild === 'all';
     const guild = guilds.find((g) => g.id === query.guild);
     if ((global && role !== 'admin') || (!global && !guild)) throw Object.assign(new Error('forbidden'), { statusCode: 403 });
-    const days = query.days === undefined ? 7 : Number(query.days);
-    const period = Number.isInteger(days) && days >= 1 && days <= 60
-      ? parsePeriod(query.from ?? new Date(now.getTime() - days * 86400_000).toISOString(), query.to, now) : null;
-    if (!period) throw Object.assign(new Error('invalid_period'), { statusCode: 400 });
+    const period = resolveStatsPeriod(query, 'UTC', now, undefined, { trimExpiredExportStart: exporting });
     const scope = global ? 'global' : query.mode === 'overview' && !exporting ? 'overview' :
       query.mode !== 'personal' && (role === 'admin' || guild?.level === 'officer') ? 'guild' : 'self';
     const visible = segments.filter((s) => (global || s.guildId === guild!.id) &&
@@ -94,7 +95,7 @@ export function createStatsDevServer(role: PreviewRole = 'admin', now = new Date
     const firstDay = new Date(period.from);
     firstDay.setUTCHours(0, 0, 0, 0);
     const dailyFor = (items: typeof visible) => {
-      return Array.from({ length: Math.floor((period.to.getTime() - firstDay.getTime()) / 86400_000) + 1 }, (_, index) => {
+      return Array.from({ length: Math.floor((period.to.getTime() - 1 - firstDay.getTime()) / 86400_000) + 1 }, (_, index) => {
         const start = Math.max(firstDay.getTime() + index * 86400_000, period.from.getTime());
         const end = Math.min(firstDay.getTime() + (index + 1) * 86400_000, period.to.getTime());
         const active = items.filter((s) => Date.parse(s.startedAt) < end && Date.parse(s.endedAt) > start);
@@ -123,7 +124,7 @@ export function createStatsDevServer(role: PreviewRole = 'admin', now = new Date
       ? FEATURES.map(feature => ({ feature, enabled: feature === 'stats' ? guild.enabled
         : feature === 'timers' || feature === 'voice' || (feature === 'todolists' ? guild.id !== B : [A, B].includes(guild.id)) }))
       : undefined;
-    return { scope, ...(guildFeatures ? { guildFeatures } : {}), ...(global ? {snapshotAt:now.toISOString()} : {}), from: period.from.toISOString(), to: period.to.toISOString(), timezone: 'UTC',
+    return { scope, periodLimits: calendarLimits('UTC', now), periodLimitedBySnapshot: false, ...(guildFeatures ? { guildFeatures } : {}), ...(global ? {snapshotAt:now.toISOString()} : {}), from: period.from.toISOString(), to: period.to.toISOString(), timezone: 'UTC',
       seconds: visible.reduce((sum, s) => sum + s.seconds, 0), activeUsers: new Set(visible.map((s) => s.userId)).size,
       sessions: visible.length, inVoice: 0, peakConcurrency,
       serverActivity: guilds.filter((g) => global || g.id === guild!.id).map((g) => {
@@ -146,7 +147,8 @@ export function createStatsDevServer(role: PreviewRole = 'admin', now = new Date
     if (query.format !== 'csv' && query.format !== 'json') return reply.code(400).send({ error: 'invalid_export' });
     const data = report(query, true);
     return reply.type(query.format === 'csv' ? 'text/csv; charset=utf-8' : 'application/json')
-      .header('Content-Disposition', `attachment; filename="picket-demo.${query.format}"`)
+      .header('Content-Disposition', `attachment; filename="${activityFilename(query.guild === 'all' ? 'instance' : String(query.guild), data.from, data.to, query.format)}"`)
+      .header('X-Picket-Period-From', data.from).header('X-Picket-Period-To', data.to)
       .send(exportActivity(data.users, query.format, data.scope === 'global'));
   });
   app.get('/api/privacy', async (request) => ({ optedOut: excluded.has((request.query as { guild: string }).guild) }));

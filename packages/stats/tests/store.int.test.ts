@@ -325,6 +325,7 @@ describe('voice facts, RLS, erasure and recovery (PostgreSQL)', () => {
     );
     expect(dst.seconds).toBe(25 * 3600);
     expect(dst.daily.find((d) => d.day === '2026-10-25')?.seconds).toBe(25 * 3600);
+    expect(dst.daily).toEqual([{ day: '2026-10-25', seconds: 25 * 3600, users: 1 }]);
     expect(dst.serverActivity[0]?.daily).toEqual([{ day: '2026-10-25', seconds: 25 * 3600, users: 1 }]);
     expect(dst.hourly.find((h) => h.hour === 2)?.seconds).toBe(7200);
     await queryAsAdmin(database, "UPDATE guild_settings SET timezone='Asia/Kathmandu' WHERE guild_id=$1", [

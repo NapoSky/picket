@@ -479,6 +479,7 @@ main:has(> .welcome:not([hidden])) {
 }
 .filters {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: 14px;
   padding: 17px 20px;
@@ -530,6 +531,20 @@ main:has(> .welcome:not([hidden])) {
   font-size: 10px;
   color: var(--muted);
   margin: 15px 2px 22px;
+}
+.calendar-period {
+  margin-top: 12px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.calendar-fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px; }
+.calendar-fields input { width: 100%; min-width: 0; }
+.calendar-period p, #period-summary, #period-snapshot-note { font-size: 12px; margin: 10px 2px; }
+@media (max-width: 600px) {
+  .calendar-fields .field { flex: 1 1 100%; min-width: 0; }
+  .calendar-fields button { width: 100%; }
 }
 .notice {
   padding: 11px 15px;

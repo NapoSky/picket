@@ -133,6 +133,7 @@
                   <option value="14" data-i18n="last14">Last 14 days</option>
                   <option value="30" data-i18n="last30">Last 30 days</option>
                   <option value="60" data-i18n="last60">Last 60 days</option>
+                  <option value="custom" data-i18n="customPeriod">Custom…</option>
                 </select>
               </div>
               <div class="field" id="access-field" hidden>
@@ -150,6 +151,21 @@
               </div>
               <button id="refresh" class="secondary" data-i18n="refresh">Refresh</button>
             </div>
+            <div id="calendar-period" class="calendar-period" hidden>
+              <div class="calendar-fields">
+                <div class="field"><label for="period-start" data-i18n="periodStart">From</label>
+                  <input id="period-start" type="date" required aria-describedby="calendar-help calendar-limits period-pending period-error" /></div>
+                <div class="field"><label for="period-end" data-i18n="periodEnd">Through</label>
+                  <input id="period-end" type="date" required aria-describedby="calendar-help calendar-limits period-pending period-error" /></div>
+                <button id="period-apply" class="secondary" data-i18n="applyPeriod">Apply</button>
+              </div>
+              <p id="calendar-help" class="muted" data-i18n="calendarHelp">Both dates are included. Today covers activity recorded so far.</p>
+              <p id="calendar-limits" class="muted"></p>
+              <p id="period-pending" class="muted" role="status" aria-live="polite" hidden></p>
+              <p id="period-error" class="error" role="alert" hidden></p>
+            </div>
+            <p id="period-summary" class="muted" role="status" aria-live="polite" hidden></p>
+            <p id="period-snapshot-note" class="muted" role="status" hidden data-i18n="snapshotLimited">This period is limited to the latest scheduled snapshot.</p>
             <div class="freshness">
               <span id="updated" role="status" aria-live="polite"></span><span id="timezone"></span>
             </div>
@@ -279,7 +295,7 @@
               <div class="card-heading">
                 <div>
                   <h2 data-i18n="recentTitle">Recent presences</h2>
-                  <p data-i18n="recentHelp">Latest 100 observed segments in this period</p>
+                  <p data-i18n="recentHelp">Latest 100 overlapping segments. Only time within this period counts toward totals.</p>
                 </div>
               </div>
               <div class="table-scroll">

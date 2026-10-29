@@ -544,8 +544,12 @@
       "status": "Pokaż stan zbierania danych głosowych",
       "export": "Eksportuj statystyki głosowe serwera",
       "days": "Liczba dni, maksymalnie 60",
-      "format": "Format pliku eksportu"
-    }
+      "format": "Format pliku eksportu",
+      "start": "Data początkowa, RRRR-MM-DD (włącznie; strefa serwera)",
+      "end": "Data końcowa, RRRR-MM-DD (włącznie; strefa serwera)"
+    },
+    "invalidPeriod": "Podaj start i end w formacie RRRR-MM-DD, bez days. Wybierz daty od {{earliestStart}} do {{today}} włącznie, w strefie {{timezone}}. Koniec nie może poprzedzać początku.",
+    "exportPeriod": "Okres: {{from}} → {{to}} · {{timezone}} (chwila końcowa wyłączona)."
   },
   "ops": {
     "command": "Prywatna administracja usługi PICKET",

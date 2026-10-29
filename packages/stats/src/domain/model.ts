@@ -14,6 +14,7 @@ export interface VoicePerson {
 
 export interface StatsConfig {
   readonly guildId: string;
+  readonly timezone?: string;
   readonly enabled: boolean;
   readonly roles: readonly string[];
   readonly excludedChannels: readonly string[];

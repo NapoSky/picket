@@ -34,6 +34,36 @@ describe('offline dashboard development environment', () => {
       expect((await app.inject(`/api/export?guild=${A}&format=csv`)).body.split('\r\n')[0]).toBe('user_id,username,total_seconds,last_activity_date');
     } finally { await app.close(); }
   });
+  it('previews custom dates with the shared validation, bounds and download names', async () => {
+    const app = createStatsDevServer('officer', now);
+    try {
+      const filters = `guild=${A}&mode=guild&start=2026-10-10&end=2026-10-11`;
+      const response = await app.inject(`/api/activity?${filters}`);
+      expect(response.statusCode).toBe(200);
+      const data = response.json();
+      expect(data).toMatchObject({ from: '2026-10-10T00:00:00.000Z', to: '2026-10-12T00:00:00.000Z',
+        periodLimits: { timezone: 'UTC', earliestStart: '2026-08-15', today: '2026-10-13' } });
+      expect(data.daily.map((d: { day: string }) => d.day)).toEqual(['2026-10-10', '2026-10-11']);
+      const download = await app.inject(`/api/export?${filters}&format=json`);
+      expect(download.statusCode).toBe(200);
+      expect(download.headers['content-disposition']).toContain('20261010T000000Z_20261012T000000Z.json');
+      expect(download.json().reduce((s: number, p: { totalSeconds: number }) => s + p.totalSeconds, 0)).toBe(data.seconds);
+      const frozen = new URLSearchParams({ guild: A, from: '2026-08-14T11:59:30Z', to: '2026-10-13T11:59:30Z', format: 'json' });
+      expect((await app.inject(`/api/activity?${frozen}`)).statusCode).toBe(400);
+      const trimmed = await app.inject(`/api/export?${frozen}`);
+      expect(trimmed.statusCode).toBe(200);
+      expect(trimmed.headers['x-picket-period-from']).toBe('2026-08-14T12:00:00.000Z');
+      expect(trimmed.headers['x-picket-period-to']).toBe('2026-10-13T11:59:30.000Z');
+      for (const invalid of ['start=2026-10-10', 'start=2026-09-31&end=2026-10-01',
+        'start=2026-10-10&end=2026-10-11&days=7', 'start=2026-08-14&end=2026-08-15']) {
+        for (const path of ['activity', 'export']) {
+          const result = await app.inject(`/api/${path}?guild=${A}&${invalid}&format=csv`);
+          expect(result.statusCode).toBe(400);
+          expect(result.json()).toEqual({ error: 'invalid_period' });
+        }
+      }
+    } finally { await app.close(); }
+  });
   it('supports global administration, erasure and sign-out in isolated fixtures', async () => {
     const app = createStatsDevServer('admin', now);
     try {
