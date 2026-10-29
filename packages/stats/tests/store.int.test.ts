@@ -316,6 +316,8 @@ describe('voice facts, RLS, erasure and recovery (PostgreSQL)', () => {
   it('splits daylight-saving and quarter-hour timezone boundaries exactly', async () => {
     const reportAt = new Date('2026-11-01T00:00:00Z');
     const clocked = new PostgresStatsStore(database.handle.db, () => reportAt);
+    // The historical observations must follow activation regardless of today's date.
+    await queryAsAdmin(database, "UPDATE stats_settings SET enabled_at='2026-10-24T00:00:00Z'");
     await queryAsAdmin(database, "UPDATE guild_settings SET timezone='Europe/Paris' WHERE guild_id=$1", [A]);
     await clocked.observe(observation({ key: 'dst-join', at: '2026-10-24T22:00:00Z' }));
     await clocked.observe(observation({ key: 'dst-leave', channelId: null, at: '2026-10-25T23:00:00Z' }));
