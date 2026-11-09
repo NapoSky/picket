@@ -16,7 +16,7 @@
   ],
   "dependencies": {
     "@picket/kernel": "workspace:*",
-    "cron-parser": "^5.10.2",
+    "cron-parser": "^5.10.4",
     "zod": "^4.6.7"
   }
 }
