@@ -117,6 +117,41 @@ Bug reports, code, documentation and translations are welcome. Browse the
 
 Keep credentials, `.env` files, database dumps and generated build files out of pull requests.
 
+### Dependency maintenance and security policy
+
+Dependabot keeps its weekly updates and separate npm, GitHub Actions, Docker and Docker Compose PRs.
+Only npm Dependabot PRs and the dedicated `maintenance/npm-lockfile` PR participate in the retry controller.
+After a failed CI/Docs run, or during its daily catch-up, it may retry failed jobs **once per workflow and commit**
+when every failure is a recognized network/service error or a timeout. Audit failures, secret findings and
+unclassified test/build failures remain for review. The controller only reads GitHub metadata and logs; it never
+executes PR code. Its job summary records the decisions without posting repeated PR comments.
+
+The dependency audit covers every workspace, including development tools. **High/critical findings block CI**,
+including findings without a published fix. Low/moderate findings remain visible in the job summary and the
+`dependency-audit` JSON artifact (30-day retention), and do not block unrelated updates by default. An unavailable
+registry or invalid report still fails CI. Run `pnpm audit` locally for the high/critical gate, or
+`node scripts/dependency-audit.cjs` for the full report and the same gate.
+
+Triage considers reachable code, untrusted input, runtime/CI exposure and impact, rather than severity alone.
+Stats' web/API surface and the bot's signed interactions both process external input. A lower-severity issue can
+still require urgent action when exploitable in our use. Reviewed risks may remain accepted while the exposure is
+unchanged; no automatic override, custom patch or major upgrade is required merely to reach zero findings.
+Revisit accepted risks during dependency reviews and when exposure or advisory information changes. The existing
+verified deepmerge backport and its specific exception remain enforced; see [its rationale](patches/README.md).
+
+The **npm lockfile maintenance** workflow refreshes direct/transitive resolutions weekly within the existing
+manifest constraints, preserving overrides and patches and requiring releases to be at least three days old.
+It also audits the current default branch every week, even when no update or maintenance PR is available.
+It manages one lockfile-only PR, launches CI explicitly (including the documentation build), and leaves review and
+merge manual. Docker Compose keeps its independent Dependabot cycle and is not changed by this workflow.
+
+To activate automatic maintenance PR creation, enable **Settings → Actions → General → Workflow permissions →
+Allow GitHub Actions to create and approve pull requests**. The workflow uses only `GITHUB_TOKEN`, never approves
+or merges PRs, and dispatches CI explicitly because token-created PR workflows may require manual approval.
+The workflows and controller must first be published on the default branch. Test the controller/policy with
+`node --test tests/security/dependency-automation.test.cjs`; run the maintenance workflow manually from `main`
+to validate its first PR. Existing PR runs retain their old workflow until their branch/merge ref is refreshed.
+
 ## License
 
 PICKET is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE): you may use, change and share it for any

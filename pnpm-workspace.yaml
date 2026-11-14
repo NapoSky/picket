@@ -23,6 +23,8 @@ overrides:
 # Only this advisory is backported locally; see patches/README.md.
 # CI verifies the installed patch before honoring this version-based exception.
 audit:
+  # Low/moderate findings stay visible in CI reports without blocking updates.
+  level: high
   ignore:
     - GHSA-gcqx-w48m-w2h4
 

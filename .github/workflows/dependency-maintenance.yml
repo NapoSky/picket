@@ -1,0 +1,97 @@
+name: npm lockfile maintenance
+
+on:
+  schedule:
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-lockfile-maintenance
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify the existing backport
+        run: node scripts/check-dependency-patches.cjs
+      - name: Review current default-branch dependencies, even when no update is available
+        run: node scripts/dependency-audit.cjs
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: dependency-audit
+          path: dependency-audit/
+          retention-days: 30
+          if-no-files-found: warn
+
+  refresh:
+    # Manual dispatch must also use the trusted default branch.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Refresh compatible resolutions, without package lifecycle scripts
+        run: |
+          rm pnpm-lock.yaml
+          pnpm install --lockfile-only --ignore-scripts --config.minimumReleaseAge=4320
+          # Manifests, patches and policy must remain unchanged.
+          git diff --exit-code -- . ':!pnpm-lock.yaml'
+      - name: Open or refresh the dedicated npm maintenance PR
+        id: pr
+        uses: peter-evans/create-pull-request@v8.1.3
+        with:
+          branch: maintenance/npm-lockfile
+          add-paths: pnpm-lock.yaml
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          commit-message: 'build(deps): refresh compatible npm lockfile resolutions'
+          title: 'build(deps): refresh compatible npm lockfile resolutions'
+          labels: dependencies
+          body: |
+            Refresh direct and transitive npm resolutions within the existing manifest constraints.
+            Releases must be at least three days old. Manifests, overrides, patches and Docker Compose remain unchanged.
+
+            CI is dispatched explicitly and includes tests, the documentation build, the dependency audit, image scanning and secret scanning.
+            Low/moderate audit findings remain visible without blocking; high/critical findings and a broken deepmerge patch block CI.
+            Review and merge remain manual. Avoid editing this managed branch: its lockfile is refreshed weekly from the default branch.
+      - name: Start CI explicitly for the maintenance commit
+        if: steps.pr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          MAINTENANCE_SHA: ${{ steps.pr.outputs.pull-request-head-sha }}
+        run: |
+          # Catch up if an earlier dispatch failed, without retesting an unchanged commit every week.
+          run_count=$(gh run list --workflow ci.yml --branch maintenance/npm-lockfile \
+            --commit "$MAINTENANCE_SHA" --event workflow_dispatch --limit 1 --json databaseId --jq 'length')
+          if [ "$run_count" = 0 ]; then
+            gh workflow run ci.yml --ref maintenance/npm-lockfile
+          fi
