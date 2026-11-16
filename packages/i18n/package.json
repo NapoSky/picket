@@ -16,6 +16,6 @@
     "i18next": "^26.5.7"
   },
   "devDependencies": {
-    "discord-api-types": "^0.38.57"
+    "discord-api-types": "^0.38.59"
   }
 }
