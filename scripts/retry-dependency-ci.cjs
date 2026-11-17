@@ -67,10 +67,12 @@ async function retryPull({ api, repository, pull, now = Date.now(), onlyRunId })
 
 function githubApi(repository, token) {
   const base = `https://api.github.com/repos/${repository}`;
-  async function request(path, method = 'GET') {
+  async function request(path, method = 'GET', body) {
     const response = await fetch(base + path, {
       method,
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(30_000),
     });
     if (!response.ok) throw new Error(`GitHub API ${method} ${path.split('?')[0]} returned ${response.status}`);
@@ -78,7 +80,8 @@ function githubApi(repository, token) {
   }
   return {
     get: async path => (await request(path)).json(),
-    post: async path => { await request(path, 'POST'); },
+    post: async (path, body) => { await request(path, 'POST', body); },
+    put: async (path, body) => (await request(path, 'PUT', body)).json(),
     logs: async path => {
       const response = await request(path);
       const chunks = [];

@@ -154,17 +154,35 @@ unchanged; no automatic override, custom patch or major upgrade is required mere
 Revisit accepted risks during dependency reviews and when exposure or advisory information changes. The existing
 verified deepmerge backport and its specific exception remain enforced; see [its rationale](patches/README.md).
 
+The **Dependabot automatic merge** controller merges same-repository Dependabot npm, GitHub Actions and root
+Docker PRs into the default branch, including major updates, after all workflows on their current commit succeed.
+CI is mandatory; Docs is also mandatory when its path filters apply. A newer pending, failed, cancelled or skipped
+run prevents merging. Drafts, conflicts, requested changes and incomplete file lists remain for review.
+Docker Compose PRs, anything under `deploy/`, and Compose files anywhere in the tree always remain manual,
+including mixed changes and renames. The controller reads GitHub metadata from trusted default-branch code;
+it never executes PR code or downloads PR artifacts with its write token.
+
+After checking the files, workflows and latest PR state, it supplies the required approval if needed and squash
+merges with the exact tested head SHA. GitHub branch protections still apply. Completion events from CI/Docs and
+a six-hour catch-up drive the controller, with one merge per invocation and serialized executions.
+It waits for successful default-branch CI and its other triggered workflows before merging another PR.
+Merges made with `GITHUB_TOKEN` do not start push workflows, so it explicitly dispatches CI and Docs on `main`.
+Successful main CI dispatched by `github-actions[bot]` can deploy through the existing protected production
+environment; manual dispatches and maintenance-branch CI do not deploy the application. A later controller run
+recovers missing post-merge dispatches. No personal access token is stored in the repository.
+
 The **npm lockfile maintenance** workflow refreshes direct/transitive resolutions weekly within the existing
 manifest constraints, preserving overrides and patches and requiring releases to be at least three days old.
 It also audits the current default branch every week, even when no update or maintenance PR is available.
 It manages one lockfile-only PR, launches CI explicitly (including the documentation build), and leaves review and
 merge manual. Docker Compose keeps its independent Dependabot cycle and is not changed by this workflow.
 
-To activate automatic maintenance PR creation, enable **Settings → Actions → General → Workflow permissions →
-Allow GitHub Actions to create and approve pull requests**. The workflow uses only `GITHUB_TOKEN`, never approves
-or merges PRs, and dispatches CI explicitly because token-created PR workflows may require manual approval.
+Enable **Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve
+pull requests** for the required Dependabot approval and automatic maintenance PR creation. Keep the default
+workflow permission read-only; the privileged controllers request their own limited write permissions.
+The lockfile maintenance workflow uses only `GITHUB_TOKEN` and leaves its own PRs for manual review and merge.
 The workflows and controller must first be published on the default branch. Test the controller/policy with
-`node --test tests/security/dependency-automation.test.cjs`; run the maintenance workflow manually from `main`
+`node --test tests/security/dependency-automation.test.cjs tests/security/dependabot-merge.test.cjs`; run the maintenance workflow manually from `main`
 to validate its first PR. Existing PR runs retain their old workflow until their branch/merge ref is refreshed.
 
 ## License

@@ -1,0 +1,39 @@
+name: Dependabot automatic merge
+
+on:
+  workflow_run:
+    workflows: [CI, Docs]
+    types: [completed]
+  schedule:
+    - cron: '47 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependabot-automatic-merge
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      # workflow_run is privileged: use only trusted default-branch code.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Merge passing Dependabot PRs outside Compose
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/merge-dependabot.cjs
