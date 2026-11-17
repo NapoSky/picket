@@ -37,7 +37,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Dependency automation regression tests
-        run: node --test tests/security/dependency-automation.test.cjs
+        run: node --test tests/security/dependency-automation.test.cjs tests/security/dependabot-merge.test.cjs
       - name: Build (TypeScript 7)
         run: pnpm build
       - name: Typecheck, including tests
