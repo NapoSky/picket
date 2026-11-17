@@ -172,6 +172,15 @@ describe('createI18n', () => {
     expect(i18n.translator('fr').t('only' as never)).toBe('only english');
   });
 
+  it('preserves empty translations for command validation instead of replacing them with a key or fallback', () => {
+    const empty = createI18n({ en: { commands: { empty: '', translated: 'English description' } },
+      fr: { commands: { empty: '', translated: '' } } });
+    expect(empty.translator('en').t('commands.empty' as never)).toBe('');
+    expect(empty.translator('fr').t('commands.translated' as never)).toBe('');
+    expect(empty.text('commands.empty' as never)).toEqual({ default: '', localizations: { fr: '' } });
+    expect(empty.text('commands.translated' as never)).toEqual({ default: 'English description', localizations: { fr: '' } });
+  });
+
   it.each([
     [['fr'], 'fr'],
     [['fr-CA'], 'fr'],
