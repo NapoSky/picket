@@ -127,10 +127,25 @@ unclassified test/build failures remain for review. The controller only reads Gi
 executes PR code. Its job summary records the decisions without posting repeated PR comments.
 
 The dependency audit covers every workspace, including development tools. **High/critical findings block CI**,
-including findings without a published fix. Low/moderate findings remain visible in the job summary and the
+including findings without a published fix, except for the reviewed temporary risk below.
+Low/moderate findings remain visible in the job summary and the
 `dependency-audit` JSON artifact (30-day retention), and do not block unrelated updates by default. An unavailable
-registry or invalid report still fails CI. Run `pnpm audit` locally for the high/critical gate, or
-`node scripts/dependency-audit.cjs` for the full report and the same gate.
+registry or invalid report still fails CI. Run `node scripts/dependency-audit.cjs` for the CI policy and full report.
+Plain `pnpm audit` still reports the temporarily accepted High finding and can exit with a failure.
+
+Until **2026-12-01 00:00 UTC**, only [GHSA-fc5q-39xc-vjpf / CVE-2026-112366](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
+in `picomatch` is accepted at High severity. It is used by Jest, Vite and VitePress; production dependencies do
+not include it. The audit checks this on every affected run using `pnpm why --recursive --prod picomatch --json`;
+any match, failed command or invalid report fails CI. The original finding remains in the summary and JSON
+artifact alongside the production graph check. Other High/Critical findings still block, and this exception
+stops applying at its expiry, including if the same advisory becomes Critical.
+
+This ReDoS concerns crafted repeated extglob patterns. Our current use is developer-controlled file matching;
+there is still exposure in development/CI tools, so this is temporary risk acceptance, not a local fix.
+[Snyk withdrew its advisory](https://security.snyk.io/vuln/SNYK-JS-PICOMATCH-21248802), while GitHub still lists it
+without a patched version as reviewed on 2026-11-17. Recheck upstream releases and both advisories before expiry,
+and remove or explicitly reassess the exception when a fix or our exposure changes. It is deliberately kept
+out of `audit.ignore` so the finding and complete High/Critical counts remain visible.
 
 Triage considers reachable code, untrusted input, runtime/CI exposure and impact, rather than severity alone.
 Stats' web/API surface and the bot's signed interactions both process external input. A lower-severity issue can
