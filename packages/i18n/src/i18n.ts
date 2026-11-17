@@ -59,6 +59,9 @@ export function createI18n(catalogs: Catalogs = loadCatalogs()): I18n {
     interpolation: { escapeValue: false },
     nsSeparator: false,
     returnNull: false,
+    // Preserve empty values so command validation can reject invalid descriptions.
+    // i18next 27 otherwise replaces them with a fallback or the key itself.
+    returnEmptyString: true,
   });
 
   const locales = Object.keys(catalogs);
