@@ -165,7 +165,8 @@ it never executes PR code or downloads PR artifacts with its write token.
 After checking the files, workflows and latest PR state, it supplies the required approval if needed and squash
 merges with the exact tested head SHA. GitHub branch protections still apply. Completion events from CI/Docs and
 a six-hour catch-up drive the controller, with one merge per invocation and serialized executions.
-It waits for successful default-branch CI and its other triggered workflows before merging another PR.
+It waits for every triggered default-branch workflow before merging another PR, including Docs-only pushes;
+default-branch workflow completions wake the controller again as soon as this gate clears.
 Merges made with `GITHUB_TOKEN` do not start push workflows, so it explicitly dispatches CI and Docs on `main`.
 Successful main CI dispatched by `github-actions[bot]` can deploy through the existing protected production
 environment; manual dispatches and maintenance-branch CI do not deploy the application. A later controller run

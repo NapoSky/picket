@@ -45,8 +45,11 @@ function workflowsPass(runs, pull, files, repository) {
 }
 
 function mainChecksPass(runs, base, sha) {
-  return latestWorkflowsPass(runs.filter(run => run.head_sha === sha && run.head_branch === base &&
-    ['push', 'workflow_dispatch'].includes(run.event)), ['.github/workflows/ci.yml']);
+  const current = runs.filter(run => run.head_sha === sha && run.head_branch === base &&
+    ['push', 'workflow_dispatch'].includes(run.event));
+  // Docs/workflow-only pushes intentionally skip application CI. Wait for every
+  // workflow that actually runs on main, without requiring a filtered-out run.
+  return current.length > 0 && latestWorkflowsPass(current, []);
 }
 
 async function dispatchMainChecks({ api, base, sha }) {
@@ -113,7 +116,7 @@ async function main() {
   }
   const mainRuns = await api.list(`/actions/runs?head_sha=${branch.commit.sha}&per_page=100`, 'workflow_runs');
   const mainReady = mainChecksPass(mainRuns, base, branch.commit.sha);
-  if (!mainReady) lines.push('Waiting for successful default-branch CI/workflows before another automatic merge.', '');
+  if (!mainReady) lines.push('Waiting for successful default-branch workflows before another automatic merge.', '');
   const pulls = mainReady ? await api.list(`/pulls?state=open&base=${encodeURIComponent(base)}&per_page=100`) : [];
   for (const pull of pulls.filter(p => eligiblePull(p, repository, base))) {
     const merged = await mergePull({ api, repository, base, number: pull.number });
