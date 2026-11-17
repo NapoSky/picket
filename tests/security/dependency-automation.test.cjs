@@ -68,6 +68,74 @@ test('advisory text cannot inject HTML or extra table rows into the CI summary',
   assert.match(summary, /&lt;script&gt;&#124; malicious/);
 });
 
+const exceptionNow = Date.parse('2026-11-17T22:00:00Z');
+function picomatchReport() {
+  const input = report(['high']);
+  Object.assign(input.advisories[0], { module_name: 'picomatch', github_advisory_id: 'GHSA-fc5q-39xc-vjpf' });
+  return input;
+}
+
+test('the temporary picomatch exception preserves the High finding and requires production evidence', () => {
+  const input = JSON.stringify(picomatchReport());
+  const assessed = assessAudit(input, 1, { now: exceptionNow, productionChecked: true });
+  assert.equal(assessed.blocking, false);
+  assert.deepEqual(assessed.report, JSON.parse(input));
+  assert.match(assessed.summary, /Temporary exception until 2026-12-01T00:00:00Z/);
+  assert.match(assessed.summary, /\| high \| picomatch \|/);
+  assert.equal(assessAudit(input, 1, { now: exceptionNow }).blocking, true);
+  assert.equal(assessAudit(input, 1, { now: exceptionNow, productionChecked: 'true' }).blocking, true);
+});
+
+test('the exception expires exactly at its deadline and cannot suppress other High/Critical findings', () => {
+  const options = { now: exceptionNow, productionChecked: true };
+  const input = picomatchReport();
+  for (const now of [Date.parse('2026-12-01T00:00:00Z'), Date.parse('2026-12-02T00:00:00Z'), NaN]) {
+    assert.equal(assessAudit(JSON.stringify(input), 1, { ...options, now }).blocking, true);
+  }
+  for (const change of [{ module_name: 'other' }, { github_advisory_id: 'GHSA-aaaa-bbbb-cccc' }, { severity: 'critical' }]) {
+    const changed = structuredClone(input);
+    Object.assign(changed.advisories[0], change);
+    if (change.severity) { changed.metadata.vulnerabilities.high = 0; changed.metadata.vulnerabilities.critical = 1; }
+    assert.equal(assessAudit(JSON.stringify(changed), 1, options).blocking, true);
+  }
+  for (const severity of ['high', 'critical']) {
+    const mixed = structuredClone(input);
+    mixed.advisories[1] = report([severity]).advisories[0];
+    mixed.metadata.vulnerabilities[severity]++;
+    assert.equal(assessAudit(JSON.stringify(mixed), 1, options).blocking, true);
+  }
+  // A hidden High advisory still fails report validation before any exception applies.
+  input.metadata.vulnerabilities.high++;
+  assert.throws(() => assessAudit(JSON.stringify(input), 1, options), /counts disagree/);
+});
+
+test('the audit checks production dependencies, retains evidence and refuses uncertain or changed exposure', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'picket-picomatch-audit-'));
+  const output = JSON.stringify(picomatchReport());
+  const invoke = production => audit({ directory, now: exceptionNow, run: (_command, args) => {
+    if (args[1] === 'audit') return { status: 1, stdout: output };
+    assert.deepEqual(args, ['pnpm', 'why', '--recursive', '--prod', 'picomatch', '--json']);
+    return production;
+  } });
+  try {
+    assert.equal(invoke({ status: 0, stdout: '[]' }), 0);
+    assert.deepEqual(JSON.parse(readFileSync(join(directory, 'report.json'))), JSON.parse(output));
+    assert.deepEqual(JSON.parse(readFileSync(join(directory, 'production-picomatch.json'))), []);
+    assert.match(readFileSync(join(directory, 'summary.md'), 'utf8'), /Temporary exception/);
+    for (const production of [
+      { status: 0, stdout: '[{"name":"picomatch","version":"4.0.7"}]' },
+      { status: 0, stdout: '{}' }, { status: 0, stdout: '' }, { status: 0, stdout: 'not JSON' },
+      { status: 1, stdout: '[]' }, { status: null, error: new Error('spawn failed') },
+      { status: 0, stdout: '[]', signal: 'SIGTERM' },
+    ]) {
+      assert.equal(invoke(production), 2);
+      assert.equal(existsSync(join(directory, 'summary.md')), false);
+      // Even a refused exception keeps the original advisory available for review.
+      assert.deepEqual(JSON.parse(readFileSync(join(directory, 'report.json'))), JSON.parse(output));
+    }
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
 const repository = 'NapoSky/picket';
 const now = Date.parse('2026-11-14T12:00:00Z');
 const pull = {
