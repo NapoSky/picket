@@ -98,12 +98,12 @@ test('a passing PR merges with an expected SHA and dispatches CI and Docs on mai
   ]);
 });
 
-test('another automatic merge waits for successful main CI and every other triggered main workflow', () => {
+test('another automatic merge waits for all triggered main workflows, including Docs-only pushes', () => {
   const mainRuns = runs.map(run => ({ ...run, head_sha: 'main-sha', head_branch: base, event: 'workflow_dispatch' }));
   assert.equal(mainChecksPass(mainRuns, base, 'main-sha'), true);
   assert.equal(mainChecksPass([], base, 'main-sha'), false);
   assert.equal(mainChecksPass(mainRuns, base, 'new-main-sha'), false);
-  assert.equal(mainChecksPass(mainRuns.slice(1), base, 'main-sha'), false);
+  assert.equal(mainChecksPass(mainRuns.slice(1), base, 'main-sha'), true);
   assert.equal(mainChecksPass([mainRuns[0], { ...mainRuns[1], status: 'in_progress', conclusion: null }], base, 'main-sha'), false);
   assert.equal(mainChecksPass([mainRuns[0], { ...mainRuns[1], conclusion: 'failure' }], base, 'main-sha'), false);
 });
