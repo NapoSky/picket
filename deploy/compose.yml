@@ -43,7 +43,7 @@ services:
   # Stack HTTPS entrypoint: port 443 only (no port 80; Cloudflare handles redirects), with Let's Encrypt certificates
   # obtained through the Cloudflare DNS-01 challenge. Reads Docker labels from the other services.
   traefik:
-    image: traefik:v3.7.18
+    image: traefik:v3.7.19
     restart: unless-stopped
     <<: *hardening
     cap_add:
@@ -401,7 +401,7 @@ services:
     networks: [internal]
 
   node-exporter:
-    image: prom/node-exporter:v1.12.1
+    image: prom/node-exporter:v1.13.1
     profiles: [monitoring]
     restart: unless-stopped
     <<: *hardening
@@ -413,7 +413,7 @@ services:
     networks: [internal]
 
   postgres-exporter:
-    image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.21.1
     profiles: [monitoring]
     restart: unless-stopped
     <<: *hardening
